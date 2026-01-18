@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Play, Home, BookOpen, Video, Briefcase, User, List } from "lucide-react";
+import { Plus, Play, Home, BookOpen, Video, Briefcase, User, ChevronDown, HelpCircle } from "lucide-react";
 
 const subjects = [
   { id: 1, name: "Microbiology", color: "bg-purple-600" },
@@ -8,14 +8,19 @@ const subjects = [
 ];
 
 const videoTiles = [
-  { id: 1, type: "video", title: "Introduction to Microbiology", author: "Jason Amores", duration: "12:34", gradient: "from-purple-400 to-pink-300" },
-  { id: 2, type: "flashcard", title: "Bacterial Cell Structure", author: "Sarah Chen", concept: "CELL ANATOMY", bullets: ["Prokaryotic cells...", "Cell wall types...", "Flagella & pili..."] },
-  { id: 3, type: "video", title: "Gram Staining Techniques", author: "Dr. Emily Park", duration: "08:22", gradient: "from-blue-400 to-cyan-300" },
-  { id: 4, type: "flashcard", title: "Viral Replication Cycles", author: "Marcus Johnson", concept: "VIROLOGY", bullets: ["Lytic cycle...", "Lysogenic cycle...", "Attachment phase..."] },
-  { id: 5, type: "video", title: "Antibiotic Resistance", author: "Dr. Lisa Wong", duration: "15:47", gradient: "from-green-400 to-teal-300" },
-  { id: 6, type: "flashcard", title: "Fungal Morphology", author: "Kevin Patel", concept: "MYCOLOGY", bullets: ["Hyphae structure...", "Spore formation...", "Yeast vs mold..."] },
-  { id: 7, type: "video", title: "Immune System Response", author: "Dr. Rachel Kim", duration: "11:05", gradient: "from-orange-400 to-amber-300" },
-  { id: 8, type: "flashcard", title: "Pathogenic Bacteria", author: "Alex Rivera", concept: "PATHOGENS", bullets: ["Toxin production...", "Invasion mechanisms...", "Host specificity..."] },
+  { id: 1, title: "Introduction to Microbiology", author: "Jason Amores", duration: "12:34", gradient: "from-purple-400 to-pink-300" },
+  { id: 2, title: "Gram Staining Techniques", author: "Dr. Emily Park", duration: "08:22", gradient: "from-blue-400 to-cyan-300" },
+  { id: 3, title: "Antibiotic Resistance", author: "Dr. Lisa Wong", duration: "15:47", gradient: "from-green-400 to-teal-300" },
+  { id: 4, title: "Immune System Response", author: "Dr. Rachel Kim", duration: "11:05", gradient: "from-orange-400 to-amber-300" },
+  { id: 5, title: "Bacterial Growth Phases", author: "Dr. Mike Chen", duration: "09:18", gradient: "from-indigo-400 to-purple-300" },
+];
+
+const practiceTiles = [
+  { id: 1, title: "Cell Structure Quiz", questions: 15, difficulty: "Easy", color: "bg-emerald-500" },
+  { id: 2, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-amber-500" },
+  { id: 3, title: "Virology Concepts", questions: 12, difficulty: "Hard", color: "bg-rose-500" },
+  { id: 4, title: "Antibiotic Mechanisms", questions: 18, difficulty: "Medium", color: "bg-blue-500" },
+  { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-violet-500" },
 ];
 
 const Index = () => {
@@ -67,60 +72,84 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Start Studying */}
-      <section className="px-4 py-4 flex-1">
+      {/* Related Videos and Practice */}
+      <section className="px-4 py-4 flex-1 overflow-y-auto">
         <div className="mb-3">
           <h2 className="text-xl font-bold text-foreground">Related videos and practice</h2>
         </div>
         
-        {/* Chapter Selector */}
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center justify-between mb-4">
-          <span className="font-medium text-foreground">Ch. 1 - Introduction to Microbiology</span>
-          <List className="w-5 h-5 text-muted-foreground" />
-        </div>
+        {/* Chapter/Topic Selector */}
+        <button className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">Ch. 1 - Introduction to Microbiology</span>
+          </div>
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+        </button>
 
-        {/* Video Cards */}
-        <div className="-mx-4 px-4">
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
-          {videoTiles.map((tile) => (
-            <div key={tile.id} className="flex-shrink-0 w-44">
-              {tile.type === "video" ? (
-                <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                      <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
+        {/* Videos Section */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Video className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-foreground text-sm">Videos</h3>
+            <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
+          </div>
+          <div className="-mx-4 px-4">
+            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
+              {videoTiles.map((tile) => (
+                <div key={tile.id} className="flex-shrink-0 w-44">
+                  <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                        <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      {tile.duration}
                     </div>
                   </div>
-                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                    {tile.duration}
+                  <div className="flex items-start gap-2 mt-2">
+                    <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground text-xs leading-tight">{tile.title}</p>
+                      <p className="text-muted-foreground text-xs">By {tile.author}</p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-xl overflow-hidden bg-card border border-border h-28 p-2">
-                  <div className="text-xs">
-                    <p className="font-bold text-primary mb-1 text-[10px]">CONCEPT: {tile.concept}</p>
-                    {tile.bullets?.map((bullet, idx) => (
-                      <p key={idx} className="text-muted-foreground text-[10px]">• {bullet}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex items-start gap-2 mt-2">
-                <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground text-xs leading-tight">{tile.title}</p>
-                  <p className="text-muted-foreground text-xs">By {tile.author}</p>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
           </div>
         </div>
 
-        {/* Get Exam Ready */}
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-foreground">Get exam ready</h2>
-          <button className="text-primary font-medium text-sm">Go to practice</button>
+        {/* Practice Questions Section */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <HelpCircle className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-foreground text-sm">Practice Questions</h3>
+            <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
+          </div>
+          <div className="-mx-4 px-4">
+            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
+              {practiceTiles.map((tile) => (
+                <div key={tile.id} className="flex-shrink-0 w-44">
+                  <div className={`rounded-xl overflow-hidden ${tile.color} h-28 p-3 flex flex-col justify-between`}>
+                    <div>
+                      <p className="text-white font-semibold text-sm leading-tight">{tile.title}</p>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <span className="text-white/80 text-xs">{tile.questions} questions</span>
+                      <span className="text-white text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
+                        {tile.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className="font-medium text-foreground text-xs">Start quiz</p>
+                    <p className="text-muted-foreground text-xs">~{Math.ceil(tile.questions * 1.5)} min</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
