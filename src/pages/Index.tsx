@@ -52,7 +52,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full safe-area-inset">
       {/* Header */}
       <header className="px-4 pt-4 pb-2">
         <h1 className="text-3xl font-bold text-foreground mt-4">Home</h1>
@@ -206,7 +206,7 @@ const Index = () => {
       </section>
 
       {/* Bottom Navigation */}
-      <nav className="bg-card border-t border-border px-2 py-2 sticky bottom-0">
+      <nav className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0">
         <div className="flex justify-around items-center">
           {[
             { id: "home", icon: Home, label: "Home" },
@@ -218,20 +218,16 @@ const Index = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors active:scale-95 ${
                 activeTab === item.id
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground"
               }`}
             >
               <item.icon className="w-6 h-6" fill={activeTab === item.id ? "currentColor" : "none"} />
               <span className="text-xs font-medium">{item.label}</span>
             </button>
           ))}
-        </div>
-        {/* Home Indicator */}
-        <div className="flex justify-center mt-2">
-          <div className="w-32 h-1 bg-foreground rounded-full" />
         </div>
       </nav>
     </div>
