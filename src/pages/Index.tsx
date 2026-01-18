@@ -66,8 +66,8 @@ const Index = () => {
     <div className="h-screen bg-background flex flex-col w-full safe-area-inset overflow-hidden">
       {/* Header */}
       <header className="px-4 pt-4 pb-2">
-        <h1 className="text-3xl font-bold text-foreground mt-4">Home</h1>
-        <div className="w-16 h-1 bg-primary mt-2 rounded-full" />
+        <h1 className="text-2xl font-bold text-foreground mt-4">Home</h1>
+        <div className="w-12 h-1 bg-primary mt-2 rounded-full" />
       </header>
 
       {/* Subject Chips */}
@@ -86,7 +86,7 @@ const Index = () => {
                   {subject.name.charAt(0)}
                 </span>
               </div>
-              <span className="font-medium text-foreground">{subject.name}</span>
+              <span className="text-sm font-medium text-foreground">{subject.name}</span>
             </button>
           ))}
         </div>
@@ -95,14 +95,14 @@ const Index = () => {
       {/* Your eTextbook */}
       <section className="px-4 py-2">
         <div className="mb-3">
-          <h2 className="text-xl font-bold text-foreground">Textbook</h2>
+          <h2 className="text-lg font-bold text-foreground">Textbook</h2>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
           </div>
           <div>
-            <p className="font-medium text-foreground">Microbiology with Diseases by Body System, 5th edition</p>
+            <p className="text-sm font-medium text-foreground leading-snug">Microbiology with Diseases by Body System, 5th edition</p>
           </div>
         </div>
       </section>
@@ -110,7 +110,7 @@ const Index = () => {
       {/* Related Videos and Practice */}
       <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
         <div className="mb-3">
-          <h2 className="text-lg font-semibold text-muted-foreground">Related videos and practice</h2>
+          <h2 className="text-base font-semibold text-muted-foreground">Related videos and practice</h2>
         </div>
         
         {/* Chapter/Topic Selector */}
@@ -119,7 +119,7 @@ const Index = () => {
             onClick={() => setIsChapterDropdownOpen(!isChapterDropdownOpen)}
             className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between"
           >
-            <span className="font-medium text-foreground">{selectedChapter.title}</span>
+            <span className="text-sm font-medium text-foreground">{selectedChapter.title}</span>
             <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isChapterDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
