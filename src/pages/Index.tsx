@@ -39,10 +39,10 @@ const Index = () => {
             <button
               key={subject.id}
               onClick={() => setSelectedSubject(subject)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
                 selectedSubject.id === subject.id
-                  ? 'border-primary bg-card'
-                  : 'border-border bg-card hover:bg-accent'
+                  ? 'border-2 border-primary bg-card'
+                  : 'border border-border bg-card hover:bg-accent'
               }`}
             >
               <div className={`w-8 h-8 ${subject.color} rounded-lg flex items-center justify-center`}>
