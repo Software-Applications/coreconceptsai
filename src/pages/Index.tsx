@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, Play, Home, BookOpen, Video, Briefcase, User, ChevronDown, HelpCircle, Check } from "lucide-react";
+import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 
 const subjects = [
   { id: 1, name: "Microbiology", color: "bg-purple-600" },
@@ -39,6 +40,12 @@ const Index = () => {
   const [selectedChapter, setSelectedChapter] = useState(chapters[0]);
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Drag scroll refs
+  const mainScrollRef = useDragScroll<HTMLElement>();
+  const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -61,7 +68,7 @@ const Index = () => {
 
       {/* Subject Chips */}
       <section className="px-4 py-4">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <div ref={subjectsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
             <Plus className="w-6 h-6 text-muted-foreground" />
           </button>
@@ -97,7 +104,7 @@ const Index = () => {
       </section>
 
       {/* Related Videos and Practice */}
-      <section className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
+      <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
         <div className="mb-3">
           <h2 className="text-xl font-bold text-foreground">Related videos and practice</h2>
         </div>
@@ -146,7 +153,7 @@ const Index = () => {
             <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
-            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
+            <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {videoTiles.map((tile) => (
                 <div key={tile.id} className="flex-shrink-0 w-44">
                   <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
@@ -180,7 +187,7 @@ const Index = () => {
             <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
-            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
+            <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {practiceTiles.map((tile) => (
                 <div key={tile.id} className="flex-shrink-0 w-44">
                   <div className={`rounded-xl overflow-hidden ${tile.color} h-28 p-3 flex flex-col justify-between`}>
