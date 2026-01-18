@@ -64,9 +64,11 @@ const Index = () => {
           <h2 className="text-xl font-bold text-foreground">Textbook</h2>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
-          <div className="w-16 h-20 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
-          </div>
+          <img 
+            src="https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=200&h=250&fit=crop" 
+            alt="Microbiology Textbook"
+            className="w-16 h-20 rounded-lg flex-shrink-0 object-cover shadow-sm"
+          />
           <div>
             <p className="text-sm font-medium text-foreground leading-snug">Microbiology with Diseases by Body System, 5th edition</p>
           </div>
