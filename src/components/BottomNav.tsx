@@ -1,4 +1,4 @@
-import { Home, BookOpen, Video, Briefcase, User } from "lucide-react";
+import { Home, BookOpen, Video, User } from "lucide-react";
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,7 +9,6 @@ const navItems = [
   { id: "home", icon: Home, label: "Home" },
   { id: "library", icon: BookOpen, label: "Textbooks" },
   { id: "study", icon: Video, label: "Study" },
-  { id: "jobs", icon: Briefcase, label: "Job Skills" },
   { id: "account", icon: User, label: "Account" },
 ];
 
