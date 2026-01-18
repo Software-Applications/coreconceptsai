@@ -1,4 +1,5 @@
 import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
+import { useQuizProgress } from "@/hooks/useQuizProgress";
 
 interface PracticeQuizSheetProps {
   quiz: {
@@ -14,15 +15,26 @@ interface PracticeQuizSheetProps {
 }
 
 export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQuizSheetProps) {
-  if (!isOpen || !quiz) return null;
+  const { getCompletionPercentage, getAttemptCount, getBestScore, recordAttempt } = useQuizProgress();
+  
+  if (!isOpen || !quiz || !chapter) return null;
 
   const estimatedTime = Math.ceil(quiz.questions * 1.5);
+  const completionPercentage = getCompletionPercentage(quiz.id, chapter.id);
+  const attemptCount = getAttemptCount(quiz.id, chapter.id);
+  const bestScore = getBestScore(quiz.id, chapter.id);
   
   const topics = [
-    { name: "Concept Review", questions: Math.floor(quiz.questions * 0.4), completed: false },
-    { name: "Application Questions", questions: Math.floor(quiz.questions * 0.35), completed: false },
-    { name: "Critical Thinking", questions: Math.floor(quiz.questions * 0.25), completed: false },
+    { name: "Concept Review", questions: Math.floor(quiz.questions * 0.4), completed: completionPercentage >= 40 },
+    { name: "Application Questions", questions: Math.floor(quiz.questions * 0.35), completed: completionPercentage >= 75 },
+    { name: "Critical Thinking", questions: Math.floor(quiz.questions * 0.25), completed: completionPercentage === 100 },
   ];
+
+  const handleStartPractice = () => {
+    // Simulate completing a quiz with random score for demo
+    const score = Math.floor(Math.random() * (quiz.questions + 1));
+    recordAttempt(quiz.id, chapter.id, score, quiz.questions);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -63,15 +75,17 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">0%</p>
-            <p className="text-xs text-muted-foreground">Completed</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">--</p>
+            <p className="text-2xl font-bold text-foreground">{completionPercentage}%</p>
             <p className="text-xs text-muted-foreground">Best Score</p>
           </div>
           <div className="bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">0</p>
+            <p className="text-2xl font-bold text-foreground">
+              {bestScore ? `${bestScore.score}/${bestScore.total}` : '--'}
+            </p>
+            <p className="text-xs text-muted-foreground">Last Score</p>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{attemptCount}</p>
             <p className="text-xs text-muted-foreground">Attempts</p>
           </div>
         </div>
@@ -115,8 +129,11 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
 
       {/* Start Button */}
       <div className="p-4 border-t border-border">
-        <button className={`w-full ${quiz.color} text-white font-semibold py-4 rounded-xl active:scale-[0.98] transition-transform`}>
-          Start Practice
+        <button 
+          onClick={handleStartPractice}
+          className={`w-full ${quiz.color} text-white font-semibold py-4 rounded-xl active:scale-[0.98] transition-transform`}
+        >
+          {attemptCount > 0 ? 'Practice Again' : 'Start Practice'}
         </button>
       </div>
     </div>
