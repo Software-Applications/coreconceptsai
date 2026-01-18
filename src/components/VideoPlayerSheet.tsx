@@ -1,5 +1,5 @@
 import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
-import { useState } from "react";
+import { useState } from "react"; import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 
 interface Video {
   id: number;
@@ -19,7 +19,7 @@ interface VideoPlayerSheetProps {
 
 export function VideoPlayerSheet({ video, videos, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(0); const contentRef = useDragScroll<HTMLDivElement>(); const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
 
   if (!isOpen || !video) return null;
 
@@ -39,7 +39,7 @@ export function VideoPlayerSheet({ video, videos, isOpen, onClose, onVideoSelect
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={contentRef} className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y">
         {/* Video Display */}
         <div className={`w-full aspect-video bg-gradient-to-br ${video.gradient} relative`}>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -128,7 +128,7 @@ export function VideoPlayerSheet({ video, videos, isOpen, onClose, onVideoSelect
         {upNextVideos.length > 0 && (
           <div className="px-4 py-4 border-t border-border">
             <h3 className="font-semibold text-foreground text-sm mb-3">Up Next</h3>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div ref={upNextRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x">
               {upNextVideos.map((nextVideo) => (
                 <button 
                   key={nextVideo.id}
