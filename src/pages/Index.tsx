@@ -52,7 +52,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full safe-area-inset">
+    <div className="h-screen bg-background flex flex-col w-full safe-area-inset overflow-hidden">
       {/* Header */}
       <header className="px-4 pt-4 pb-2">
         <h1 className="text-3xl font-bold text-foreground mt-4">Home</h1>
@@ -97,7 +97,7 @@ const Index = () => {
       </section>
 
       {/* Related Videos and Practice */}
-      <section className="px-4 py-4 flex-1 overflow-y-auto">
+      <section className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
         <div className="mb-3">
           <h2 className="text-xl font-bold text-foreground">Related videos and practice</h2>
         </div>
