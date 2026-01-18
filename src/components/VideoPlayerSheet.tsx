@@ -41,7 +41,13 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
       {/* Scrollable Content */}
       <div ref={contentRef} className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y">
         {/* Video Display */}
-        <div className={`w-full aspect-video bg-gradient-to-br ${video.gradient} relative`}>
+        <div className="w-full aspect-video relative">
+          <img 
+            src={video.thumbnail} 
+            alt={video.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/30" />
           <div className="absolute inset-0 flex items-center justify-center">
             <button 
               onClick={() => setIsPlaying(!isPlaying)}
@@ -140,7 +146,13 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
                     }}
                     className="flex-shrink-0 w-36 text-left cursor-pointer active:scale-[0.98] transition-transform"
                   >
-                    <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
+                    <div className="relative rounded-xl overflow-hidden h-20">
+                      <img 
+                        src={nextVideo.thumbnail} 
+                        alt={nextVideo.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20" />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                           <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
