@@ -23,7 +23,7 @@ const Index = () => {
 
       {/* Subject Chips */}
       <section className="px-4 py-4">
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
             <Plus className="w-6 h-6 text-muted-foreground" />
           </button>
@@ -73,7 +73,7 @@ const Index = () => {
         </div>
 
         {/* Video Cards */}
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
           {/* Main Video Card */}
           <div className="flex-shrink-0 w-72">
             <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-purple-400 to-pink-300 aspect-video">
