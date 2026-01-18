@@ -64,8 +64,8 @@ const Index = () => {
           <h2 className="text-xl font-bold text-foreground">Textbook</h2>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
-          <div className="w-16 h-20 bg-tile-dark rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold text-center px-1 tracking-tight">MICRO<br/>BIOLOGY</span>
+          <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
           </div>
           <div>
             <p className="text-sm font-medium text-foreground leading-snug">Microbiology with Diseases by Body System, 5th edition</p>
