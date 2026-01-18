@@ -45,11 +45,11 @@ const Index = () => {
                   : 'border border-border bg-card hover:bg-accent'
               }`}
             >
-              <div className={`w-8 h-8 ${subject.color} rounded-lg flex items-center justify-center`}>
-                <span className="text-white text-xs font-bold">
-                  {subject.name.charAt(0)}
-                </span>
-              </div>
+              <img 
+                src={subject.imageUrl} 
+                alt={subject.name}
+                className="w-8 h-8 rounded-lg object-cover"
+              />
               <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-primary' : 'text-foreground'}`}>
                 {subject.name}
               </span>
