@@ -7,6 +7,17 @@ const subjects = [
   { id: 3, name: "Biology", color: "bg-green-500" },
 ];
 
+const videoTiles = [
+  { id: 1, type: "video", title: "Introduction to Microbiology", author: "Jason Amores", duration: "12:34", gradient: "from-purple-400 to-pink-300" },
+  { id: 2, type: "flashcard", title: "Bacterial Cell Structure", author: "Sarah Chen", concept: "CELL ANATOMY", bullets: ["Prokaryotic cells...", "Cell wall types...", "Flagella & pili..."] },
+  { id: 3, type: "video", title: "Gram Staining Techniques", author: "Dr. Emily Park", duration: "08:22", gradient: "from-blue-400 to-cyan-300" },
+  { id: 4, type: "flashcard", title: "Viral Replication Cycles", author: "Marcus Johnson", concept: "VIROLOGY", bullets: ["Lytic cycle...", "Lysogenic cycle...", "Attachment phase..."] },
+  { id: 5, type: "video", title: "Antibiotic Resistance", author: "Dr. Lisa Wong", duration: "15:47", gradient: "from-green-400 to-teal-300" },
+  { id: 6, type: "flashcard", title: "Fungal Morphology", author: "Kevin Patel", concept: "MYCOLOGY", bullets: ["Hyphae structure...", "Spore formation...", "Yeast vs mold..."] },
+  { id: 7, type: "video", title: "Immune System Response", author: "Dr. Rachel Kim", duration: "11:05", gradient: "from-orange-400 to-amber-300" },
+  { id: 8, type: "flashcard", title: "Pathogenic Bacteria", author: "Alex Rivera", concept: "PATHOGENS", bullets: ["Toxin production...", "Invasion mechanisms...", "Host specificity..."] },
+];
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
 
@@ -71,45 +82,38 @@ const Index = () => {
 
         {/* Video Cards */}
         <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start">
-          {/* Main Video Card */}
-          <div className="flex-shrink-0 w-44">
-            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-purple-400 to-pink-300 h-28">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                  <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
+          {videoTiles.map((tile) => (
+            <div key={tile.id} className="flex-shrink-0 w-44">
+              {tile.type === "video" ? (
+                <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                      <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                    {tile.duration}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden bg-card border border-border h-28 p-2">
+                  <div className="text-xs">
+                    <p className="font-bold text-primary mb-1 text-[10px]">CONCEPT: {tile.concept}</p>
+                    {tile.bullets?.map((bullet, idx) => (
+                      <p key={idx} className="text-muted-foreground text-[10px]">• {bullet}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-2 mt-2">
+                <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground text-xs leading-tight">{tile.title}</p>
+                  <p className="text-muted-foreground text-xs">By {tile.author}</p>
                 </div>
               </div>
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                00:00
-              </div>
             </div>
-            <div className="flex items-start gap-2 mt-2">
-              <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="font-medium text-foreground text-xs leading-tight">Introduction to Microbiology Channel</p>
-                <p className="text-muted-foreground text-xs">By Jason Amores</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Secondary Card */}
-          <div className="flex-shrink-0 w-44">
-            <div className="rounded-xl overflow-hidden bg-card border border-border h-28 p-2">
-              <div className="text-xs">
-                <p className="font-bold text-primary mb-1 text-[10px]">CONCEPT: INTRODUCTION</p>
-                <p className="text-muted-foreground text-[10px]">• Microbiology: the study...</p>
-                <p className="text-muted-foreground text-[10px]">• Prefix "..."</p>
-                <p className="text-muted-foreground text-[10px]">• Microorganisms...</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 mt-2">
-              <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="font-medium text-foreground text-xs leading-tight">Intro to Microbiology</p>
-                <p className="text-muted-foreground text-xs">By Jason Amores</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Get Exam Ready */}
