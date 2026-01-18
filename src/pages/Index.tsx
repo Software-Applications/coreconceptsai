@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, Play, Home, BookOpen, Video, Briefcase, User, ChevronDown, HelpCircle, Check } from "lucide-react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
+import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
 
 const subjects = [
   { id: 1, name: "Microbiology", color: "bg-purple-600" },
@@ -39,6 +41,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedChapter, setSelectedChapter] = useState(chapters[0]);
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<typeof videoTiles[0] | null>(null);
+  const [selectedQuiz, setSelectedQuiz] = useState<typeof practiceTiles[0] | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Drag scroll refs
@@ -155,7 +159,11 @@ const Index = () => {
           <div className="-mx-4 px-4">
             <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {videoTiles.map((tile) => (
-                <div key={tile.id} className="flex-shrink-0 w-44">
+                <button 
+                  key={tile.id} 
+                  className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
+                  onClick={() => setSelectedVideo(tile)}
+                >
                   <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
@@ -173,7 +181,7 @@ const Index = () => {
                       <p className="text-muted-foreground text-xs">By {tile.author}</p>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -189,7 +197,11 @@ const Index = () => {
           <div className="-mx-4 px-4">
             <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {practiceTiles.map((tile) => (
-                <div key={tile.id} className="flex-shrink-0 w-44">
+                <button 
+                  key={tile.id} 
+                  className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
+                  onClick={() => setSelectedQuiz(tile)}
+                >
                   <div className={`rounded-xl overflow-hidden ${tile.color} h-28 p-3 flex flex-col justify-between`}>
                     <div>
                       <p className="text-white font-semibold text-sm leading-tight">{tile.title}</p>
@@ -205,7 +217,7 @@ const Index = () => {
                     <p className="font-medium text-foreground text-xs">Start quiz</p>
                     <p className="text-muted-foreground text-xs">~{Math.ceil(tile.questions * 1.5)} min</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -237,6 +249,19 @@ const Index = () => {
           ))}
         </div>
       </nav>
+      {/* Video Player Sheet */}
+      <VideoPlayerSheet 
+        video={selectedVideo}
+        isOpen={!!selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
+
+      {/* Practice Quiz Sheet */}
+      <PracticeQuizSheet 
+        quiz={selectedQuiz}
+        isOpen={!!selectedQuiz}
+        onClose={() => setSelectedQuiz(null)}
+      />
     </div>
   );
 };
