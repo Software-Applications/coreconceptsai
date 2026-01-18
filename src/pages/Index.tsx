@@ -39,22 +39,18 @@ const Index = () => {
             <button
               key={subject.id}
               onClick={() => setSelectedSubject(subject)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 ease-out ${
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
                 selectedSubject.id === subject.id
-                  ? 'bg-primary border-transparent shadow-lg scale-[1.02]'
-                  : 'border-border bg-card hover:bg-accent hover:scale-[1.01]'
+                  ? `${subject.color} border-transparent`
+                  : 'border-border bg-card hover:bg-accent'
               }`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${subject.color} ${
-                selectedSubject.id === subject.id ? 'scale-110' : ''
-              }`}>
+              <div className={`w-8 h-8 ${selectedSubject.id === subject.id ? 'bg-white/20' : subject.color} rounded-lg flex items-center justify-center`}>
                 <span className="text-white text-xs font-bold">
                   {subject.name.charAt(0)}
                 </span>
               </div>
-              <span className={`text-sm font-medium transition-colors duration-300 ${
-                selectedSubject.id === subject.id ? 'text-white' : 'text-foreground'
-              }`}>
+              <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-white' : 'text-foreground'}`}>
                 {subject.name}
               </span>
             </button>
@@ -92,21 +88,17 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <Video className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-foreground text-sm">Videos</h3>
-            <span className="text-xs text-muted-foreground">
-              ({videoTiles.filter(v => v.subjectId === selectedSubject.id).length})
-            </span>
+            <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
             <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
-              {videoTiles
-                .filter(video => video.subjectId === selectedSubject.id)
-                .map((video) => (
-                  <VideoCard 
-                    key={video.id} 
-                    video={video} 
-                    onClick={() => setSelectedVideo(video)} 
-                  />
-                ))}
+              {videoTiles.map((video) => (
+                <VideoCard 
+                  key={video.id} 
+                  video={video} 
+                  onClick={() => setSelectedVideo(video)} 
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -116,21 +108,17 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <HelpCircle className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-foreground text-sm">Practice Sets</h3>
-            <span className="text-xs text-muted-foreground">
-              ({practiceTiles.filter(p => p.subjectId === selectedSubject.id).length})
-            </span>
+            <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
             <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
-              {practiceTiles
-                .filter(practice => practice.subjectId === selectedSubject.id)
-                .map((practice) => (
-                  <PracticeCard 
-                    key={practice.id} 
-                    practice={practice} 
-                    onClick={() => setSelectedQuiz(practice)} 
-                  />
-                ))}
+              {practiceTiles.map((practice) => (
+                <PracticeCard 
+                  key={practice.id} 
+                  practice={practice} 
+                  onClick={() => setSelectedQuiz(practice)} 
+                />
+              ))}
             </div>
           </div>
         </div>
