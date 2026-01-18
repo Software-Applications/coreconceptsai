@@ -81,7 +81,8 @@ const Index = () => {
         </div>
 
         {/* Video Cards */}
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start">
+        <div className="-mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
           {videoTiles.map((tile) => (
             <div key={tile.id} className="flex-shrink-0 w-44">
               {tile.type === "video" ? (
@@ -114,6 +115,7 @@ const Index = () => {
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {/* Get Exam Ready */}
