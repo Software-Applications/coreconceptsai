@@ -1,23 +1,29 @@
 import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import { useState } from "react";
 
-interface VideoPlayerSheetProps {
-  video: {
-    id: number;
-    title: string;
-    author: string;
-    duration: string;
-    gradient: string;
-  } | null;
-  isOpen: boolean;
-  onClose: () => void;
+interface Video {
+  id: number;
+  title: string;
+  author: string;
+  duration: string;
+  gradient: string;
 }
 
-export function VideoPlayerSheet({ video, isOpen, onClose }: VideoPlayerSheetProps) {
+interface VideoPlayerSheetProps {
+  video: Video | null;
+  videos: Video[];
+  isOpen: boolean;
+  onClose: () => void;
+  onVideoSelect: (video: Video) => void;
+}
+
+export function VideoPlayerSheet({ video, videos, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
   if (!isOpen || !video) return null;
+
+  const upNextVideos = videos.filter(v => v.id !== video.id);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -32,8 +38,8 @@ export function VideoPlayerSheet({ video, isOpen, onClose }: VideoPlayerSheetPro
         <div className="w-10" />
       </div>
 
-      {/* Video Player Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
         {/* Video Display */}
         <div className={`w-full aspect-video bg-gradient-to-br ${video.gradient} relative`}>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -108,8 +114,8 @@ export function VideoPlayerSheet({ video, isOpen, onClose }: VideoPlayerSheetPro
           </div>
         </div>
 
-        {/* Flashcard Summary */}
-        <div className="mx-4 mt-auto mb-4 bg-card border border-border rounded-xl p-4">
+        {/* Key Points */}
+        <div className="mx-4 mb-4 bg-card border border-border rounded-xl p-4">
           <h3 className="font-semibold text-foreground text-sm mb-2">Key Points</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>• Core concepts and definitions</li>
@@ -117,6 +123,39 @@ export function VideoPlayerSheet({ video, isOpen, onClose }: VideoPlayerSheetPro
             <li>• Common exam questions</li>
           </ul>
         </div>
+
+        {/* Up Next */}
+        {upNextVideos.length > 0 && (
+          <div className="px-4 py-4 border-t border-border">
+            <h3 className="font-semibold text-foreground text-sm mb-3">Up Next</h3>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {upNextVideos.map((nextVideo) => (
+                <button 
+                  key={nextVideo.id}
+                  onClick={() => {
+                    setProgress(0);
+                    setIsPlaying(false);
+                    onVideoSelect(nextVideo);
+                  }}
+                  className="flex-shrink-0 w-36 text-left active:scale-[0.98] transition-transform"
+                >
+                  <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                        <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                      {nextVideo.duration}
+                    </div>
+                  </div>
+                  <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
+                  <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
