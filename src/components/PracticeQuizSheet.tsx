@@ -39,7 +39,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-border bg-gradient-to-b from-[hsl(var(--section-alt))] to-transparent">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
@@ -55,14 +55,14 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         {/* Quiz Header Card */}
-        <div className={`${quiz.color} rounded-2xl p-6 mb-6 shadow-lg`}>
-          <h1 className="text-2xl font-bold text-white mb-3">{quiz.title}</h1>
+        <div className={`${quiz.color} rounded-2xl p-5 mb-6`}>
+          <h1 className="text-2xl font-bold text-white mb-2">{quiz.title}</h1>
           <div className="flex items-center gap-4 text-white/80 text-sm">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>~{estimatedTime} min</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span>{quiz.difficulty}</span>
             </div>
@@ -73,34 +73,30 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
         </div>
 
         {/* Stats */}
-        <div className="bg-[hsl(var(--section-alt))] rounded-xl p-4 mb-6">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-card border-t-4 border-t-emerald-500 border border-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-2xl font-bold text-foreground">{completionPercentage}%</p>
-              <p className="text-xs text-muted-foreground mt-1">Best Score</p>
-            </div>
-            <div className="bg-card border-t-4 border-t-blue-500 border border-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-2xl font-bold text-foreground">
-                {bestScore ? `${bestScore.score}/${bestScore.total}` : '--'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">Last Score</p>
-            </div>
-            <div className="bg-card border-t-4 border-t-purple-500 border border-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-2xl font-bold text-foreground">{attemptCount}</p>
-              <p className="text-xs text-muted-foreground mt-1">Attempts</p>
-            </div>
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{completionPercentage}%</p>
+            <p className="text-xs text-muted-foreground">Best Score</p>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">
+              {bestScore ? `${bestScore.score}/${bestScore.total}` : '--'}
+            </p>
+            <p className="text-xs text-muted-foreground">Last Score</p>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{attemptCount}</p>
+            <p className="text-xs text-muted-foreground">Attempts</p>
           </div>
         </div>
 
         {/* Topics Breakdown */}
-        <h3 className="font-semibold text-foreground mb-4 border-l-4 border-primary pl-3">Topics Covered</h3>
-        <div className="space-y-2.5 mb-6">
+        <h3 className="font-semibold text-foreground mb-3">Topics Covered</h3>
+        <div className="space-y-2 mb-6">
           {topics.map((topic, index) => (
             <div 
               key={index}
-              className={`bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm ${
-                index % 2 === 1 ? 'bg-[hsl(var(--section-alt))]' : ''
-              }`}
+              className="bg-card border border-border rounded-xl p-4 flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -123,7 +119,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
         </div>
 
         {/* Tips */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl p-5 mb-4 border-l-4 border-amber-400 shadow-sm">
+        <div className="bg-accent rounded-xl p-4 mb-4">
           <h3 className="font-semibold text-foreground text-sm mb-2">💡 Study Tip</h3>
           <p className="text-sm text-muted-foreground">
             Review the related video before attempting this practice set for better understanding.
@@ -132,10 +128,10 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
       </div>
 
       {/* Start Button */}
-      <div className="p-4 border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      <div className="p-4 border-t border-border">
         <button 
           onClick={handleStartPractice}
-          className={`w-full ${quiz.color} text-white font-semibold py-4 rounded-xl active:scale-[0.98] transition-transform shadow-lg`}
+          className={`w-full ${quiz.color} text-white font-semibold py-4 rounded-xl active:scale-[0.98] transition-transform`}
         >
           {attemptCount > 0 ? 'Practice Again' : 'Start Practice'}
         </button>
