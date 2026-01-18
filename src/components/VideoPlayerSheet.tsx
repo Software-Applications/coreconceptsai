@@ -126,33 +126,35 @@ export function VideoPlayerSheet({ video, videos, isOpen, onClose, onVideoSelect
 
         {/* Up Next */}
         {upNextVideos.length > 0 && (
-          <div className="px-4 py-4 border-t border-border">
-            <h3 className="font-semibold text-foreground text-sm mb-3">Up Next</h3>
-            <div ref={upNextRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x">
-              {upNextVideos.map((nextVideo) => (
-                <button 
-                  key={nextVideo.id}
-                  onClick={() => {
-                    setProgress(0);
-                    setIsPlaying(false);
-                    onVideoSelect(nextVideo);
-                  }}
-                  className="flex-shrink-0 w-36 text-left active:scale-[0.98] transition-transform"
-                >
-                  <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                        <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+          <div className="py-4 border-t border-border">
+            <h3 className="font-semibold text-foreground text-sm mb-3 px-4">Up Next</h3>
+            <div className="px-4">
+              <div ref={upNextRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x">
+                {upNextVideos.map((nextVideo) => (
+                  <div 
+                    key={nextVideo.id}
+                    onClick={() => {
+                      setProgress(0);
+                      setIsPlaying(false);
+                      onVideoSelect(nextVideo);
+                    }}
+                    className="flex-shrink-0 w-36 text-left cursor-pointer active:scale-[0.98] transition-transform"
+                  >
+                    <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                          <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                        {nextVideo.duration}
                       </div>
                     </div>
-                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      {nextVideo.duration}
-                    </div>
+                    <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
+                    <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
                   </div>
-                  <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
-                  <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
-                </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
