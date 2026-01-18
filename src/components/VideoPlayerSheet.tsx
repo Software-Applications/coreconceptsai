@@ -52,12 +52,12 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           <div className="absolute inset-0 flex items-center justify-center">
             <button 
               onClick={() => setIsPlaying(!isPlaying)}
-              className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-xl active:scale-95"
+              className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-xl active:scale-95 pl-1"
             >
               {isPlaying ? (
-                <Pause className="w-10 h-10 text-foreground" fill="currentColor" />
+                <Pause className="w-10 h-10 text-foreground -ml-1" fill="currentColor" />
               ) : (
-                <Play className="w-10 h-10 text-foreground ml-1" fill="currentColor" />
+                <Play className="w-10 h-10 text-foreground" fill="currentColor" />
               )}
             </button>
           </div>
@@ -100,12 +100,12 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           </button>
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95"
+            className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95 pl-0.5"
           >
             {isPlaying ? (
-              <Pause className="w-6 h-6 text-primary-foreground" fill="currentColor" />
+              <Pause className="w-6 h-6 text-primary-foreground -ml-0.5" fill="currentColor" />
             ) : (
-              <Play className="w-6 h-6 text-primary-foreground ml-0.5" fill="currentColor" />
+              <Play className="w-6 h-6 text-primary-foreground" fill="currentColor" />
             )}
           </button>
           <button className="p-2 active:scale-95">
@@ -163,8 +163,8 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
                       />
                       <div className="absolute inset-0 bg-black/20" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                          <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+                        <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-0.5">
+                          <Play className="w-4 h-4 text-foreground" fill="currentColor" />
                         </div>
                       </div>
                       <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
