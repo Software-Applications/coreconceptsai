@@ -63,7 +63,7 @@ const Index = () => {
         <div className="mb-3">
           <h2 className="text-lg font-bold text-foreground">Textbook</h2>
         </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
           </div>

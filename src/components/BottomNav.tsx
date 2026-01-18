@@ -14,7 +14,7 @@ const navItems = [
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
-    <nav className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0">
+    <nav className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex justify-around items-center">
         {navItems.map((item) => (
           <button
