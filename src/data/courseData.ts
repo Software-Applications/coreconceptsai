@@ -85,7 +85,7 @@ export const videoTiles: VideoTile[] = [
 
 export const practiceTiles: PracticeTile[] = [
   { id: 1, title: "Cell Structure Quiz", questions: 15, difficulty: "Easy", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1518152006812-edab29b069ac?w=400&h=300&fit=crop" },
-  { id: 2, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-slate-800", imageUrl: "https://images.unsplash.com/photo-1549287195-b1fcde2dd9d6?w=400&h=300&fit=crop" },
+  { id: 2, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-slate-800", imageUrl: "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=300&fit=crop" },
   { id: 3, title: "Virology Concepts", questions: 12, difficulty: "Hard", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=400&h=300&fit=crop" },
   { id: 4, title: "Antibiotic Mechanisms", questions: 18, difficulty: "Medium", color: "bg-slate-800", imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=300&fit=crop" },
   { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=400&h=300&fit=crop" },
