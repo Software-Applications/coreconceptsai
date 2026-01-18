@@ -23,7 +23,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         </div>
       </div>
       <div className="flex items-start gap-2 mt-2">
-        <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
+        <div className="w-7 h-7 bg-slate-500 rounded-full flex-shrink-0" />
         <div className="min-w-0">
           <p className="font-medium text-foreground text-xs leading-tight">{video.title}</p>
           <p className="text-muted-foreground text-xs">By {video.author}</p>
