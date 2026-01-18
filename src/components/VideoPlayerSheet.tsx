@@ -1,5 +1,7 @@
-import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
-import { useState } from "react"; import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import { useVideoProgress } from "@/hooks/useVideoProgress";
 
 interface Video {
   id: number;
@@ -20,11 +22,30 @@ interface VideoPlayerSheetProps {
 
 export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); const contentRef = useDragScroll<HTMLDivElement>(); const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
+  const [progress, setProgress] = useState(0);
+  const contentRef = useDragScroll<HTMLDivElement>();
+  const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
+  const { updateProgress, getWatchPercentage, isCompleted } = useVideoProgress();
 
-  if (!isOpen || !video) return null;
+  // Load saved progress when video changes
+  useEffect(() => {
+    if (video && chapter) {
+      const savedProgress = getWatchPercentage(video.id, chapter.id);
+      setProgress(savedProgress);
+    }
+  }, [video?.id, chapter?.id]);
+
+  // Save progress when it changes
+  useEffect(() => {
+    if (video && chapter && progress > 0) {
+      updateProgress(video.id, chapter.id, progress);
+    }
+  }, [progress, video?.id, chapter?.id]);
+
+  if (!isOpen || !video || !chapter) return null;
 
   const upNextVideos = videos.filter(v => v.id !== video.id);
+  const videoCompleted = isCompleted(video.id, chapter.id);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -39,7 +60,10 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           </h2>
           <p className="text-xs text-muted-foreground">Now Playing</p>
         </div>
-        <div className="w-10" />
+        {videoCompleted && (
+          <CheckCircle2 className="w-5 h-5 text-green-500" />
+        )}
+        {!videoCompleted && <div className="w-5" />}
       </div>
 
       {/* Scrollable Content */}
@@ -58,12 +82,30 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
               )}
             </button>
           </div>
+          {/* Progress indicator overlay */}
+          {progress > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+              <div 
+                className="h-full bg-primary"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Video Info */}
         <div className="px-4 py-4">
-          <h1 className="text-xl font-bold text-foreground mb-1">{video.title}</h1>
-          <p className="text-muted-foreground text-sm">By {video.author}</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-foreground mb-1">{video.title}</h1>
+              <p className="text-muted-foreground text-sm">By {video.author}</p>
+            </div>
+            {videoCompleted && (
+              <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
+                Completed
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -85,7 +127,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>0:00</span>
+            <span>{Math.round(progress)}% watched</span>
             <span>{video.duration}</span>
           </div>
         </div>
@@ -134,30 +176,50 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
             <h3 className="font-semibold text-foreground text-sm mb-3 px-4">Up Next</h3>
             <div className="px-4">
               <div ref={upNextRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x">
-                {upNextVideos.map((nextVideo) => (
-                  <div 
-                    key={nextVideo.id}
-                    onClick={() => {
-                      setProgress(0);
-                      setIsPlaying(false);
-                      onVideoSelect(nextVideo);
-                    }}
-                    className="flex-shrink-0 w-36 text-left cursor-pointer active:scale-[0.98] transition-transform"
-                  >
-                    <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                          <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+                {upNextVideos.map((nextVideo) => {
+                  const nextVideoProgress = getWatchPercentage(nextVideo.id, chapter.id);
+                  const nextVideoCompleted = isCompleted(nextVideo.id, chapter.id);
+                  
+                  return (
+                    <div 
+                      key={nextVideo.id}
+                      onClick={() => {
+                        setProgress(getWatchPercentage(nextVideo.id, chapter.id));
+                        setIsPlaying(false);
+                        onVideoSelect(nextVideo);
+                      }}
+                      className="flex-shrink-0 w-36 text-left cursor-pointer active:scale-[0.98] transition-transform"
+                    >
+                      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          {nextVideoCompleted ? (
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                              <CheckCircle2 className="w-5 h-5 text-white" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                              <Play className="w-4 h-4 text-foreground ml-0.5" fill="currentColor" />
+                            </div>
+                          )}
                         </div>
+                        <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                          {nextVideo.duration}
+                        </div>
+                        {/* Progress bar */}
+                        {nextVideoProgress > 0 && !nextVideoCompleted && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+                            <div 
+                              className="h-full bg-primary"
+                              style={{ width: `${nextVideoProgress}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                        {nextVideo.duration}
-                      </div>
+                      <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
+                      <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
                     </div>
-                    <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
-                    <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
