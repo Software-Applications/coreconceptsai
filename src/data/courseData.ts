@@ -6,6 +6,7 @@ export interface Subject {
 
 export interface VideoTile {
   id: number;
+  subjectId: number;
   title: string;
   author: string;
   duration: string;
@@ -14,6 +15,7 @@ export interface VideoTile {
 
 export interface PracticeTile {
   id: number;
+  subjectId: number;
   title: string;
   questions: number;
   difficulty: string;
@@ -32,19 +34,33 @@ export const subjects: Subject[] = [
 ];
 
 export const videoTiles: VideoTile[] = [
-  { id: 1, title: "Introduction to Microbiology", author: "Jason Amores", duration: "12:34", gradient: "from-purple-400 to-pink-300" },
-  { id: 2, title: "Gram Staining Techniques", author: "Dr. Emily Park", duration: "08:22", gradient: "from-blue-400 to-cyan-300" },
-  { id: 3, title: "Antibiotic Resistance", author: "Dr. Lisa Wong", duration: "15:47", gradient: "from-green-400 to-teal-300" },
-  { id: 4, title: "Immune System Response", author: "Dr. Rachel Kim", duration: "11:05", gradient: "from-orange-400 to-amber-300" },
-  { id: 5, title: "Bacterial Growth Phases", author: "Dr. Mike Chen", duration: "09:18", gradient: "from-indigo-400 to-purple-300" },
+  // Microbiology (subjectId: 1)
+  { id: 1, subjectId: 1, title: "Introduction to Microbiology", author: "Jason Amores", duration: "12:34", gradient: "from-purple-400 to-pink-300" },
+  { id: 2, subjectId: 1, title: "Gram Staining Techniques", author: "Dr. Emily Park", duration: "08:22", gradient: "from-purple-500 to-violet-300" },
+  { id: 3, subjectId: 1, title: "Bacterial Growth Phases", author: "Dr. Mike Chen", duration: "09:18", gradient: "from-indigo-400 to-purple-300" },
+  // Chemistry (subjectId: 2)
+  { id: 4, subjectId: 2, title: "Chemical Bonding Basics", author: "Dr. Sarah Lee", duration: "14:22", gradient: "from-blue-400 to-cyan-300" },
+  { id: 5, subjectId: 2, title: "Organic Chemistry Intro", author: "Dr. James Wilson", duration: "11:45", gradient: "from-sky-400 to-blue-300" },
+  { id: 6, subjectId: 2, title: "Acid-Base Reactions", author: "Dr. Maria Garcia", duration: "10:30", gradient: "from-cyan-400 to-teal-300" },
+  // Biology (subjectId: 3)
+  { id: 7, subjectId: 3, title: "Cell Structure Overview", author: "Dr. Lisa Wong", duration: "15:47", gradient: "from-green-400 to-teal-300" },
+  { id: 8, subjectId: 3, title: "Immune System Response", author: "Dr. Rachel Kim", duration: "11:05", gradient: "from-emerald-400 to-green-300" },
+  { id: 9, subjectId: 3, title: "DNA Replication", author: "Dr. Tom Brown", duration: "13:20", gradient: "from-lime-400 to-emerald-300" },
 ];
 
 export const practiceTiles: PracticeTile[] = [
-  { id: 1, title: "Cell Structure Quiz", questions: 15, difficulty: "Easy", color: "bg-emerald-500" },
-  { id: 2, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-amber-500" },
-  { id: 3, title: "Virology Concepts", questions: 12, difficulty: "Hard", color: "bg-rose-500" },
-  { id: 4, title: "Antibiotic Mechanisms", questions: 18, difficulty: "Medium", color: "bg-blue-500" },
-  { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-violet-500" },
+  // Microbiology (subjectId: 1)
+  { id: 1, subjectId: 1, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-purple-500" },
+  { id: 2, subjectId: 1, title: "Virology Concepts", questions: 12, difficulty: "Hard", color: "bg-violet-500" },
+  { id: 3, subjectId: 1, title: "Microbial Growth", questions: 15, difficulty: "Easy", color: "bg-indigo-500" },
+  // Chemistry (subjectId: 2)
+  { id: 4, subjectId: 2, title: "Chemical Equations", questions: 18, difficulty: "Medium", color: "bg-blue-500" },
+  { id: 5, subjectId: 2, title: "Periodic Table Quiz", questions: 25, difficulty: "Easy", color: "bg-cyan-500" },
+  { id: 6, subjectId: 2, title: "Organic Reactions", questions: 15, difficulty: "Hard", color: "bg-sky-500" },
+  // Biology (subjectId: 3)
+  { id: 7, subjectId: 3, title: "Cell Structure Quiz", questions: 15, difficulty: "Easy", color: "bg-emerald-500" },
+  { id: 8, subjectId: 3, title: "Genetics Fundamentals", questions: 20, difficulty: "Medium", color: "bg-green-500" },
+  { id: 9, subjectId: 3, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-teal-500" },
 ];
 
 export const chapters: Chapter[] = [
