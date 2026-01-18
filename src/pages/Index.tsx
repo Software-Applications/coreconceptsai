@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Play, Home, BookOpen, Video, Briefcase, User, ChevronDown, HelpCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Plus, Play, Home, BookOpen, Video, Briefcase, User, ChevronDown, HelpCircle, Check } from "lucide-react";
 
 const subjects = [
   { id: 1, name: "Microbiology", color: "bg-purple-600" },
@@ -23,8 +23,33 @@ const practiceTiles = [
   { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-violet-500" },
 ];
 
+const chapters = [
+  { id: 1, title: "Ch. 1 - Introduction to Microbiology" },
+  { id: 2, title: "Ch. 2 - Cell Structure and Function" },
+  { id: 3, title: "Ch. 3 - Bacterial Genetics" },
+  { id: 4, title: "Ch. 4 - Microbial Metabolism" },
+  { id: 5, title: "Ch. 5 - Microbial Growth" },
+  { id: 6, title: "Ch. 6 - Viruses and Prions" },
+  { id: 7, title: "Ch. 7 - Control of Microbial Growth" },
+  { id: 8, title: "Ch. 8 - Antimicrobial Drugs" },
+];
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const [selectedChapter, setSelectedChapter] = useState(chapters[0]);
+  const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsChapterDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
@@ -79,12 +104,40 @@ const Index = () => {
         </div>
         
         {/* Chapter/Topic Selector */}
-        <button className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground">Ch. 1 - Introduction to Microbiology</span>
-          </div>
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <div className="relative mb-5" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsChapterDropdownOpen(!isChapterDropdownOpen)}
+            className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between"
+          >
+            <span className="font-medium text-foreground">{selectedChapter.title}</span>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isChapterDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {isChapterDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+              <ul className="py-1 max-h-64 overflow-y-auto">
+                {chapters.map((chapter) => (
+                  <li key={chapter.id}>
+                    <button
+                      onClick={() => {
+                        setSelectedChapter(chapter);
+                        setIsChapterDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left flex items-center justify-between hover:bg-accent transition-colors ${
+                        selectedChapter.id === chapter.id ? 'bg-accent' : ''
+                      }`}
+                    >
+                      <span className="font-medium text-foreground text-sm">{chapter.title}</span>
+                      {selectedChapter.id === chapter.id && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
         {/* Videos Section */}
         <div className="mb-5">
