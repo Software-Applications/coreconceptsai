@@ -263,6 +263,7 @@ const Index = () => {
       {/* Practice Quiz Sheet */}
       <PracticeQuizSheet 
         quiz={selectedQuiz}
+        chapter={selectedChapter}
         isOpen={!!selectedQuiz}
         onClose={() => setSelectedQuiz(null)}
       />
