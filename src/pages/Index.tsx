@@ -11,6 +11,7 @@ import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type Pra
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
   const [selectedChapter, setSelectedChapter] = useState(chapters[0]);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
@@ -37,14 +38,21 @@ const Index = () => {
           {subjects.map((subject) => (
             <button
               key={subject.id}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card hover:bg-accent transition-colors"
+              onClick={() => setSelectedSubject(subject)}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
+                selectedSubject.id === subject.id
+                  ? `${subject.color} border-transparent`
+                  : 'border-border bg-card hover:bg-accent'
+              }`}
             >
-              <div className={`w-8 h-8 ${subject.color} rounded-lg flex items-center justify-center`}>
+              <div className={`w-8 h-8 ${selectedSubject.id === subject.id ? 'bg-white/20' : subject.color} rounded-lg flex items-center justify-center`}>
                 <span className="text-white text-xs font-bold">
                   {subject.name.charAt(0)}
                 </span>
               </div>
-              <span className="text-sm font-medium text-foreground">{subject.name}</span>
+              <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-white' : 'text-foreground'}`}>
+                {subject.name}
+              </span>
             </button>
           ))}
         </div>
