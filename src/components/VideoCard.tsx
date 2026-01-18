@@ -1,5 +1,7 @@
 import { Play } from "lucide-react";
+import { motion } from "framer-motion";
 import type { VideoTile } from "@/data/courseData";
+import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
 
 interface VideoCardProps {
   video: VideoTile;
@@ -8,11 +10,14 @@ interface VideoCardProps {
 
 export function VideoCard({ video, onClick }: VideoCardProps) {
   return (
-    <button 
-      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-all"
+    <motion.button 
+      className="flex-shrink-0 w-44 text-left"
       onClick={onClick}
+      whileHover={cardHover}
+      whileTap={cardTap}
+      transition={springTransition}
     >
-      <div className="relative rounded-xl overflow-hidden h-28 shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative rounded-xl overflow-hidden h-28 shadow-sm">
         <img 
           src={video.thumbnail} 
           alt={video.title}
@@ -20,9 +25,13 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         />
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1">
+          <motion.div 
+            className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1"
+            whileHover={{ scale: 1.1 }}
+            transition={springTransition}
+          >
             <Play className="w-6 h-6 text-foreground" fill="currentColor" />
-          </div>
+          </motion.div>
         </div>
         <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
           {video.duration}
@@ -39,6 +48,6 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
           <p className="text-muted-foreground text-xs">By {video.author}</p>
         </div>
       </div>
-    </button>
+    </motion.button>
   );
 }

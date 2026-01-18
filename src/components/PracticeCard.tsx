@@ -1,4 +1,6 @@
+import { motion } from "framer-motion";
 import type { PracticeTile } from "@/data/courseData";
+import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
 
 interface PracticeCardProps {
   practice: PracticeTile;
@@ -9,11 +11,14 @@ export function PracticeCard({ practice, onClick }: PracticeCardProps) {
   const estimatedTime = Math.ceil(practice.questions * 1.5);
 
   return (
-    <button 
-      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-all"
+    <motion.button 
+      className="flex-shrink-0 w-44 text-left"
       onClick={onClick}
+      whileHover={cardHover}
+      whileTap={cardTap}
+      transition={springTransition}
     >
-      <div className="relative rounded-xl overflow-hidden h-28 shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative rounded-xl overflow-hidden h-28 shadow-sm">
         <img 
           src={practice.imageUrl} 
           alt={practice.title}
@@ -36,6 +41,6 @@ export function PracticeCard({ practice, onClick }: PracticeCardProps) {
         <p className="font-medium text-foreground text-xs">Start quiz</p>
         <p className="text-muted-foreground text-xs">~{estimatedTime} min</p>
       </div>
-    </button>
+    </motion.button>
   );
 }
