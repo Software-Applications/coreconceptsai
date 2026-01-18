@@ -41,16 +41,16 @@ const Index = () => {
               onClick={() => setSelectedSubject(subject)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${
                 selectedSubject.id === subject.id
-                  ? `${subject.color} border-transparent`
+                  ? 'border-primary bg-card'
                   : 'border-border bg-card hover:bg-accent'
               }`}
             >
-              <div className={`w-8 h-8 ${selectedSubject.id === subject.id ? 'bg-white/20' : subject.color} rounded-lg flex items-center justify-center`}>
+              <div className={`w-8 h-8 ${subject.color} rounded-lg flex items-center justify-center`}>
                 <span className="text-white text-xs font-bold">
                   {subject.name.charAt(0)}
                 </span>
               </div>
-              <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-white' : 'text-foreground'}`}>
+              <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-primary' : 'text-foreground'}`}>
                 {subject.name}
               </span>
             </button>
