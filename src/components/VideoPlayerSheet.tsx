@@ -1,26 +1,22 @@
 import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
-import { useState } from "react"; import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
-
-interface Video {
-  id: number;
-  title: string;
-  author: string;
-  duration: string;
-  gradient: string;
-}
+import { useState } from "react";
+import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import type { VideoTile, Chapter } from "@/data/courseData";
 
 interface VideoPlayerSheetProps {
-  video: Video | null;
-  videos: Video[];
-  chapter: { id: number; title: string } | null;
+  video: VideoTile | null;
+  videos: VideoTile[];
+  chapter: Chapter | null;
   isOpen: boolean;
   onClose: () => void;
-  onVideoSelect: (video: Video) => void;
+  onVideoSelect: (video: VideoTile) => void;
 }
 
 export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); const contentRef = useDragScroll<HTMLDivElement>(); const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
+  const [progress, setProgress] = useState(0);
+  const contentRef = useDragScroll<HTMLDivElement>();
+  const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
 
   if (!isOpen || !video) return null;
 
