@@ -8,11 +8,12 @@ interface PracticeQuizSheetProps {
     difficulty: string;
     color: string;
   } | null;
+  chapter: { id: number; title: string } | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function PracticeQuizSheet({ quiz, isOpen, onClose }: PracticeQuizSheetProps) {
+export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQuizSheetProps) {
   if (!isOpen || !quiz) return null;
 
   const estimatedTime = Math.ceil(quiz.questions * 1.5);
@@ -30,9 +31,12 @@ export function PracticeQuizSheet({ quiz, isOpen, onClose }: PracticeQuizSheetPr
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
-        <h2 className="font-semibold text-foreground text-sm truncate flex-1 mx-4 text-center">
-          Practice Set
-        </h2>
+        <div className="flex-1 mx-4 text-center">
+          <h2 className="font-semibold text-foreground text-sm truncate">
+            {chapter?.title || "Practice Set"}
+          </h2>
+          <p className="text-xs text-muted-foreground">Practice Set</p>
+        </div>
         <div className="w-10" />
       </div>
 
