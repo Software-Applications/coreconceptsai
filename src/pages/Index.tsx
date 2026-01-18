@@ -65,21 +65,21 @@ const Index = () => {
   return (
     <div className="h-screen bg-background flex flex-col w-full safe-area-inset overflow-hidden">
       {/* Header */}
-      <header className="px-4 pt-4 pb-2">
+      <header className="px-4 pt-6 pb-3">
         <h1 className="text-2xl font-bold text-foreground mt-4">Home</h1>
-        <div className="w-12 h-1 bg-primary mt-2 rounded-full" />
+        <div className="w-16 h-1 bg-gradient-to-r from-primary to-primary/60 mt-2 rounded-full" />
       </header>
 
       {/* Subject Chips */}
-      <section className="px-4 py-4">
-        <div ref={subjectsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+      <section className="bg-[hsl(var(--section-alt))] py-5 rounded-xl mx-2">
+        <div ref={subjectsScrollRef} className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+          <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-background">
             <Plus className="w-6 h-6 text-muted-foreground" />
           </button>
           {subjects.map((subject) => (
             <button
               key={subject.id}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card hover:bg-accent transition-colors"
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card hover:bg-accent transition-colors shadow-sm"
             >
               <div className={`w-8 h-8 ${subject.color} rounded-lg flex items-center justify-center`}>
                 <span className="text-white text-xs font-bold">
@@ -93,12 +93,13 @@ const Index = () => {
       </section>
 
       {/* Your eTextbook */}
-      <section className="px-4 py-2">
-        <div className="mb-3">
-          <h2 className="text-lg font-bold text-foreground">Textbook</h2>
+      <section className="px-4 py-5">
+        <div className="mb-4">
+          <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Your Study Material</span>
+          <h2 className="text-lg font-bold text-foreground border-l-4 border-primary pl-3 mt-2">Textbook</h2>
         </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
             <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
           </div>
           <div>
@@ -108,24 +109,25 @@ const Index = () => {
       </section>
 
       {/* Related Videos and Practice */}
-      <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
+      <section ref={mainScrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
         {/* Topic Header */}
-        <h2 className="text-lg font-bold text-foreground mb-3">{selectedChapter.title}</h2>
-        
-        <p className="text-sm text-muted-foreground mb-4">Related videos and practice</p>
+        <div className="px-4 pt-4 pb-3">
+          <h2 className="text-lg font-bold text-foreground border-l-4 border-primary pl-3">{selectedChapter.title}</h2>
+          <p className="text-sm text-muted-foreground mt-2 pl-4">Related videos and practice</p>
+        </div>
         
         {/* Chapter/Topic Selector */}
-        <div className="relative mb-5" ref={dropdownRef}>
+        <div className="relative px-4 mb-6" ref={dropdownRef}>
           <button 
             onClick={() => setIsChapterDropdownOpen(!isChapterDropdownOpen)}
-            className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between"
+            className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm"
           >
             <span className="text-sm font-medium text-foreground">{selectedChapter.title}</span>
             <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isChapterDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
           {isChapterDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+            <div className="absolute top-full left-4 right-4 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
               <ul className="py-1 max-h-64 overflow-y-auto">
                 {chapters.map((chapter) => (
                   <li key={chapter.id}>
@@ -151,13 +153,15 @@ const Index = () => {
         </div>
 
         {/* Videos Section */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Video className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-foreground text-sm">Videos</h3>
+        <div className="mb-8 py-5 bg-background">
+          <div className="flex items-center gap-2 mb-4 px-4">
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full">
+              <Video className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Videos</h3>
+            </div>
             <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
           </div>
-          <div className="-mx-4 px-4">
+          <div className="pl-4">
             <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {videoTiles.map((tile) => (
                 <button 
@@ -165,7 +169,7 @@ const Index = () => {
                   className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
                   onClick={() => setSelectedVideo(tile)}
                 >
-                  <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28`}>
+                  <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${tile.gradient} h-28 shadow-md`}>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                         <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
@@ -175,11 +179,11 @@ const Index = () => {
                       {tile.duration}
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 mt-2">
+                  <div className="flex items-start gap-2 mt-3">
                     <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium text-foreground text-xs leading-tight">{tile.title}</p>
-                      <p className="text-muted-foreground text-xs">By {tile.author}</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">By {tile.author}</p>
                     </div>
                   </div>
                 </button>
@@ -189,13 +193,15 @@ const Index = () => {
         </div>
 
         {/* Practice Questions Section */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <HelpCircle className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-foreground text-sm">Practice Sets</h3>
+        <div className="mb-6 py-5 bg-[hsl(var(--section-alt))] rounded-t-2xl">
+          <div className="flex items-center gap-2 mb-4 px-4">
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full">
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Practice Sets</h3>
+            </div>
             <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
           </div>
-          <div className="-mx-4 px-4">
+          <div className="pl-4">
             <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {practiceTiles.map((tile) => (
                 <button 
@@ -203,7 +209,7 @@ const Index = () => {
                   className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
                   onClick={() => setSelectedQuiz(tile)}
                 >
-                  <div className={`rounded-xl overflow-hidden ${tile.color} h-28 p-3 flex flex-col justify-between`}>
+                  <div className={`rounded-xl overflow-hidden ${tile.color} h-28 p-3 flex flex-col justify-between shadow-md`}>
                     <div>
                       <p className="text-white font-semibold text-sm leading-tight">{tile.title}</p>
                     </div>
@@ -214,9 +220,9 @@ const Index = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <p className="font-medium text-foreground text-xs">Start quiz</p>
-                    <p className="text-muted-foreground text-xs">~{Math.ceil(tile.questions * 1.5)} min</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">~{Math.ceil(tile.questions * 1.5)} min</p>
                   </div>
                 </button>
               ))}
@@ -226,7 +232,7 @@ const Index = () => {
       </section>
 
       {/* Bottom Navigation */}
-      <nav className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0">
+      <nav className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
         <div className="flex justify-around items-center">
           {[
             { id: "home", icon: Home, label: "Home" },

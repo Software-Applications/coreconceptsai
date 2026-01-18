@@ -50,7 +50,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-border bg-gradient-to-b from-[hsl(var(--section-alt))] to-transparent">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
@@ -94,8 +94,8 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
         </div>
 
         {/* Video Info */}
-        <div className="px-4 py-4">
-          <div className="flex items-start justify-between">
+        <div className="px-4 py-5">
+          <div className="flex items-start justify-between border-l-4 border-primary pl-4">
             <div>
               <h1 className="text-xl font-bold text-foreground mb-1">{video.title}</h1>
               <p className="text-muted-foreground text-sm">By {video.author}</p>
@@ -109,9 +109,9 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
         </div>
 
         {/* Progress Bar */}
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-5">
           <div className="relative">
-            <div className="h-1 bg-muted rounded-full overflow-hidden">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary rounded-full transition-all"
                 style={{ width: `${progress}%` }}
@@ -133,7 +133,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
         </div>
 
         {/* Playback Controls */}
-        <div className="flex items-center justify-center gap-8 py-4">
+        <div className="flex items-center justify-center gap-8 py-5">
           <button className="p-3 active:scale-95">
             <SkipBack className="w-8 h-8 text-foreground" />
           </button>
@@ -153,27 +153,37 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
         </div>
 
         {/* Volume */}
-        <div className="flex items-center gap-3 px-8 py-4">
+        <div className="flex items-center gap-3 px-8 py-5">
           <Volume2 className="w-5 h-5 text-muted-foreground" />
-          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
             <div className="h-full bg-muted-foreground/50 rounded-full w-3/4" />
           </div>
         </div>
 
         {/* Key Points */}
-        <div className="mx-4 mb-4 bg-card border border-border rounded-xl p-4">
-          <h3 className="font-semibold text-foreground text-sm mb-2">Key Points</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>• Core concepts and definitions</li>
-            <li>• Practical applications</li>
-            <li>• Common exam questions</li>
+        <div className="mx-4 mb-5 bg-gradient-to-br from-card to-[hsl(var(--section-alt))] border border-border rounded-xl p-5 shadow-sm">
+          <h3 className="font-semibold text-foreground text-sm mb-3 border-l-4 border-primary pl-3">Key Points</h3>
+          <ul className="space-y-2.5 text-sm text-muted-foreground pl-4">
+            <li className="flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+              Core concepts and definitions
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+              Practical applications
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+              Common exam questions
+            </li>
           </ul>
         </div>
 
         {/* Up Next */}
         {upNextVideos.length > 0 && (
-          <div className="py-4 border-t border-border">
-            <h3 className="font-semibold text-foreground text-sm mb-3 px-4">Up Next</h3>
+          <div className="py-5 bg-[hsl(var(--section-alt))] mt-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-4" />
+            <h3 className="font-semibold text-foreground text-sm mb-4 px-4 border-l-4 border-primary pl-3 ml-4">Up Next</h3>
             <div className="px-4">
               <div ref={upNextRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x">
                 {upNextVideos.map((nextVideo) => {
@@ -190,7 +200,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
                       }}
                       className="flex-shrink-0 w-36 text-left cursor-pointer active:scale-[0.98] transition-transform"
                     >
-                      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20`}>
+                      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${nextVideo.gradient} h-20 shadow-md`}>
                         <div className="absolute inset-0 flex items-center justify-center">
                           {nextVideoCompleted ? (
                             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
@@ -216,7 +226,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
                         )}
                       </div>
                       <p className="font-medium text-foreground text-xs leading-tight mt-2 line-clamp-2">{nextVideo.title}</p>
-                      <p className="text-muted-foreground text-xs">{nextVideo.author}</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">{nextVideo.author}</p>
                     </div>
                   );
                 })}
