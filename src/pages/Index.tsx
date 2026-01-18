@@ -95,7 +95,7 @@ const Index = () => {
       {/* Your eTextbook */}
       <section className="px-4 py-2">
         <div className="mb-3">
-          <h2 className="text-xl font-bold text-foreground">Your eTextbook</h2>
+          <h2 className="text-xl font-bold text-foreground">Textbook</h2>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
