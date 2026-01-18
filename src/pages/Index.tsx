@@ -254,6 +254,7 @@ const Index = () => {
       <VideoPlayerSheet 
         video={selectedVideo}
         videos={videoTiles}
+        chapter={selectedChapter}
         isOpen={!!selectedVideo}
         onClose={() => setSelectedVideo(null)}
         onVideoSelect={setSelectedVideo}
