@@ -30,7 +30,7 @@ export interface Chapter {
 }
 
 export const subjects: Subject[] = [
-  { id: 1, name: "Microbiology", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=100&h=100&fit=crop" },
+  { id: 1, name: "Microbiology", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=100&h=100&fit=crop" },
   { id: 2, name: "Chemistry", color: "bg-slate-600", imageUrl: "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?w=100&h=100&fit=crop" },
   { id: 3, name: "Biology", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=100&h=100&fit=crop" },
 ];
@@ -69,7 +69,7 @@ export const videoTiles: VideoTile[] = [
     author: "Dr. Rachel Kim", 
     duration: "11:05", 
     gradient: "from-slate-600 to-slate-500",
-    thumbnail: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=300&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=400&h=300&fit=crop",
     avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
   },
   { 
@@ -88,7 +88,7 @@ export const practiceTiles: PracticeTile[] = [
   { id: 2, title: "Bacterial Identification", questions: 20, difficulty: "Medium", color: "bg-slate-800", imageUrl: "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=300&fit=crop" },
   { id: 3, title: "Virology Concepts", questions: 12, difficulty: "Hard", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=400&h=300&fit=crop" },
   { id: 4, title: "Antibiotic Mechanisms", questions: 18, difficulty: "Medium", color: "bg-slate-800", imageUrl: "https://images.unsplash.com/photo-1579165466741-7f35e4755660?w=400&h=300&fit=crop" },
-  { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=300&fit=crop" },
+  { id: 5, title: "Immune Response", questions: 10, difficulty: "Easy", color: "bg-slate-700", imageUrl: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=400&h=300&fit=crop" },
 ];
 
 export const chapters: Chapter[] = [
