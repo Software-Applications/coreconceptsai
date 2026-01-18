@@ -50,20 +50,28 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         {/* Quiz Header Card */}
-        <div className={`${quiz.color} rounded-xl p-5 mb-6`}>
-          <h1 className="text-2xl font-bold text-white mb-2">{quiz.title}</h1>
-          <div className="flex items-center gap-4 text-white/80 text-sm">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>~{estimatedTime} min</span>
+        <div className="relative rounded-xl overflow-hidden mb-6">
+          <img 
+            src={quiz.imageUrl} 
+            alt={quiz.title}
+            className="w-full h-48 object-cover"
+          />
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 p-5 flex flex-col justify-end">
+            <h1 className="text-2xl font-bold text-white mb-2">{quiz.title}</h1>
+            <div className="flex items-center gap-4 text-white/80 text-sm">
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <span>~{estimatedTime} min</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <BarChart3 className="w-4 h-4" />
+                <span>{quiz.difficulty}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <BarChart3 className="w-4 h-4" />
-              <span>{quiz.difficulty}</span>
+            <div className="mt-3 bg-white/20 rounded-full px-3 py-1 inline-block w-fit">
+              <span className="text-white text-sm font-medium">{quiz.questions} questions</span>
             </div>
-          </div>
-          <div className="mt-4 bg-white/20 rounded-full px-3 py-1 inline-block">
-            <span className="text-white text-sm font-medium">{quiz.questions} questions</span>
           </div>
         </div>
 
