@@ -110,7 +110,7 @@ const Index = () => {
       {/* Related Videos and Practice */}
       <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
         <div className="mb-3">
-          <h2 className="text-xl font-bold text-foreground">Related videos and practice</h2>
+          <h2 className="text-lg font-semibold text-muted-foreground">Related videos and practice</h2>
         </div>
         
         {/* Chapter/Topic Selector */}
