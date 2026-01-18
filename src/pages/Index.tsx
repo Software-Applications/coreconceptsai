@@ -70,42 +70,43 @@ const Index = () => {
         </div>
 
         {/* Video Cards */}
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start">
           {/* Main Video Card */}
-          <div className="flex-shrink-0 w-72">
-            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-purple-400 to-pink-300 aspect-video">
+          <div className="flex-shrink-0 w-44">
+            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-purple-400 to-pink-300 h-28">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                  <Play className="w-8 h-8 text-foreground ml-1" fill="currentColor" />
+                <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                  <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
                 </div>
               </div>
               <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
                 00:00
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-8 h-8 bg-amber-600 rounded-full" />
-              <div>
-                <p className="font-medium text-foreground text-sm">Introduction to Microbiology Channel</p>
+            <div className="flex items-start gap-2 mt-2">
+              <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium text-foreground text-xs leading-tight">Introduction to Microbiology Channel</p>
                 <p className="text-muted-foreground text-xs">By Jason Amores</p>
               </div>
             </div>
           </div>
 
           {/* Secondary Card */}
-          <div className="flex-shrink-0 w-48">
-            <div className="rounded-xl overflow-hidden bg-card border border-border aspect-video p-2">
+          <div className="flex-shrink-0 w-44">
+            <div className="rounded-xl overflow-hidden bg-card border border-border h-28 p-2">
               <div className="text-xs">
-                <p className="font-bold text-primary mb-1">CONCEPT: INTRODUCTION</p>
+                <p className="font-bold text-primary mb-1 text-[10px]">CONCEPT: INTRODUCTION</p>
                 <p className="text-muted-foreground text-[10px]">• Microbiology: the study...</p>
                 <p className="text-muted-foreground text-[10px]">• Prefix "..."</p>
+                <p className="text-muted-foreground text-[10px]">• Microorganisms...</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-8 h-8 bg-amber-600 rounded-full" />
-              <div>
-                <p className="font-medium text-foreground text-sm truncate">Intro...</p>
-                <p className="text-muted-foreground text-xs">By J...</p>
+            <div className="flex items-start gap-2 mt-2">
+              <div className="w-7 h-7 bg-amber-600 rounded-full flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium text-foreground text-xs leading-tight">Intro to Microbiology</p>
+                <p className="text-muted-foreground text-xs">By Jason Amores</p>
               </div>
             </div>
           </div>
