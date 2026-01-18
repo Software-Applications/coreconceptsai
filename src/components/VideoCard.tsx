@@ -9,10 +9,10 @@ interface VideoCardProps {
 export function VideoCard({ video, onClick }: VideoCardProps) {
   return (
     <button 
-      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
+      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-all"
       onClick={onClick}
     >
-      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${video.gradient} h-28`}>
+      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${video.gradient} h-28 shadow-sm hover:shadow-md transition-shadow`}>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
             <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />

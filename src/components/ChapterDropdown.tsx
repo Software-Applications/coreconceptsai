@@ -26,7 +26,7 @@ export function ChapterDropdown({ chapters, selectedChapter, onSelectChapter }: 
     <div className="relative mb-5" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between"
+        className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
       >
         <span className="text-sm font-medium text-foreground">{selectedChapter.title}</span>
         <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
