@@ -1,4 +1,4 @@
-import { X, Play, Pause, SkipBack, SkipForward, Volume2, Expand } from "lucide-react";
+import { X, Play, Pause, SkipBack, SkipForward, Expand } from "lucide-react";
 import { useState } from "react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import type { VideoTile, Chapter } from "@/data/courseData";
@@ -111,14 +111,6 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           <button className="p-2 active:scale-95">
             <SkipForward className="w-6 h-6 text-foreground" />
           </button>
-        </div>
-
-        {/* Volume - Compact */}
-        <div className="flex items-center gap-3 px-8 py-2">
-          <Volume2 className="w-4 h-4 text-muted-foreground" />
-          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-muted-foreground/50 rounded-full w-3/4" />
-          </div>
         </div>
 
         {/* Key Points */}
