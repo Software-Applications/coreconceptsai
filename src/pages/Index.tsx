@@ -83,9 +83,8 @@ const Index = () => {
 
       {/* Your eTextbook */}
       <section className="px-4 py-2">
-        <div className="flex justify-between items-center mb-3">
+        <div className="mb-3">
           <h2 className="text-xl font-bold text-foreground">Your eTextbook</h2>
-          <button className="text-primary font-medium text-sm">Go to library</button>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
