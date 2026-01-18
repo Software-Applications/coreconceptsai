@@ -14,10 +14,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
       {/* Header */}
       <header className="px-4 pt-4 pb-2">
-        <div className="flex justify-end">
-          <button className="text-primary font-medium">Sign in</button>
-        </div>
-        <h1 className="text-3xl font-bold text-foreground mt-2">Home</h1>
+        <h1 className="text-3xl font-bold text-foreground mt-4">Home</h1>
         <div className="w-16 h-1 bg-primary mt-2 rounded-full" />
       </header>
 
