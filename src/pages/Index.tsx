@@ -41,12 +41,12 @@ const Index = () => {
               onClick={() => setSelectedSubject(subject)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 ease-out ${
                 selectedSubject.id === subject.id
-                  ? `${subject.color} border-transparent shadow-lg scale-[1.02]`
+                  ? 'bg-primary border-transparent shadow-lg scale-[1.02]'
                   : 'border-border bg-card hover:bg-accent hover:scale-[1.01]'
               }`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                selectedSubject.id === subject.id ? 'bg-white/20 scale-110' : subject.color
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${subject.color} ${
+                selectedSubject.id === subject.id ? 'scale-110' : ''
               }`}>
                 <span className="text-white text-xs font-bold">
                   {subject.name.charAt(0)}
