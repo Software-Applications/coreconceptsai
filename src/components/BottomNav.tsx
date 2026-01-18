@@ -20,7 +20,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors active:scale-95 ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all active:scale-[0.95] ${
               activeTab === item.id
                 ? "text-primary"
                 : "text-muted-foreground"

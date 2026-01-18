@@ -63,7 +63,7 @@ const Index = () => {
         <div className="mb-3">
           <h2 className="text-xl font-bold text-foreground">Textbook</h2>
         </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.99]">
+        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold text-center px-1">MICRO<br/>BIOLOGY</span>
           </div>
@@ -78,7 +78,7 @@ const Index = () => {
 
       {/* Related Videos and Practice */}
       <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
-        <h2 className="text-lg font-semibold text-muted-foreground mb-4">Related videos and practice</h2>
+        <h2 className="text-lg font-bold text-foreground mb-4">Related videos and practice</h2>
         
         <ChapterDropdown 
           chapters={chapters}

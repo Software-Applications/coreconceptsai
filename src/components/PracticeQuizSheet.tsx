@@ -50,7 +50,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         {/* Quiz Header Card */}
-        <div className={`${quiz.color} rounded-2xl p-5 mb-6`}>
+        <div className={`${quiz.color} rounded-xl p-5 mb-6`}>
           <h1 className="text-2xl font-bold text-white mb-2">{quiz.title}</h1>
           <div className="flex items-center gap-4 text-white/80 text-sm">
             <div className="flex items-center gap-1">
@@ -91,7 +91,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
           {topics.map((topic, index) => (
             <div 
               key={index}
-              className="bg-card border border-border rounded-xl p-4 flex items-center justify-between"
+              className="bg-card border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
             >
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${

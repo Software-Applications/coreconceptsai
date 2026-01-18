@@ -10,10 +10,10 @@ export function PracticeCard({ practice, onClick }: PracticeCardProps) {
 
   return (
     <button 
-      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-transform"
+      className="flex-shrink-0 w-44 text-left active:scale-[0.98] transition-all"
       onClick={onClick}
     >
-      <div className={`rounded-xl overflow-hidden ${practice.color} h-28 p-3 flex flex-col justify-between`}>
+      <div className={`rounded-xl overflow-hidden ${practice.color} h-28 p-3 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow`}>
         <div>
           <p className="text-white font-semibold text-sm leading-tight">{practice.title}</p>
         </div>
