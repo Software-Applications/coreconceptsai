@@ -61,7 +61,7 @@ const Index = () => {
       {/* Your eTextbook */}
       <section className="px-4 py-2">
         <div className="mb-3">
-          <h2 className="text-lg font-bold text-foreground">Textbook</h2>
+          <h2 className="text-xl font-bold text-foreground">Textbook</h2>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm">
           <div className="w-16 h-20 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -75,7 +75,7 @@ const Index = () => {
 
       {/* Related Videos and Practice */}
       <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
-        <h2 className="text-lg font-bold text-foreground mb-4">Related videos and practice</h2>
+        <h2 className="text-lg font-semibold text-muted-foreground mb-4">Related videos and practice</h2>
         
         <ChapterDropdown 
           chapters={chapters}
