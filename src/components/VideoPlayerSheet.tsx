@@ -1,4 +1,4 @@
-import { X, Play, Pause, SkipBack, SkipForward, Expand } from "lucide-react";
+import { X, Play, Pause, Expand } from "lucide-react";
 import { useState } from "react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import type { VideoTile, Chapter } from "@/data/courseData";
@@ -92,27 +92,6 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
             <span>{video.duration}</span>
           </div>
         </div>
-
-        {/* Compact Playback Controls */}
-        <div className="flex items-center justify-center gap-6 py-2">
-          <button className="p-2 active:scale-95">
-            <SkipBack className="w-6 h-6 text-foreground" />
-          </button>
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95 pl-0.5"
-          >
-            {isPlaying ? (
-              <Pause className="w-6 h-6 text-primary-foreground -ml-0.5" fill="currentColor" />
-            ) : (
-              <Play className="w-6 h-6 text-primary-foreground" fill="currentColor" />
-            )}
-          </button>
-          <button className="p-2 active:scale-95">
-            <SkipForward className="w-6 h-6 text-foreground" />
-          </button>
-        </div>
-
         {/* Key Points */}
         <div className={`mx-4 mb-4 bg-card border border-border rounded-xl p-4 transition-all min-h-[200px] ${isKeyPointsExpanded ? 'fixed inset-4 z-60 overflow-y-auto' : ''}`}>
           <div className="flex items-center justify-between mb-2">
