@@ -20,8 +20,8 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         />
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-            <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
+          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1">
+            <Play className="w-6 h-6 text-foreground" fill="currentColor" />
           </div>
         </div>
         <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
