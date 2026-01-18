@@ -1,4 +1,4 @@
-import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, Expand } from "lucide-react";
 import { useState } from "react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import type { VideoTile, Chapter } from "@/data/courseData";
@@ -15,6 +15,7 @@ interface VideoPlayerSheetProps {
 export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isKeyPointsExpanded, setIsKeyPointsExpanded] = useState(false);
   const contentRef = useDragScroll<HTMLDivElement>();
   const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
 
@@ -92,41 +93,57 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           </div>
         </div>
 
-        {/* Playback Controls */}
-        <div className="flex items-center justify-center gap-8 py-4">
-          <button className="p-3 active:scale-95">
-            <SkipBack className="w-8 h-8 text-foreground" />
+        {/* Compact Playback Controls */}
+        <div className="flex items-center justify-center gap-6 py-2">
+          <button className="p-2 active:scale-95">
+            <SkipBack className="w-6 h-6 text-foreground" />
           </button>
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95"
+            className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95"
           >
             {isPlaying ? (
-              <Pause className="w-8 h-8 text-primary-foreground" fill="currentColor" />
+              <Pause className="w-6 h-6 text-primary-foreground" fill="currentColor" />
             ) : (
-              <Play className="w-8 h-8 text-primary-foreground ml-1" fill="currentColor" />
+              <Play className="w-6 h-6 text-primary-foreground ml-0.5" fill="currentColor" />
             )}
           </button>
-          <button className="p-3 active:scale-95">
-            <SkipForward className="w-8 h-8 text-foreground" />
+          <button className="p-2 active:scale-95">
+            <SkipForward className="w-6 h-6 text-foreground" />
           </button>
         </div>
 
-        {/* Volume */}
-        <div className="flex items-center gap-3 px-8 py-4">
-          <Volume2 className="w-5 h-5 text-muted-foreground" />
+        {/* Volume - Compact */}
+        <div className="flex items-center gap-3 px-8 py-2">
+          <Volume2 className="w-4 h-4 text-muted-foreground" />
           <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
             <div className="h-full bg-muted-foreground/50 rounded-full w-3/4" />
           </div>
         </div>
 
         {/* Key Points */}
-        <div className="mx-4 mb-4 bg-card border border-border rounded-xl p-4">
-          <h3 className="font-semibold text-foreground text-sm mb-2">Key Points</h3>
+        <div className={`mx-4 mb-4 bg-card border border-border rounded-xl p-4 transition-all ${isKeyPointsExpanded ? 'fixed inset-4 z-60 overflow-y-auto' : ''}`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-foreground text-sm">Key Points</h3>
+            <button 
+              onClick={() => setIsKeyPointsExpanded(!isKeyPointsExpanded)}
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors active:scale-95"
+            >
+              <Expand className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>• Core concepts and definitions</li>
             <li>• Practical applications</li>
             <li>• Common exam questions</li>
+            {isKeyPointsExpanded && (
+              <>
+                <li>• Key terminology and vocabulary</li>
+                <li>• Important diagrams and visuals</li>
+                <li>• Study tips and mnemonics</li>
+                <li>• Related topics to explore</li>
+              </>
+            )}
           </ul>
         </div>
 
