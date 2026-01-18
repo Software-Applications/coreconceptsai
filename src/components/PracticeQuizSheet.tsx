@@ -1,15 +1,10 @@
 import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuizProgress } from "@/hooks/useQuizProgress";
+import type { PracticeTile, Chapter } from "@/data/courseData";
 
 interface PracticeQuizSheetProps {
-  quiz: {
-    id: number;
-    title: string;
-    questions: number;
-    difficulty: string;
-    color: string;
-  } | null;
-  chapter: { id: number; title: string } | null;
+  quiz: PracticeTile | null;
+  chapter: Chapter | null;
   isOpen: boolean;
   onClose: () => void;
 }
