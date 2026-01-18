@@ -93,7 +93,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           </div>
         </div>
         {/* Key Points */}
-        <div className={`mx-4 mb-4 bg-card border border-border rounded-xl p-4 transition-all min-h-[200px] ${isKeyPointsExpanded ? 'fixed inset-4 z-60 overflow-y-auto' : ''}`}>
+        <div className={`mx-4 mb-4 bg-card border border-border rounded-xl p-4 transition-all min-h-[320px] ${isKeyPointsExpanded ? 'fixed inset-4 z-60 overflow-y-auto' : ''}`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-foreground text-sm">Key Points</h3>
             <button 
