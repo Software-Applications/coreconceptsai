@@ -252,8 +252,10 @@ const Index = () => {
       {/* Video Player Sheet */}
       <VideoPlayerSheet 
         video={selectedVideo}
+        videos={videoTiles}
         isOpen={!!selectedVideo}
         onClose={() => setSelectedVideo(null)}
+        onVideoSelect={setSelectedVideo}
       />
 
       {/* Practice Quiz Sheet */}
