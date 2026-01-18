@@ -177,7 +177,7 @@ const Index = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <HelpCircle className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-foreground text-sm">Practice Questions</h3>
+            <h3 className="font-semibold text-foreground text-sm">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
