@@ -32,6 +32,8 @@ const Index = () => {
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
   const subjectVideos = videoTiles.filter(v => v.subjectId === selectedSubject.id);
   const subjectPractice = practiceTiles.filter(p => p.subjectId === selectedSubject.id);
+  const subjectTopics = dailyDownloadTopics.filter(t => t.subjectId === selectedSubject.id);
+  const subjectPinnedCards = pinnedCards.filter(c => c.subjectName === selectedSubject.name);
   
   const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
   
@@ -119,14 +121,14 @@ const Index = () => {
       </section>
 
       {/* My Pinned Cards Section */}
-      {getPinnedCount() > 0 && (
+      {subjectPinnedCards.length > 0 && (
         <section className="px-4 py-2 pb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bookmark className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-medium text-foreground">My Pinned Cards</h3>
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {getPinnedCount()}
+                {subjectPinnedCards.length}
               </span>
             </div>
             <button 
@@ -139,7 +141,7 @@ const Index = () => {
           </div>
           <div className="-mx-4 px-4 -my-2 py-2">
             <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto overflow-y-visible py-2 pl-2 scrollbar-hide pr-4 snap-x snap-mandatory">
-              {pinnedCards.slice(0, 5).map((card) => (
+              {subjectPinnedCards.slice(0, 5).map((card) => (
                 <PinnedCardPreview
                   key={card.id}
                   card={card}
@@ -233,7 +235,7 @@ const Index = () => {
       <TopicSelectionSheet
         isOpen={showTopicSelection}
         onClose={() => setShowTopicSelection(false)}
-        topics={dailyDownloadTopics}
+        topics={subjectTopics}
         subjects={subjects}
         onSelectTopic={handleSelectTopic}
       />
