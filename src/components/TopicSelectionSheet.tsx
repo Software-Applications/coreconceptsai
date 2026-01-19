@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Sparkles, CheckCircle, ChevronDown } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -27,12 +27,61 @@ export const TopicSelectionSheet = ({
   const { lightTap, selectionChanged } = useHaptics();
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
 
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef({
+    isDown: false,
+    startY: 0,
+    scrollTop: 0,
+    didDrag: false,
+  });
+
+  const handleScrollMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    dragState.current.isDown = true;
+    dragState.current.startY = e.clientY;
+    dragState.current.scrollTop = el.scrollTop;
+    dragState.current.didDrag = false;
+
+    el.style.cursor = 'grabbing';
+  };
+
+  const handleScrollMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (!dragState.current.isDown) return;
+
+    const dy = e.clientY - dragState.current.startY;
+    if (Math.abs(dy) > 3) dragState.current.didDrag = true;
+
+    el.scrollTop = dragState.current.scrollTop - dy;
+    e.preventDefault();
+  };
+
+  const endDrag = () => {
+    const el = scrollContainerRef.current;
+    if (el) el.style.cursor = 'grab';
+
+    const hadDrag = dragState.current.didDrag;
+    dragState.current.isDown = false;
+
+    // Clear after click would fire, so dragging doesn't accidentally trigger selection.
+    if (hadDrag) {
+      window.setTimeout(() => {
+        dragState.current.didDrag = false;
+      }, 0);
+    }
+  };
+
   const handleSelectTopic = (topic: DailyDownloadTopic) => {
+    if (dragState.current.didDrag) return;
     selectionChanged();
     onSelectTopic(topic);
   };
 
   const toggleChapter = (chapterId: number) => {
+    if (dragState.current.didDrag) return;
     lightTap();
     setExpandedChapters(prev => {
       const next = new Set(prev);
@@ -71,10 +120,11 @@ export const TopicSelectionSheet = ({
   }, [topics]);
 
   // Expand first chapter by default when sheet opens
-  useMemo(() => {
+  useEffect(() => {
     if (isOpen && groupedTopics.length > 0 && expandedChapters.size === 0) {
       setExpandedChapters(new Set([groupedTopics[0].chapter.id]));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, groupedTopics]);
 
   return (
@@ -118,9 +168,15 @@ export const TopicSelectionSheet = ({
             </div>
 
             {/* Topics list grouped by chapter */}
-            <div 
-              className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none overscroll-contain"
+            <div
+              ref={scrollContainerRef}
+              className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none overscroll-contain cursor-grab"
               style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+              onMouseDown={handleScrollMouseDown}
+              onMouseMove={handleScrollMouseMove}
+              onMouseUp={endDrag}
+              onMouseLeave={endDrag}
+              onDragStart={(e) => e.preventDefault()}
             >
               <div className="space-y-3 pb-6">
                 {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
