@@ -13,6 +13,7 @@ import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
 import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
+import { useListenedTopics } from "@/hooks/useListenedTopics";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { dailyDownloadTopics, type DailyDownloadTopic } from "@/data/dailyDownloadData";
 
@@ -27,6 +28,7 @@ const Index = () => {
   const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
+  const { markAsListened, getUnlistenedCount } = useListenedTopics();
   
   // Filter content by selected subject
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
@@ -34,6 +36,7 @@ const Index = () => {
   const subjectPractice = practiceTiles.filter(p => p.subjectId === selectedSubject.id);
   const subjectTopics = dailyDownloadTopics.filter(t => t.subjectId === selectedSubject.id);
   const subjectPinnedCards = pinnedCards.filter(c => c.subjectName === selectedSubject.name);
+  const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   
   const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
   
@@ -210,7 +213,7 @@ const Index = () => {
       {/* Daily Download FAB */}
       <DailyDownloadFAB 
         onClick={() => setShowTopicSelection(true)}
-        hasPendingReviews={subjectPinnedCards.length > 0}
+        unlistenedCount={unlistenedCount}
       />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -246,6 +249,7 @@ const Index = () => {
         isOpen={!!selectedTopic}
         onClose={() => setSelectedTopic(null)}
         onPinCard={handlePinCard}
+        onTopicListened={markAsListened}
       />
 
       <ReviewBoard

@@ -16,6 +16,7 @@ interface DailyDownloadPlayerProps {
   isOpen: boolean;
   onClose: () => void;
   onPinCard: (topic: DailyDownloadTopic) => void;
+  onTopicListened?: (topicId: string) => void;
 }
 
 export const DailyDownloadPlayer = ({
@@ -23,7 +24,8 @@ export const DailyDownloadPlayer = ({
   subjectName,
   isOpen,
   onClose,
-  onPinCard
+  onPinCard,
+  onTopicListened
 }: DailyDownloadPlayerProps) => {
   const { lightTap, mediumTap, successNotification } = useHaptics();
   const [showFlashCard, setShowFlashCard] = useState(false);
@@ -51,6 +53,7 @@ export const DailyDownloadPlayer = ({
         const next = prev + (100 / 632) * playbackRate; // Simulate 10:32 duration
         if (next >= 100) {
           setShowFlashCard(true);
+          onTopicListened?.(topic.id);
           return 100;
         }
         return next;
@@ -58,7 +61,7 @@ export const DailyDownloadPlayer = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, playbackRate, topic]);
+  }, [isPlaying, playbackRate, topic, onTopicListened]);
 
   // Reset state when topic changes
   useEffect(() => {

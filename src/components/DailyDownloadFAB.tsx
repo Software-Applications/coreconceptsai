@@ -5,10 +5,10 @@ import { springTransition } from '@/lib/motionVariants';
 
 interface DailyDownloadFABProps {
   onClick: () => void;
-  hasPendingReviews?: boolean;
+  unlistenedCount?: number;
 }
 
-export const DailyDownloadFAB = ({ onClick, hasPendingReviews = false }: DailyDownloadFABProps) => {
+export const DailyDownloadFAB = ({ onClick, unlistenedCount = 0 }: DailyDownloadFABProps) => {
   const { mediumTap } = useHaptics();
 
   const handleClick = () => {
@@ -28,15 +28,15 @@ export const DailyDownloadFAB = ({ onClick, hasPendingReviews = false }: DailyDo
     >
       <Headphones className="w-6 h-6" />
       
-      {/* Notification badge */}
-      {hasPendingReviews && (
+      {/* Unlistened topics badge */}
+      {unlistenedCount > 0 && (
         <motion.div
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center"
+          className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={springTransition}
         >
-          !
+          {unlistenedCount}
         </motion.div>
       )}
     </motion.button>
