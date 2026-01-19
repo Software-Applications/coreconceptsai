@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Play, Pause, SkipBack, SkipForward, 
@@ -9,6 +9,7 @@ import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
+import { generateMockTranscript, type TranscriptSegment } from '@/data/dailyDownloadData';
 
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;
@@ -31,6 +32,11 @@ export const DailyDownloadPlayer = ({
   const [showFlashCard, setShowFlashCard] = useState(false);
   const [mockProgress, setMockProgress] = useState(0);
   
+  // Transcript scroll refs
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
+  const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0 });
+  
   const {
     isPlaying,
     progress,
@@ -43,6 +49,34 @@ export const DailyDownloadPlayer = ({
   } = useAudioPlayer(topic?.audioUrl || null, {
     onEnded: () => setShowFlashCard(true)
   });
+
+  // Generate transcript for current topic
+  const transcript = useMemo(() => {
+    if (!topic) return [];
+    return generateMockTranscript(topic);
+  }, [topic]);
+
+  // Calculate current time in seconds
+  const displayProgress = progress > 0 ? progress : mockProgress;
+  const currentSeconds = (displayProgress / 100) * 632;
+  const totalSeconds = 632;
+
+  // Find active transcript segment
+  const activeSegmentIndex = useMemo(() => {
+    return transcript.findIndex(
+      seg => currentSeconds >= seg.startTime && currentSeconds < seg.endTime
+    );
+  }, [transcript, currentSeconds]);
+
+  // Auto-scroll to active segment
+  useEffect(() => {
+    if (activeSegmentRef.current && transcriptRef.current) {
+      activeSegmentRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [activeSegmentIndex]);
 
   // Mock progress simulation for demo
   useEffect(() => {
@@ -68,6 +102,30 @@ export const DailyDownloadPlayer = ({
     setMockProgress(0);
     setShowFlashCard(false);
   }, [topic?.id]);
+
+  // Transcript drag handlers
+  const handleTranscriptMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    const el = transcriptRef.current;
+    if (!el) return;
+    dragState.current.isDown = true;
+    dragState.current.startY = e.clientY;
+    dragState.current.scrollTop = el.scrollTop;
+    el.style.cursor = 'grabbing';
+  };
+
+  const handleTranscriptMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = transcriptRef.current;
+    if (!el || !dragState.current.isDown) return;
+    const dy = e.clientY - dragState.current.startY;
+    el.scrollTop = dragState.current.scrollTop - dy;
+    e.preventDefault();
+  };
+
+  const handleTranscriptMouseUp = () => {
+    const el = transcriptRef.current;
+    if (el) el.style.cursor = 'grab';
+    dragState.current.isDown = false;
+  };
 
   const handlePlayPause = () => {
     mediumTap();
@@ -99,10 +157,6 @@ export const DailyDownloadPlayer = ({
       onClose();
     }
   };
-
-  const displayProgress = progress > 0 ? progress : mockProgress;
-  const currentSeconds = (displayProgress / 100) * 632;
-  const totalSeconds = 632;
 
   // Generate waveform bars
   const waveformBars = Array.from({ length: 40 }, (_, i) => ({
@@ -239,6 +293,47 @@ export const DailyDownloadPlayer = ({
                 >
                   <SkipForward className="w-6 h-6 text-muted-foreground" />
                 </button>
+              </div>
+            </div>
+
+            {/* Transcript section */}
+            <div className="w-full max-w-sm mt-6">
+              <p className="text-xs text-muted-foreground mb-2 text-center">Transcript</p>
+              <div
+                ref={transcriptRef}
+                className="h-40 overflow-y-auto scrollbar-none bg-muted/30 rounded-xl p-4 cursor-grab overscroll-contain"
+                style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                onMouseDown={handleTranscriptMouseDown}
+                onMouseMove={handleTranscriptMouseMove}
+                onMouseUp={handleTranscriptMouseUp}
+                onMouseLeave={handleTranscriptMouseUp}
+                onDragStart={(e) => e.preventDefault()}
+              >
+                <div className="space-y-3">
+                  {transcript.map((segment, index) => {
+                    const isActive = index === activeSegmentIndex;
+                    const isPast = index < activeSegmentIndex;
+                    
+                    return (
+                      <p
+                        key={segment.id}
+                        ref={isActive ? activeSegmentRef : null}
+                        className={`text-sm leading-relaxed transition-all duration-300 ${
+                          isActive 
+                            ? 'text-foreground font-medium' 
+                            : isPast 
+                              ? 'text-muted-foreground/60' 
+                              : 'text-muted-foreground/40'
+                        }`}
+                      >
+                        {isActive && (
+                          <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full mr-2 animate-pulse" />
+                        )}
+                        {segment.text}
+                      </p>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
