@@ -35,9 +35,12 @@ export const usePinnedCards = () => {
     topicTitle: string,
     subjectName: string
   ) => {
+    console.log('pinCard called with:', { flashSummary, topicTitle, subjectName });
+    
     setPinnedCards(prev => {
       // Check if already pinned
       if (prev.some(card => card.flashSummary.id === flashSummary.id)) {
+        console.log('Card already pinned, skipping');
         return prev;
       }
 
@@ -50,6 +53,7 @@ export const usePinnedCards = () => {
       };
 
       const updated = [newCard, ...prev];
+      console.log('Pinned card, new total:', updated.length);
       saveToStorage(updated);
       return updated;
     });
