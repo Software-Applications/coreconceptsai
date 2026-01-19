@@ -66,6 +66,7 @@ const Index = () => {
   const mainScrollRef = useDragScroll<HTMLElement>();
   const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
@@ -143,7 +144,7 @@ const Index = () => {
             </button>
           </div>
           <div className="-mx-4 px-4">
-            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
+            <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {subjectPinnedCards.slice(0, 5).map((card) => (
                 <PinnedCardPreview
                   key={card.id}
