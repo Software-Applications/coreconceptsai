@@ -34,267 +34,267 @@ export interface ActivePrompt {
 
 // Mock audio topics organized by subject
 export const dailyDownloadTopics: DailyDownloadTopic[] = [
-  // Physics topics (subjectId: 1)
+  // Microbiology topics (subjectId: 1) - chapters 1-8
   {
-    id: 'physics-newton-laws',
+    id: 'micro-intro',
     subjectId: 1,
     chapterId: 1,
-    title: "Newton's Three Laws of Motion",
-    description: "Master the fundamental principles that govern how objects move and interact with forces.",
+    title: "Introduction to Microbiology",
+    description: "Explore the microscopic world and learn about different types of microorganisms.",
     duration: "10:32",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-newton-laws',
-      topicId: 'physics-newton-laws',
-      visualType: 'formula',
-      visualContent: 'F = ma',
-      bulletPoints: [
-        "Objects stay still or keep moving unless a force acts on them (inertia)",
-        "The harder you push something, the faster it accelerates - but heavier things need more push",
-        "Every action has an equal and opposite reaction - like how rockets push gas down to go up"
-      ],
-      difficulty: 'medium'
-    }
-  },
-  {
-    id: 'physics-energy-conservation',
-    subjectId: 1,
-    chapterId: 2,
-    title: "Conservation of Energy",
-    description: "Understand how energy transforms but never disappears in closed systems.",
-    duration: "11:15",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-energy',
-      topicId: 'physics-energy-conservation',
+      id: 'fs-micro-intro',
+      topicId: 'micro-intro',
       visualType: 'diagram',
-      visualContent: '⚡ KE + PE = Constant',
+      visualContent: '🔬 Bacteria, Viruses, Fungi, Protozoa',
       bulletPoints: [
-        "Energy can't be created or destroyed - only converted from one form to another",
-        "A roller coaster trades height (potential energy) for speed (kinetic energy) as it drops",
-        "In real life, some energy always converts to heat due to friction"
-      ],
-      difficulty: 'medium'
-    }
-  },
-  {
-    id: 'physics-waves',
-    subjectId: 1,
-    chapterId: 3,
-    title: "Wave Properties & Behavior",
-    description: "Learn how waves carry energy through space and interact with matter.",
-    duration: "9:48",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-waves',
-      topicId: 'physics-waves',
-      visualType: 'analogy',
-      visualContent: '🌊 Waves = Energy Messengers',
-      bulletPoints: [
-        "Waves transfer energy without moving matter - like a stadium wave where people stay seated",
-        "Wavelength is the distance between peaks; frequency is how many peaks pass per second",
-        "When waves meet, they can add up (constructive) or cancel out (destructive)"
+        "Microorganisms are everywhere - in soil, water, air, and inside our bodies",
+        "Bacteria are single-celled organisms with no nucleus (prokaryotes)",
+        "Viruses are not truly alive - they need host cells to reproduce"
       ],
       difficulty: 'easy'
     }
   },
   {
-    id: 'physics-momentum',
+    id: 'micro-history',
     subjectId: 1,
     chapterId: 1,
-    title: "Momentum & Collisions",
-    description: "Explore how mass and velocity combine to create momentum in moving objects.",
-    duration: "8:45",
+    title: "History of Microbiology",
+    description: "From Leeuwenhoek to modern genetics - the journey of discovery.",
+    duration: "9:15",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-momentum',
-      topicId: 'physics-momentum',
-      visualType: 'formula',
-      visualContent: 'p = mv',
+      id: 'fs-micro-history',
+      topicId: 'micro-history',
+      visualType: 'analogy',
+      visualContent: '📜 Germ Theory Revolution',
       bulletPoints: [
-        "Momentum is mass times velocity - a truck moving slowly can have more momentum than a fast bicycle",
-        "In collisions, total momentum before equals total momentum after",
-        "Elastic collisions conserve kinetic energy; inelastic collisions don't"
+        "Leeuwenhoek first observed 'animalcules' with his handmade microscopes",
+        "Pasteur disproved spontaneous generation and developed pasteurization",
+        "Koch's postulates established how to prove a microbe causes disease"
       ],
-      difficulty: 'medium'
+      difficulty: 'easy'
     }
   },
   {
-    id: 'physics-gravity',
+    id: 'micro-cell-structure',
     subjectId: 1,
     chapterId: 2,
-    title: "Gravity & Free Fall",
-    description: "Understand the universal force that keeps planets in orbit and objects grounded.",
-    duration: "9:20",
+    title: "Bacterial Cell Structure",
+    description: "Learn the key components that make up bacterial cells.",
+    duration: "11:45",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-gravity',
-      topicId: 'physics-gravity',
-      visualType: 'formula',
-      visualContent: 'g = 9.8 m/s²',
-      bulletPoints: [
-        "All objects fall at the same rate regardless of mass (ignoring air resistance)",
-        "Gravity gets weaker with distance - it follows an inverse square law",
-        "Weight is the force of gravity on mass: W = mg"
-      ],
-      difficulty: 'easy'
-    }
-  },
-  {
-    id: 'physics-electricity',
-    subjectId: 1,
-    chapterId: 3,
-    title: "Electric Circuits Basics",
-    description: "Learn how current, voltage, and resistance work together in circuits.",
-    duration: "11:50",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-electricity',
-      topicId: 'physics-electricity',
-      visualType: 'formula',
-      visualContent: 'V = IR (Ohm\'s Law)',
-      bulletPoints: [
-        "Voltage is the push, current is the flow, resistance is the opposition",
-        "Series circuits have one path; parallel circuits have multiple paths",
-        "Power consumed = voltage × current (P = VI)"
-      ],
-      difficulty: 'medium'
-    }
-  },
-  {
-    id: 'physics-waves',
-    subjectId: 1,
-    chapterId: 3,
-    title: "Wave Properties & Behavior",
-    description: "Learn how waves carry energy through space and interact with matter.",
-    duration: "9:48",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-waves',
-      topicId: 'physics-waves',
-      visualType: 'analogy',
-      visualContent: '🌊 Waves = Energy Messengers',
-      bulletPoints: [
-        "Waves transfer energy without moving matter - like a stadium wave where people stay seated",
-        "Wavelength is the distance between peaks; frequency is how many peaks pass per second",
-        "When waves meet, they can add up (constructive) or cancel out (destructive)"
-      ],
-      difficulty: 'easy'
-    }
-  },
-
-  // Chemistry topics (subjectId: 2)
-  {
-    id: 'chem-periodic-trends',
-    subjectId: 2,
-    chapterId: 4,
-    title: "Periodic Table Trends",
-    description: "Discover the patterns that make the periodic table predictable and powerful.",
-    duration: "12:05",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-periodic',
-      topicId: 'chem-periodic-trends',
+      id: 'fs-cell-struct',
+      topicId: 'micro-cell-structure',
       visualType: 'diagram',
-      visualContent: '📊 ← Electronegativity increases →',
+      visualContent: '🦠 Cell Wall → Membrane → Cytoplasm',
       bulletPoints: [
-        "Moving right across a period: atoms get smaller and hold electrons tighter",
-        "Moving down a group: atoms get bigger and lose electrons more easily",
-        "These trends explain why metals are on the left and nonmetals on the right"
+        "The cell wall provides shape and protection - differs between gram+ and gram-",
+        "Flagella enable movement; pili help attach to surfaces and transfer DNA",
+        "Ribosomes are smaller (70S) than eukaryotic ones - key for antibiotic targeting"
       ],
       difficulty: 'medium'
     }
   },
   {
-    id: 'chem-bonding',
-    subjectId: 2,
-    chapterId: 5,
-    title: "Chemical Bonding Basics",
-    description: "Understand why atoms stick together and how different bonds form.",
-    duration: "10:55",
+    id: 'micro-gram-staining',
+    subjectId: 1,
+    chapterId: 2,
+    title: "Gram Staining Technique",
+    description: "Master the essential lab technique for classifying bacteria.",
+    duration: "8:30",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-bonding',
-      topicId: 'chem-bonding',
-      visualType: 'analogy',
-      visualContent: '🤝 Bonds = Atomic Relationships',
+      id: 'fs-gram-stain',
+      topicId: 'micro-gram-staining',
+      visualType: 'diagram',
+      visualContent: '🟣 Gram+ Purple | 🔴 Gram- Pink',
       bulletPoints: [
-        "Ionic bonds: one atom gives electrons to another (like a gift) - happens between metals and nonmetals",
-        "Covalent bonds: atoms share electrons equally (like roommates) - happens between nonmetals",
-        "The type of bond determines if a substance conducts electricity and its melting point"
+        "Crystal violet stains all cells purple initially",
+        "Alcohol decolorizes thin-walled Gram-negative cells",
+        "Safranin counterstain makes Gram-negative cells appear pink"
       ],
       difficulty: 'easy'
     }
   },
   {
-    id: 'chem-reactions',
-    subjectId: 2,
-    chapterId: 6,
-    title: "Balancing Chemical Reactions",
-    description: "Master the art of balancing equations and understanding reaction types.",
-    duration: "11:30",
+    id: 'micro-genetics',
+    subjectId: 1,
+    chapterId: 3,
+    title: "Bacterial Genetics",
+    description: "How bacteria replicate, mutate, and share genetic information.",
+    duration: "12:20",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-reactions',
-      topicId: 'chem-reactions',
-      visualType: 'formula',
-      visualContent: 'Reactants → Products (atoms balanced)',
+      id: 'fs-bac-genetics',
+      topicId: 'micro-genetics',
+      visualType: 'diagram',
+      visualContent: '🧬 Chromosome + Plasmids',
       bulletPoints: [
-        "Atoms are never created or destroyed in a reaction - what goes in must come out",
-        "Balance equations by adjusting coefficients, never subscripts",
-        "Start with the most complex molecule, then balance elements that appear only once"
+        "Bacteria have a single circular chromosome plus extra plasmids",
+        "Horizontal gene transfer spreads antibiotic resistance rapidly",
+        "Transformation, transduction, and conjugation are three ways bacteria share DNA"
       ],
       difficulty: 'hard'
     }
   },
   {
-    id: 'chem-acids-bases',
-    subjectId: 2,
+    id: 'micro-metabolism',
+    subjectId: 1,
     chapterId: 4,
-    title: "Acids, Bases & pH Scale",
-    description: "Learn how to measure and understand acidic and basic solutions.",
-    duration: "9:40",
+    title: "Microbial Metabolism",
+    description: "How microbes obtain energy and build cellular components.",
+    duration: "13:10",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-acids',
-      topicId: 'chem-acids-bases',
-      visualType: 'diagram',
-      visualContent: 'pH 0 ←→ 7 ←→ 14',
+      id: 'fs-metabolism',
+      topicId: 'micro-metabolism',
+      visualType: 'formula',
+      visualContent: 'ATP = Cellular Energy Currency',
       bulletPoints: [
-        "Acids donate H+ ions; bases accept H+ ions (or donate OH-)",
-        "pH below 7 is acidic, above 7 is basic, exactly 7 is neutral",
-        "Each pH unit represents a 10x difference in H+ concentration"
+        "Autotrophs make their own food; heterotrophs consume organic compounds",
+        "Aerobic respiration yields ~38 ATP; fermentation yields only 2 ATP",
+        "Some bacteria use unique pathways like chemolithotrophy"
       ],
-      difficulty: 'easy'
+      difficulty: 'hard'
     }
   },
   {
-    id: 'chem-moles',
-    subjectId: 2,
+    id: 'micro-growth',
+    subjectId: 1,
     chapterId: 5,
-    title: "The Mole Concept",
-    description: "Understand how chemists count atoms using Avogadro's number.",
-    duration: "10:25",
+    title: "Bacterial Growth Phases",
+    description: "Understand the four phases of bacterial population growth.",
+    duration: "9:45",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-moles',
-      topicId: 'chem-moles',
-      visualType: 'formula',
-      visualContent: '1 mol = 6.022 × 10²³',
+      id: 'fs-growth',
+      topicId: 'micro-growth',
+      visualType: 'diagram',
+      visualContent: '📈 Lag → Log → Stationary → Death',
       bulletPoints: [
-        "A mole is just a counting unit - like a dozen, but for atoms (6.022 × 10²³)",
-        "Molar mass = mass of one mole of a substance in grams",
-        "Use moles to convert between mass, particles, and volume of gases"
+        "Lag phase: bacteria adapt to new environment, no division yet",
+        "Log phase: exponential growth with constant generation time",
+        "Stationary phase: nutrients deplete, growth equals death rate"
       ],
       difficulty: 'medium'
     }
   },
   {
+    id: 'micro-growth-factors',
+    subjectId: 1,
+    chapterId: 5,
+    title: "Growth Requirements",
+    description: "What bacteria need to survive and multiply.",
+    duration: "10:15",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-growth-req',
+      topicId: 'micro-growth-factors',
+      visualType: 'diagram',
+      visualContent: '🌡️ Temperature + pH + Oxygen',
+      bulletPoints: [
+        "Most pathogens are mesophiles (grow at 20-40°C body temperature)",
+        "pH affects enzyme function - most bacteria prefer neutral pH",
+        "Aerobes need O₂; anaerobes are killed by it; facultatives can use both"
+      ],
+      difficulty: 'medium'
+    }
+  },
+
+  // Chemistry topics (subjectId: 2) - chapters 9-15
+  {
+    id: 'chem-matter',
+    subjectId: 2,
+    chapterId: 9,
+    title: "Matter and Measurements",
+    description: "Foundations of chemistry - what matter is and how we measure it.",
+    duration: "10:05",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-matter',
+      topicId: 'chem-matter',
+      visualType: 'diagram',
+      visualContent: '⚗️ Solid ↔ Liquid ↔ Gas',
+      bulletPoints: [
+        "Matter is anything with mass and volume - exists in three main states",
+        "Physical changes don't alter chemical composition; chemical changes do",
+        "SI units provide a universal measurement system for science"
+      ],
+      difficulty: 'easy'
+    }
+  },
+  {
+    id: 'chem-sig-figs',
+    subjectId: 2,
+    chapterId: 9,
+    title: "Significant Figures",
+    description: "How to express precision in scientific measurements.",
+    duration: "8:30",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-sig-figs',
+      topicId: 'chem-sig-figs',
+      visualType: 'formula',
+      visualContent: '0.00340 = 3 sig figs',
+      bulletPoints: [
+        "Leading zeros are never significant; trailing zeros after decimal are",
+        "In multiplication/division, answer has fewest sig figs of inputs",
+        "In addition/subtraction, answer matches fewest decimal places"
+      ],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'chem-atomic-structure',
+    subjectId: 2,
+    chapterId: 10,
+    title: "Atomic Structure",
+    description: "Protons, neutrons, electrons - the building blocks of atoms.",
+    duration: "11:20",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-atomic',
+      topicId: 'chem-atomic-structure',
+      visualType: 'diagram',
+      visualContent: '⚛️ Nucleus: p⁺ + n⁰ | Shell: e⁻',
+      bulletPoints: [
+        "Protons determine element identity; electrons determine chemistry",
+        "Isotopes have same protons but different neutrons",
+        "Atomic mass is weighted average of all natural isotopes"
+      ],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'chem-ions',
+    subjectId: 2,
+    chapterId: 10,
+    title: "Ions and Ionic Compounds",
+    description: "How atoms gain or lose electrons to form charged particles.",
+    duration: "10:45",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-ions',
+      topicId: 'chem-ions',
+      visualType: 'analogy',
+      visualContent: '🔋 Cations (+) give | Anions (-) take',
+      bulletPoints: [
+        "Metals lose electrons to form positive cations",
+        "Nonmetals gain electrons to form negative anions",
+        "Ionic compounds are neutral - charges must balance"
+      ],
+      difficulty: 'easy'
+    }
+  },
+  {
     id: 'chem-stoichiometry',
     subjectId: 2,
-    chapterId: 6,
-    title: "Stoichiometry Calculations",
-    description: "Calculate reactant and product quantities in chemical reactions.",
+    chapterId: 11,
+    title: "Stoichiometry Basics",
+    description: "Calculate quantities in chemical reactions using mole ratios.",
     duration: "13:15",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
@@ -303,95 +303,221 @@ export const dailyDownloadTopics: DailyDownloadTopic[] = [
       visualType: 'formula',
       visualContent: 'mol ratio = coefficient ratio',
       bulletPoints: [
-        "Coefficients in balanced equations give mole ratios between substances",
-        "Convert grams → moles → use ratio → convert back to grams",
-        "Limiting reagent runs out first and determines max product"
-      ],
-      difficulty: 'hard'
-    }
-  },
-
-  // Biology topics (subjectId: 3)
-  {
-    id: 'bio-cell-structure',
-    subjectId: 3,
-    chapterId: 7,
-    title: "Cell Structure & Organelles",
-    description: "Explore the tiny factories inside every living cell.",
-    duration: "11:20",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-cell',
-      topicId: 'bio-cell-structure',
-      visualType: 'analogy',
-      visualContent: '🏭 Cell = A Tiny Factory',
-      bulletPoints: [
-        "The nucleus is the control center (CEO's office) containing DNA instructions",
-        "Mitochondria are power plants converting food into energy (ATP)",
-        "The membrane is security - controlling what enters and leaves the cell"
-      ],
-      difficulty: 'easy'
-    }
-  },
-  {
-    id: 'bio-dna-replication',
-    subjectId: 3,
-    chapterId: 8,
-    title: "DNA Replication Process",
-    description: "Learn how cells copy their genetic blueprint with incredible accuracy.",
-    duration: "12:45",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-dna',
-      topicId: 'bio-dna-replication',
-      visualType: 'diagram',
-      visualContent: '🧬 A-T, G-C Base Pairing',
-      bulletPoints: [
-        "DNA unzips like a zipper, with each strand serving as a template for a new copy",
-        "Base pairing rules (A with T, G with C) ensure accuracy",
-        "Enzymes like helicase unwind and DNA polymerase builds the new strand"
+        "Coefficients in balanced equations give mole ratios",
+        "Convert grams → moles → use ratio → convert back",
+        "Limiting reagent determines maximum product yield"
       ],
       difficulty: 'hard'
     }
   },
   {
-    id: 'bio-photosynthesis',
-    subjectId: 3,
-    chapterId: 9,
-    title: "Photosynthesis Explained",
-    description: "Understand how plants convert sunlight into food and oxygen.",
-    duration: "10:15",
+    id: 'chem-moles',
+    subjectId: 2,
+    chapterId: 11,
+    title: "The Mole Concept",
+    description: "Avogadro's number and counting atoms by weighing.",
+    duration: "10:50",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-photo',
-      topicId: 'bio-photosynthesis',
+      id: 'fs-moles',
+      topicId: 'chem-moles',
       visualType: 'formula',
-      visualContent: '6CO₂ + 6H₂O + Light → C₆H₁₂O₆ + 6O₂',
+      visualContent: '1 mol = 6.022 × 10²³ particles',
       bulletPoints: [
-        "Plants capture sunlight energy and store it as sugar (glucose)",
-        "Light reactions happen in thylakoids: water splits, oxygen releases, ATP forms",
-        "Dark reactions (Calvin cycle) in stroma: CO₂ becomes glucose using ATP"
+        "A mole is a counting unit - 6.022 × 10²³ of anything",
+        "Molar mass equals atomic mass in grams per mole",
+        "Moles bridge the gap between atoms and grams"
       ],
       difficulty: 'medium'
     }
   },
   {
-    id: 'bio-mitosis',
-    subjectId: 3,
-    chapterId: 7,
-    title: "Mitosis & Cell Division",
-    description: "Discover how cells divide to create identical copies of themselves.",
-    duration: "10:50",
+    id: 'chem-reactions',
+    subjectId: 2,
+    chapterId: 12,
+    title: "Reactions in Solution",
+    description: "How reactions occur when substances dissolve in water.",
+    duration: "11:30",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
-      id: 'fs-mitosis',
-      topicId: 'bio-mitosis',
+      id: 'fs-reactions',
+      topicId: 'chem-reactions',
       visualType: 'diagram',
-      visualContent: '🔄 PMAT: Prophase → Metaphase → Anaphase → Telophase',
+      visualContent: '💧 Precipitation, Acid-Base, Redox',
       bulletPoints: [
-        "Mitosis creates two identical daughter cells for growth and repair",
-        "Chromosomes line up in the middle, then get pulled apart to opposite ends",
-        "Cytokinesis splits the cytoplasm after the nucleus divides"
+        "Soluble compounds dissociate into ions in water",
+        "Precipitation occurs when insoluble products form",
+        "Net ionic equations show only species that react"
+      ],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'chem-acids-bases',
+    subjectId: 2,
+    chapterId: 12,
+    title: "Acids and Bases",
+    description: "Understanding pH and acid-base reactions.",
+    duration: "12:05",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-acids',
+      topicId: 'chem-acids-bases',
+      visualType: 'diagram',
+      visualContent: 'pH 0 ←→ 7 ←→ 14',
+      bulletPoints: [
+        "Acids donate H⁺; bases accept H⁺ (Brønsted-Lowry)",
+        "pH = -log[H⁺]; each unit is 10× difference",
+        "Neutralization: acid + base → salt + water"
+      ],
+      difficulty: 'medium'
+    }
+  },
+
+  // Biology topics (subjectId: 3) - chapters 16-23
+  {
+    id: 'bio-study-of-life',
+    subjectId: 3,
+    chapterId: 16,
+    title: "The Study of Life",
+    description: "What defines life and how biologists study living things.",
+    duration: "9:30",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-life',
+      topicId: 'bio-study-of-life',
+      visualType: 'diagram',
+      visualContent: '🌱 7 Characteristics of Life',
+      bulletPoints: [
+        "Living things: grow, reproduce, respond, use energy, maintain homeostasis",
+        "Biology uses scientific method: observe, hypothesize, experiment, conclude",
+        "Life is organized in levels: atoms → cells → organisms → ecosystems"
+      ],
+      difficulty: 'easy'
+    }
+  },
+  {
+    id: 'bio-scientific-method',
+    subjectId: 3,
+    chapterId: 16,
+    title: "Scientific Method",
+    description: "How biologists design experiments and test hypotheses.",
+    duration: "8:45",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-sci-method',
+      topicId: 'bio-scientific-method',
+      visualType: 'diagram',
+      visualContent: '🔬 Question → Hypothesis → Experiment → Analyze',
+      bulletPoints: [
+        "A hypothesis is a testable prediction based on observation",
+        "Control groups eliminate variables except the one being tested",
+        "Theories are well-supported explanations; laws describe patterns"
+      ],
+      difficulty: 'easy'
+    }
+  },
+  {
+    id: 'bio-chemistry',
+    subjectId: 3,
+    chapterId: 17,
+    title: "Chemistry of Life",
+    description: "Water, carbon, and the chemical basis of living systems.",
+    duration: "11:20",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-bio-chem',
+      topicId: 'bio-chemistry',
+      visualType: 'analogy',
+      visualContent: '💧 Water = Universal Solvent',
+      bulletPoints: [
+        "Water's polarity makes it excellent for dissolving ionic compounds",
+        "Hydrogen bonds give water high specific heat and surface tension",
+        "Carbon's 4 bonds allow complex organic molecule construction"
+      ],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'bio-macromolecules',
+    subjectId: 3,
+    chapterId: 18,
+    title: "Biological Macromolecules",
+    description: "Carbohydrates, lipids, proteins, and nucleic acids.",
+    duration: "13:45",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-macro',
+      topicId: 'bio-macromolecules',
+      visualType: 'diagram',
+      visualContent: '🧬 Carbs, Lipids, Proteins, Nucleic Acids',
+      bulletPoints: [
+        "Carbohydrates store energy (starch) and provide structure (cellulose)",
+        "Proteins are polymers of amino acids; shape determines function",
+        "Nucleic acids (DNA/RNA) store and transmit genetic information"
+      ],
+      difficulty: 'medium'
+    }
+  },
+  {
+    id: 'bio-proteins',
+    subjectId: 3,
+    chapterId: 18,
+    title: "Protein Structure",
+    description: "From amino acids to functional 3D proteins.",
+    duration: "12:10",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-proteins',
+      topicId: 'bio-proteins',
+      visualType: 'diagram',
+      visualContent: '🔗 Primary → Secondary → Tertiary → Quaternary',
+      bulletPoints: [
+        "Primary structure is the amino acid sequence",
+        "Secondary structures (α-helix, β-sheet) form from hydrogen bonds",
+        "Tertiary structure is the final 3D folded shape"
+      ],
+      difficulty: 'hard'
+    }
+  },
+  {
+    id: 'bio-cell-structure',
+    subjectId: 3,
+    chapterId: 19,
+    title: "Cell Structure",
+    description: "Organelles and their functions in eukaryotic cells.",
+    duration: "11:30",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-cell',
+      topicId: 'bio-cell-structure',
+      visualType: 'analogy',
+      visualContent: '🏭 Cell = Microscopic Factory',
+      bulletPoints: [
+        "Nucleus houses DNA; ribosomes build proteins",
+        "Mitochondria are powerhouses producing ATP",
+        "ER and Golgi process and ship proteins"
+      ],
+      difficulty: 'easy'
+    }
+  },
+  {
+    id: 'bio-cell-membrane',
+    subjectId: 3,
+    chapterId: 20,
+    title: "Cell Membrane Transport",
+    description: "How substances move in and out of cells.",
+    duration: "10:45",
+    audioUrl: "/mock-audio.mp3",
+    flashSummary: {
+      id: 'fs-membrane',
+      topicId: 'bio-cell-membrane',
+      visualType: 'diagram',
+      visualContent: '🚪 Passive vs Active Transport',
+      bulletPoints: [
+        "Passive transport requires no energy - diffusion and osmosis",
+        "Active transport uses ATP to move against concentration gradient",
+        "Endocytosis brings large particles in; exocytosis pushes them out"
       ],
       difficulty: 'medium'
     }
@@ -399,10 +525,10 @@ export const dailyDownloadTopics: DailyDownloadTopic[] = [
   {
     id: 'bio-respiration',
     subjectId: 3,
-    chapterId: 8,
+    chapterId: 22,
     title: "Cellular Respiration",
-    description: "Learn how cells break down glucose to release usable energy.",
-    duration: "11:35",
+    description: "How cells extract energy from glucose.",
+    duration: "12:30",
     audioUrl: "/mock-audio.mp3",
     flashSummary: {
       id: 'fs-respiration',
@@ -410,32 +536,11 @@ export const dailyDownloadTopics: DailyDownloadTopic[] = [
       visualType: 'formula',
       visualContent: 'C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + ATP',
       bulletPoints: [
-        "Respiration is the reverse of photosynthesis - breaks glucose to release energy",
-        "Glycolysis happens in cytoplasm; Krebs cycle and ETC in mitochondria",
-        "One glucose molecule can produce up to 36-38 ATP molecules"
+        "Glycolysis in cytoplasm yields 2 ATP and pyruvate",
+        "Krebs cycle in mitochondria produces electron carriers",
+        "Electron transport chain generates most ATP (~34)"
       ],
       difficulty: 'hard'
-    }
-  },
-  {
-    id: 'bio-genetics',
-    subjectId: 3,
-    chapterId: 9,
-    title: "Mendelian Genetics",
-    description: "Understand how traits are inherited from parents to offspring.",
-    duration: "12:10",
-    audioUrl: "/mock-audio.mp3",
-    flashSummary: {
-      id: 'fs-genetics',
-      topicId: 'bio-genetics',
-      visualType: 'diagram',
-      visualContent: '🧬 Punnett Square',
-      bulletPoints: [
-        "Dominant alleles (capital letters) mask recessive alleles (lowercase)",
-        "Genotype is the genetic makeup; phenotype is the physical expression",
-        "Use Punnett squares to predict offspring ratios"
-      ],
-      difficulty: 'medium'
     }
   }
 ];

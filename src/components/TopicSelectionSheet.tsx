@@ -1,9 +1,11 @@
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Sparkles, CheckCircle } from 'lucide-react';
+import { X, Clock, Sparkles, CheckCircle, ChevronDown } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import type { Subject } from '@/data/courseData';
+import type { Subject, Chapter } from '@/data/courseData';
+import { chapters } from '@/data/courseData';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
@@ -23,24 +25,57 @@ export const TopicSelectionSheet = ({
   isListened
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
+  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
 
   const handleSelectTopic = (topic: DailyDownloadTopic) => {
     selectionChanged();
     onSelectTopic(topic);
   };
 
-  const getSubjectName = (subjectId: number) => {
-    return subjects.find(s => s.id === subjectId)?.name || 'Unknown';
+  const toggleChapter = (chapterId: number) => {
+    lightTap();
+    setExpandedChapters(prev => {
+      const next = new Set(prev);
+      if (next.has(chapterId)) {
+        next.delete(chapterId);
+      } else {
+        next.add(chapterId);
+      }
+      return next;
+    });
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-500/20 text-green-600 dark:text-green-400';
-      case 'medium': return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
-      case 'hard': return 'bg-red-500/20 text-red-600 dark:text-red-400';
-      default: return 'bg-muted text-muted-foreground';
+  // Group topics by chapter
+  const groupedTopics = useMemo(() => {
+    const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
+    const chapterMap = new Map<number, DailyDownloadTopic[]>();
+
+    topics.forEach(topic => {
+      if (!chapterMap.has(topic.chapterId)) {
+        chapterMap.set(topic.chapterId, []);
+      }
+      chapterMap.get(topic.chapterId)!.push(topic);
+    });
+
+    chapterMap.forEach((topicList, chapterId) => {
+      const chapter = chapters.find(c => c.id === chapterId);
+      if (chapter) {
+        groups.push({ chapter, topics: topicList });
+      }
+    });
+
+    // Sort by chapter id
+    groups.sort((a, b) => a.chapter.id - b.chapter.id);
+
+    return groups;
+  }, [topics]);
+
+  // Expand first chapter by default when sheet opens
+  useMemo(() => {
+    if (isOpen && groupedTopics.length > 0 && expandedChapters.size === 0) {
+      setExpandedChapters(new Set([groupedTopics[0].chapter.id]));
     }
-  };
+  }, [isOpen, groupedTopics]);
 
   return (
     <AnimatePresence>
@@ -82,56 +117,111 @@ export const TopicSelectionSheet = ({
               </button>
             </div>
 
-            {/* Topics list */}
+            {/* Topics list grouped by chapter */}
             <div className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)]">
-              <div className="space-y-2 pb-6">
-                {topics.map((topic, index) => {
-                  const listened = isListened?.(topic.id) ?? false;
+              <div className="space-y-3 pb-6">
+                {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
+                  const isExpanded = expandedChapters.has(chapter.id);
+                  const listenedCount = chapterTopics.filter(t => isListened?.(t.id)).length;
+                  
                   return (
-                    <motion.button
-                      key={topic.id}
-                      onClick={() => handleSelectTopic(topic)}
-                      className={`w-full text-left bg-card border rounded-xl p-3 transition-colors ${
-                        listened 
-                          ? 'border-primary/30 bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
+                    <motion.div
+                      key={chapter.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      whileTap={{ scale: 0.98 }}
+                      transition={{ delay: groupIndex * 0.05 }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          listened ? 'bg-primary/20' : 'bg-primary/10'
-                        }`}>
-                          {listened ? (
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Sparkles className="w-4 h-4 text-primary" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground text-sm truncate">
-                              {topic.title}
-                            </h3>
-                            {listened && (
-                              <span className="text-xs text-primary font-medium">✓</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground line-clamp-1">
-                              {topic.description}
+                      {/* Chapter Header */}
+                      <button
+                        onClick={() => toggleChapter(chapter.id)}
+                        className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary">
+                              {chapter.id}
                             </span>
                           </div>
+                          <div className="text-left">
+                            <h3 className="font-semibold text-foreground text-sm">
+                              {chapter.title.replace(/^Ch\. \d+ - /, '')}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              {chapterTopics.length} topics · {listenedCount} completed
+                            </p>
+                          </div>
                         </div>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                          <Clock className="w-3 h-3" />
-                          {topic.duration}
-                        </span>
-                      </div>
-                    </motion.button>
+                        <motion.div
+                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        </motion.div>
+                      </button>
+
+                      {/* Chapter Topics */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-2 space-y-2 pl-2">
+                              {chapterTopics.map((topic, index) => {
+                                const listened = isListened?.(topic.id) ?? false;
+                                return (
+                                  <motion.button
+                                    key={topic.id}
+                                    onClick={() => handleSelectTopic(topic)}
+                                    className={`w-full text-left bg-card border rounded-xl p-3 transition-colors ${
+                                      listened 
+                                        ? 'border-primary/30 bg-primary/5' 
+                                        : 'border-border hover:border-primary/50'
+                                    }`}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.03 }}
+                                    whileTap={{ scale: 0.98 }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                        listened ? 'bg-primary/20' : 'bg-primary/10'
+                                      }`}>
+                                        {listened ? (
+                                          <CheckCircle className="w-4 h-4 text-primary" />
+                                        ) : (
+                                          <Sparkles className="w-4 h-4 text-primary" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <h3 className="font-medium text-foreground text-sm truncate">
+                                            {topic.title}
+                                          </h3>
+                                          {listened && (
+                                            <span className="text-xs text-primary font-medium">✓</span>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                          {topic.description}
+                                        </p>
+                                      </div>
+                                      <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                        <Clock className="w-3 h-3" />
+                                        {topic.duration}
+                                      </span>
+                                    </div>
+                                  </motion.button>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   );
                 })}
               </div>
