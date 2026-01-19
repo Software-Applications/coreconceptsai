@@ -28,7 +28,7 @@ const Index = () => {
   const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
-  const { markAsListened, getUnlistenedCount } = useListenedTopics();
+  const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
   
   // Filter content by selected subject
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
@@ -241,6 +241,7 @@ const Index = () => {
         topics={subjectTopics}
         subjects={subjects}
         onSelectTopic={handleSelectTopic}
+        isListened={isListened}
       />
 
       <DailyDownloadPlayer

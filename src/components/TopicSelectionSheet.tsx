@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Sparkles } from 'lucide-react';
+import { X, Clock, Sparkles, CheckCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
@@ -11,6 +11,7 @@ interface TopicSelectionSheetProps {
   topics: DailyDownloadTopic[];
   subjects: Subject[];
   onSelectTopic: (topic: DailyDownloadTopic) => void;
+  isListened?: (topicId: string) => boolean;
 }
 
 export const TopicSelectionSheet = ({
@@ -18,7 +19,8 @@ export const TopicSelectionSheet = ({
   onClose,
   topics,
   subjects,
-  onSelectTopic
+  onSelectTopic,
+  isListened
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
 
@@ -83,43 +85,61 @@ export const TopicSelectionSheet = ({
             {/* Topics list */}
             <div className="px-5 pb-safe overflow-y-auto max-h-[calc(85vh-100px)]">
               <div className="space-y-3 pb-6">
-                {topics.map((topic, index) => (
-                  <motion.button
-                    key={topic.id}
-                    onClick={() => handleSelectTopic(topic)}
-                    className="w-full text-left bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground text-sm mb-1 truncate">
-                          {topic.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {topic.description}
-                        </p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                            {getSubjectName(topic.subjectId)}
-                          </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(topic.flashSummary.difficulty)}`}>
-                            {topic.flashSummary.difficulty}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3" />
-                            {topic.duration}
-                          </span>
+                {topics.map((topic, index) => {
+                  const listened = isListened?.(topic.id) ?? false;
+                  return (
+                    <motion.button
+                      key={topic.id}
+                      onClick={() => handleSelectTopic(topic)}
+                      className={`w-full text-left bg-card border rounded-xl p-4 transition-colors ${
+                        listened 
+                          ? 'border-primary/30 bg-primary/5' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          listened ? 'bg-primary/20' : 'bg-primary/10'
+                        }`}>
+                          {listened ? (
+                            <CheckCircle className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Sparkles className="w-5 h-5 text-primary" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground text-sm truncate">
+                              {topic.title}
+                            </h3>
+                            {listened && (
+                              <span className="text-xs text-primary font-medium">Listened</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            {topic.description}
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              {getSubjectName(topic.subjectId)}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(topic.flashSummary.difficulty)}`}>
+                              {topic.flashSummary.difficulty}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {topic.duration}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.button>
-                ))}
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
           </motion.div>
