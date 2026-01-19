@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import type { PracticeTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface PracticeCardProps {
   practice: PracticeTile;
@@ -8,12 +9,18 @@ interface PracticeCardProps {
 }
 
 export function PracticeCard({ practice, onClick }: PracticeCardProps) {
+  const { lightTap } = useHaptics();
   const estimatedTime = Math.ceil(practice.questions * 1.5);
+
+  const handleClick = () => {
+    lightTap();
+    onClick();
+  };
 
   return (
     <motion.button 
       className="flex-shrink-0 w-44 text-left"
-      onClick={onClick}
+      onClick={handleClick}
       whileHover={cardHover}
       whileTap={cardTap}
       transition={springTransition}
