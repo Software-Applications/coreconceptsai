@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Clock } from 'lucide-react';
 import { cardHover, cardTap } from '@/lib/motionVariants';
 import { useHaptics } from '@/hooks/useHaptics';
 import type { PinnedCard } from '@/data/dailyDownloadData';
@@ -14,29 +13,20 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'easy': return 'bg-green-500';
-      case 'medium': return 'bg-amber-500';
-      case 'hard': return 'bg-red-500';
-      default: return 'bg-muted';
+      case 'easy': return 'bg-green-500/20 text-green-400';
+      case 'medium': return 'bg-amber-500/20 text-amber-400';
+      case 'hard': return 'bg-red-500/20 text-red-400';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m`;
-    if (diffHours < 24) return `${diffHours}h`;
-    return `${diffDays}d`;
+  const getDifficultyLabel = (difficulty: string) => {
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
   };
 
   return (
     <motion.button
-      className="flex-shrink-0 w-32 bg-card border border-border rounded-xl p-3 text-left"
+      className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-card border border-border rounded-xl p-3 sm:p-4 text-left hover:border-primary/50 transition-colors"
       variants={{ hover: cardHover, tap: cardTap }}
       whileHover="hover"
       whileTap="tap"
@@ -45,27 +35,18 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
         onClick();
       }}
     >
-      {/* Header with emoji and difficulty */}
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-2xl">{card.flashSummary.visualContent}</span>
-        <span className={`w-2 h-2 rounded-full ${getDifficultyColor(card.flashSummary.difficulty)}`} />
+      {/* Header with emoji */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-2xl sm:text-3xl">{card.flashSummary.visualContent}</span>
+        <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-medium ${getDifficultyColor(card.flashSummary.difficulty)}`}>
+          {getDifficultyLabel(card.flashSummary.difficulty)}
+        </span>
       </div>
 
       {/* Topic title */}
-      <h4 className="text-xs font-medium text-foreground line-clamp-2 mb-1">
+      <h4 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 leading-snug">
         {card.topicTitle}
       </h4>
-
-      {/* Subject name */}
-      <p className="text-[10px] text-muted-foreground mb-2 truncate">
-        {card.subjectName}
-      </p>
-
-      {/* Pinned time */}
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-        <Clock className="w-2.5 h-2.5" />
-        <span>{formatDate(card.pinnedAt)}</span>
-      </div>
     </motion.button>
   );
 };
