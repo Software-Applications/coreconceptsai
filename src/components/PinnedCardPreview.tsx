@@ -23,10 +23,10 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
       }}
     >
       {/* Emoji */}
-      <span className="text-2xl block mb-3">{card.flashSummary.visualContent}</span>
+      <span className="text-lg block mb-2">{card.flashSummary.visualContent}</span>
 
       {/* Topic title */}
-      <h4 className="text-sm font-medium text-foreground/90 leading-normal line-clamp-2">
+      <h4 className="text-xs font-medium text-foreground leading-normal line-clamp-2">
         {card.topicTitle}
       </h4>
     </motion.button>
