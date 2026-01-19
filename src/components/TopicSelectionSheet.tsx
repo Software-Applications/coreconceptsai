@@ -205,7 +205,7 @@ export const TopicSelectionSheet = ({
                                             <span className="text-xs text-primary font-medium">✓</span>
                                           )}
                                         </div>
-                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                        <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
                                           {topic.description}
                                         </p>
                                       </div>
