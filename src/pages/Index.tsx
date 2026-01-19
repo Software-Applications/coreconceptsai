@@ -137,7 +137,7 @@ const Index = () => {
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>
-          <div className="-mx-4 px-4">
+          <div className="-mx-4 px-4 -my-2 py-2">
             <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide pr-4">
               {pinnedCards.slice(0, 5).map((card) => (
                 <PinnedCardPreview
