@@ -68,130 +68,54 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     if (!element) return;
 
     let isDown = false;
-    let startX: number;
-    let scrollLeft: number;
-    let lastX: number;
-    let lastTime: number;
-    let velocity = 0;
-    let animationId: number | null = null;
+    let startX = 0;
+    let scrollLeft = 0;
 
-    const stopMomentum = () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-    };
-
-    const applyMomentum = () => {
-      if (Math.abs(velocity) < 0.5) {
-        animationId = null;
-        return;
-      }
-      
-      element.scrollLeft += velocity;
-      velocity *= 0.92; // Friction coefficient
-      animationId = requestAnimationFrame(applyMomentum);
-    };
-
-    // Mouse events
     const handleMouseDown = (e: MouseEvent) => {
-      stopMomentum();
       isDown = true;
       element.style.cursor = 'grabbing';
       startX = e.pageX - element.offsetLeft;
       scrollLeft = element.scrollLeft;
-      lastX = e.pageX;
-      lastTime = Date.now();
-      velocity = 0;
-    };
-
-    const handleMouseLeave = () => {
-      if (isDown) {
-        isDown = false;
-        element.style.cursor = 'grab';
-        applyMomentum();
-      }
     };
 
     const handleMouseUp = () => {
-      if (isDown) {
-        isDown = false;
-        element.style.cursor = 'grab';
-        applyMomentum();
-      }
+      if (!isDown) return;
+      isDown = false;
+      element.style.cursor = 'grab';
+    };
+
+    const handleMouseLeave = () => {
+      if (!isDown) return;
+      isDown = false;
+      element.style.cursor = 'grab';
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDown) return;
       e.preventDefault();
-      
-      const now = Date.now();
-      const dt = now - lastTime;
-      
-      if (dt > 0) {
-        velocity = (lastX - e.pageX) / dt * 15;
-      }
-      
-      lastX = e.pageX;
-      lastTime = now;
-      
       const x = e.pageX - element.offsetLeft;
       const walkX = (x - startX) * 1.5;
       element.scrollLeft = scrollLeft - walkX;
     };
 
-    // Touch events for mobile
-    const handleTouchStart = (e: TouchEvent) => {
-      stopMomentum();
-      isDown = true;
-      startX = e.touches[0].pageX - element.offsetLeft;
-      scrollLeft = element.scrollLeft;
-      lastX = e.touches[0].pageX;
-      lastTime = Date.now();
-      velocity = 0;
-    };
-
-    const handleTouchEnd = () => {
-      isDown = false;
-      applyMomentum();
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDown) return;
-      
-      const now = Date.now();
-      const dt = now - lastTime;
-      
-      if (dt > 0) {
-        velocity = (lastX - e.touches[0].pageX) / dt * 15;
-      }
-      
-      lastX = e.touches[0].pageX;
-      lastTime = now;
-      
-      const x = e.touches[0].pageX - element.offsetLeft;
-      const walkX = (x - startX) * 1.5;
-      element.scrollLeft = scrollLeft - walkX;
+    const handleDragStart = (e: DragEvent) => {
+      // Prevent image/button drag ghosting while we "grab-scroll"
+      e.preventDefault();
     };
 
     element.style.cursor = 'grab';
     element.addEventListener('mousedown', handleMouseDown);
-    element.addEventListener('mouseleave', handleMouseLeave);
-    element.addEventListener('mouseup', handleMouseUp);
     element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('touchstart', handleTouchStart, { passive: true });
-    element.addEventListener('touchend', handleTouchEnd);
-    element.addEventListener('touchmove', handleTouchMove, { passive: true });
+    element.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('dragstart', handleDragStart);
 
     return () => {
-      stopMomentum();
       element.removeEventListener('mousedown', handleMouseDown);
-      element.removeEventListener('mouseleave', handleMouseLeave);
-      element.removeEventListener('mouseup', handleMouseUp);
       element.removeEventListener('mousemove', handleMouseMove);
-      element.removeEventListener('touchstart', handleTouchStart);
-      element.removeEventListener('touchend', handleTouchEnd);
-      element.removeEventListener('touchmove', handleTouchMove);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('dragstart', handleDragStart);
     };
   }, []);
 
