@@ -28,7 +28,7 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
       </h4>
 
       {/* Topic title - Secondary */}
-      <p className="text-xs text-muted-foreground leading-normal truncate">
+      <p className="text-xs text-muted-foreground leading-normal line-clamp-2">
         {card.topicTitle}
       </p>
     </motion.button>
