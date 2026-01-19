@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion';
 import { Check, Bookmark, X } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import type { FlashSummary } from '@/data/dailyDownloadData';
@@ -10,7 +10,7 @@ interface FlashSummaryCardProps {
   onPin: () => void;
 }
 
-const SWIPE_THRESHOLD = 100;
+const SWIPE_THRESHOLD = 80;
 
 export const FlashSummaryCard = ({
   flashSummary,
@@ -29,20 +29,25 @@ export const FlashSummaryCard = ({
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const offset = info.offset.x;
+    const velocity = info.velocity.x;
     
-    if (offset < -SWIPE_THRESHOLD) {
+    // Use either distance OR velocity to trigger action
+    if (offset < -SWIPE_THRESHOLD || velocity < -500) {
       // Swiped left - Dismiss (Got it!)
       successNotification();
       onDismiss();
-    } else if (offset > SWIPE_THRESHOLD) {
+    } else if (offset > SWIPE_THRESHOLD || velocity > 500) {
       // Swiped right - Pin for review
       successNotification();
       onPin();
     }
+    // Reset position handled by dragConstraints
   };
 
-  const handleDrag = () => {
-    selectionChanged();
+  const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (Math.abs(info.offset.x) > 30) {
+      selectionChanged();
+    }
   };
 
   const getDifficultyColor = (difficulty: FlashSummary['difficulty']) => {
@@ -78,11 +83,12 @@ export const FlashSummaryCard = ({
 
       {/* Swipeable card */}
       <motion.div
-        className="relative bg-card border border-border rounded-2xl shadow-lg overflow-hidden cursor-grab active:cursor-grabbing"
+        className="relative bg-card border border-border rounded-2xl shadow-lg overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y"
         style={{ x, rotate, scale }}
         drag="x"
-        dragConstraints={{ left: -180, right: 180 }}
-        dragElastic={0.7}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={1}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
         whileTap={{ cursor: 'grabbing' }}
