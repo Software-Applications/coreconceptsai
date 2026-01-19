@@ -210,7 +210,7 @@ const Index = () => {
       {/* Daily Download FAB */}
       <DailyDownloadFAB 
         onClick={() => setShowTopicSelection(true)}
-        hasPendingReviews={getPinnedCount() > 0}
+        hasPendingReviews={subjectPinnedCards.length > 0}
       />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
