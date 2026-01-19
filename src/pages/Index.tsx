@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Video, HelpCircle } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, Bookmark } from "lucide-react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
@@ -11,6 +11,7 @@ import { DailyDownloadFAB } from "@/components/DailyDownloadFAB";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
+import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { dailyDownloadTopics, type DailyDownloadTopic } from "@/data/dailyDownloadData";
@@ -60,6 +61,7 @@ const Index = () => {
   const mainScrollRef = useDragScroll<HTMLElement>();
   const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
   return (
@@ -115,6 +117,39 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* My Pinned Cards Section */}
+      {getPinnedCount() > 0 && (
+        <section className="px-4 py-2 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-medium text-foreground">My Pinned Cards</h3>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                {getPinnedCount()}
+              </span>
+            </div>
+            <button 
+              onClick={() => setShowReviewBoard(true)}
+              className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+            >
+              See All
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="-mx-4 px-4">
+            <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide pr-4">
+              {pinnedCards.slice(0, 5).map((card) => (
+                <PinnedCardPreview
+                  key={card.id}
+                  card={card}
+                  onClick={() => setShowReviewBoard(true)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Section Divider */}
       <div className="mx-4 border-t border-border/50" />
@@ -176,12 +211,7 @@ const Index = () => {
         hasPendingReviews={getPinnedCount() > 0}
       />
 
-      <BottomNav activeTab={activeTab} onTabChange={(tab) => {
-        setActiveTab(tab);
-        if (tab === 'study') {
-          setShowReviewBoard(true);
-        }
-      }} />
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       <VideoPlayerSheet 
         video={selectedVideo}
