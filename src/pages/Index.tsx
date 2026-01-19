@@ -80,7 +80,7 @@ const Index = () => {
 
       {/* Related Videos and Practice */}
       <section ref={mainScrollRef} className="px-4 py-4 flex-1 overflow-y-auto scrollbar-hide">
-        <h2 className="text-lg font-bold text-foreground mb-4">Related videos and practice</h2>
+        <h2 className="text-base font-semibold text-foreground mb-4">Related Videos and Practice</h2>
         
         <ChapterDropdown 
           chapters={chapters}
@@ -92,7 +92,7 @@ const Index = () => {
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Video className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-foreground text-sm">Videos</h3>
+            <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
@@ -112,7 +112,7 @@ const Index = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <HelpCircle className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-foreground text-sm">Practice Sets</h3>
+            <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
           </div>
           <div className="-mx-4 px-4">
