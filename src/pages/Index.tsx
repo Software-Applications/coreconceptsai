@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, Bookmark } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, Bookmark, ChevronDown } from "lucide-react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
@@ -108,11 +108,16 @@ const Index = () => {
       </section>
 
       {/* Main Scrollable Content */}
-      <section ref={mainScrollRef} className="px-4 flex-1 overflow-y-auto scrollbar-hide">
+      <section ref={mainScrollRef} className="px-4 flex-1 overflow-y-auto scrollbar-hide relative">
         {/* Your eTextbook */}
         <div className="py-2 pb-4">
-          <div className="mb-3">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Textbook</h2>
+            {/* Scroll Hint */}
+            <div className="flex items-center gap-1 text-muted-foreground animate-bounce-gentle">
+              <span className="text-xs">More below</span>
+              <ChevronDown className="w-4 h-4" />
+            </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
             <img 
@@ -164,7 +169,19 @@ const Index = () => {
 
         {/* Related Videos and Practice */}
         <div className="py-4">
-          <h2 className="text-base font-semibold text-foreground mb-4">Related Videos and Practice</h2>
+          {/* Sticky Section Header */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-4 px-4 pt-1">
+            <h2 className="text-base font-semibold text-foreground">Related Videos and Practice</h2>
+            {/* Progress Indicators */}
+            <div className="flex gap-3 mt-2">
+              <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                {subjectVideos.length} videos to watch
+              </span>
+              <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-foreground font-medium">
+                {subjectPractice.length} practice sets pending
+              </span>
+            </div>
+          </div>
         
         <ChapterDropdown 
           chapters={subjectChapters}
@@ -174,7 +191,7 @@ const Index = () => {
 
         {/* Videos Section */}
         <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 flex items-center gap-2">
             <Video className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
@@ -194,7 +211,7 @@ const Index = () => {
 
         {/* Practice Questions Section */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 flex items-center gap-2">
             <HelpCircle className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
