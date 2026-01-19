@@ -7,11 +7,18 @@ export interface FlashSummary {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
+export interface TranscriptWord {
+  word: string;
+  startTime: number; // seconds
+  endTime: number; // seconds
+}
+
 export interface TranscriptSegment {
   id: string;
   startTime: number; // seconds
   endTime: number; // seconds
   text: string;
+  words: TranscriptWord[];
 }
 
 export interface DailyDownloadTopic {
@@ -563,6 +570,28 @@ export const getTopicById = (topicId: string): DailyDownloadTopic | undefined =>
   return dailyDownloadTopics.find(topic => topic.id === topicId);
 };
 
+// Helper to generate word-level timing from text
+const generateWordsWithTiming = (text: string, startTime: number, endTime: number): TranscriptWord[] => {
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const segmentDuration = endTime - startTime;
+  const wordDuration = segmentDuration / words.length;
+  
+  return words.map((word, index) => ({
+    word,
+    startTime: startTime + (index * wordDuration),
+    endTime: startTime + ((index + 1) * wordDuration)
+  }));
+};
+
+// Helper to create a segment with word timing
+const createSegment = (id: string, startTime: number, endTime: number, text: string): TranscriptSegment => ({
+  id,
+  startTime,
+  endTime,
+  text,
+  words: generateWordsWithTiming(text, startTime, endTime)
+});
+
 // Generate mock transcript for a topic based on its content
 export const generateMockTranscript = (topic: DailyDownloadTopic): TranscriptSegment[] => {
   const durationParts = topic.duration.split(':');
@@ -574,60 +603,60 @@ export const generateMockTranscript = (topic: DailyDownloadTopic): TranscriptSeg
   const numSegments = Math.ceil(totalSeconds / segmentDuration);
   
   // Introduction
-  segments.push({
-    id: `${topic.id}-0`,
-    startTime: 0,
-    endTime: 15,
-    text: `Welcome to today's Daily Download. We're going to explore ${topic.title}. ${topic.description}`
-  });
+  segments.push(createSegment(
+    `${topic.id}-0`,
+    0,
+    15,
+    `Welcome to today's Daily Download. We're going to explore ${topic.title}. ${topic.description}`
+  ));
   
   // Content based on flash summary bullet points
   const bulletPoints = topic.flashSummary.bulletPoints;
   bulletPoints.forEach((point, index) => {
     const startTime = 15 + (index * segmentDuration * 3);
-    segments.push({
-      id: `${topic.id}-${index + 1}a`,
+    segments.push(createSegment(
+      `${topic.id}-${index + 1}a`,
       startTime,
-      endTime: startTime + segmentDuration,
-      text: `Let's talk about our ${index === 0 ? 'first' : index === 1 ? 'second' : 'third'} key concept. ${point}`
-    });
-    segments.push({
-      id: `${topic.id}-${index + 1}b`,
-      startTime: startTime + segmentDuration,
-      endTime: startTime + segmentDuration * 2,
-      text: `This is really important to understand because it forms the foundation of how we approach this topic in practice.`
-    });
-    segments.push({
-      id: `${topic.id}-${index + 1}c`,
-      startTime: startTime + segmentDuration * 2,
-      endTime: startTime + segmentDuration * 3,
-      text: `Take a moment to think about how this concept connects to what you already know about the subject.`
-    });
+      startTime + segmentDuration,
+      `Let's talk about our ${index === 0 ? 'first' : index === 1 ? 'second' : 'third'} key concept. ${point}`
+    ));
+    segments.push(createSegment(
+      `${topic.id}-${index + 1}b`,
+      startTime + segmentDuration,
+      startTime + segmentDuration * 2,
+      `This is really important to understand because it forms the foundation of how we approach this topic in practice.`
+    ));
+    segments.push(createSegment(
+      `${topic.id}-${index + 1}c`,
+      startTime + segmentDuration * 2,
+      startTime + segmentDuration * 3,
+      `Take a moment to think about how this concept connects to what you already know about the subject.`
+    ));
   });
   
   // Add some filler content
   const midPoint = Math.floor(numSegments / 2) * segmentDuration;
-  segments.push({
-    id: `${topic.id}-mid`,
-    startTime: midPoint,
-    endTime: midPoint + segmentDuration,
-    text: `Now that we've covered the basics, let's dive deeper into the practical applications and real-world examples.`
-  });
+  segments.push(createSegment(
+    `${topic.id}-mid`,
+    midPoint,
+    midPoint + segmentDuration,
+    `Now that we've covered the basics, let's dive deeper into the practical applications and real-world examples.`
+  ));
   
   // Conclusion
-  segments.push({
-    id: `${topic.id}-end`,
-    startTime: totalSeconds - 30,
-    endTime: totalSeconds - 15,
-    text: `To summarize what we've learned: ${topic.flashSummary.bulletPoints[0].split(' - ')[0]}, and the key principles we discussed.`
-  });
+  segments.push(createSegment(
+    `${topic.id}-end`,
+    totalSeconds - 30,
+    totalSeconds - 15,
+    `To summarize what we've learned: ${topic.flashSummary.bulletPoints[0].split(' - ')[0]}, and the key principles we discussed.`
+  ));
   
-  segments.push({
-    id: `${topic.id}-outro`,
-    startTime: totalSeconds - 15,
-    endTime: totalSeconds,
-    text: `That's all for today's Daily Download on ${topic.title}. Great job! Don't forget to review the flash card summary.`
-  });
+  segments.push(createSegment(
+    `${topic.id}-outro`,
+    totalSeconds - 15,
+    totalSeconds,
+    `That's all for today's Daily Download on ${topic.title}. Great job! Don't forget to review the flash card summary.`
+  ));
   
   // Sort by start time and remove duplicates
   return segments
