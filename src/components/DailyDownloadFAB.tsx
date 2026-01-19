@@ -24,38 +24,9 @@ export const DailyDownloadFAB = ({ onClick, hasPendingReviews = false }: DailyDo
       whileTap={{ scale: 0.9 }}
       transition={springTransition}
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ 
-        scale: 1, 
-        opacity: 1,
-      }}
+      animate={{ scale: 1, opacity: 1 }}
     >
-      {/* Pulse ring animation */}
-      <motion.div
-        className="absolute inset-0 rounded-full bg-primary"
-        animate={{ 
-          scale: [1, 1.3, 1],
-          opacity: [0.5, 0, 0.5]
-        }}
-        transition={{ 
-          duration: 2, 
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      
-      <Headphones className="w-6 h-6 relative z-10" />
-      
-      {/* Notification badge */}
-      {hasPendingReviews && (
-        <motion.div
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={springTransition}
-        >
-          !
-        </motion.div>
-      )}
+      <Headphones className="w-6 h-6" />
     </motion.button>
   );
 };
