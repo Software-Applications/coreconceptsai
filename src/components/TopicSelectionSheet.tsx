@@ -118,7 +118,10 @@ export const TopicSelectionSheet = ({
             </div>
 
             {/* Topics list grouped by chapter */}
-            <div className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none [-webkit-overflow-scrolling:touch]">
+            <div 
+              className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none overscroll-contain"
+              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+            >
               <div className="space-y-3 pb-6">
                 {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
                   const isExpanded = expandedChapters.has(chapter.id);
@@ -134,7 +137,7 @@ export const TopicSelectionSheet = ({
                       {/* Chapter Header */}
                       <button
                         onClick={() => toggleChapter(chapter.id)}
-                        className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors"
+                        className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors touch-pan-y"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -176,7 +179,7 @@ export const TopicSelectionSheet = ({
                                   <motion.button
                                     key={topic.id}
                                     onClick={() => handleSelectTopic(topic)}
-                                    className={`w-full text-left bg-card border rounded-xl p-3 transition-colors ${
+                                    className={`w-full text-left bg-card border rounded-xl p-3 transition-colors touch-pan-y ${
                                       listened 
                                         ? 'border-primary/30 bg-primary/5' 
                                         : 'border-border hover:border-primary/50'
@@ -184,7 +187,6 @@ export const TopicSelectionSheet = ({
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.03 }}
-                                    whileTap={{ scale: 0.98 }}
                                   >
                                     <div className="flex items-center gap-3">
                                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
