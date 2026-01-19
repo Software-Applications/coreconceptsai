@@ -12,9 +12,22 @@ import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type Pra
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
-  const [selectedChapter, setSelectedChapter] = useState(chapters[0]);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
+  
+  // Filter content by selected subject
+  const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
+  const subjectVideos = videoTiles.filter(v => v.subjectId === selectedSubject.id);
+  const subjectPractice = practiceTiles.filter(p => p.subjectId === selectedSubject.id);
+  
+  const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
+  
+  // Reset chapter when subject changes
+  const handleSubjectChange = (subject: typeof subjects[0]) => {
+    setSelectedSubject(subject);
+    const newChapters = chapters.filter(ch => ch.subjectId === subject.id);
+    setSelectedChapter(newChapters[0]);
+  };
   
   const mainScrollRef = useDragScroll<HTMLElement>();
   const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
@@ -38,7 +51,7 @@ const Index = () => {
           {subjects.map((subject) => (
             <button
               key={subject.id}
-              onClick={() => setSelectedSubject(subject)}
+              onClick={() => handleSubjectChange(subject)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
                 selectedSubject.id === subject.id
                   ? 'border-2 border-primary bg-card'
@@ -65,12 +78,12 @@ const Index = () => {
         </div>
         <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
           <img 
-            src="https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=200&h=250&fit=crop" 
-            alt="Microbiology Textbook"
+            src={selectedSubject.textbook.imageUrl} 
+            alt={selectedSubject.textbook.title}
             className="w-16 h-20 rounded-lg flex-shrink-0 object-cover shadow-sm"
           />
           <div>
-            <p className="text-sm font-medium text-foreground leading-snug">Microbiology with Diseases by Body System, 5th edition</p>
+            <p className="text-sm font-medium text-foreground leading-snug">{selectedSubject.textbook.title}</p>
           </div>
         </div>
       </section>
@@ -83,7 +96,7 @@ const Index = () => {
         <h2 className="text-base font-semibold text-foreground mb-4">Related Videos and Practice</h2>
         
         <ChapterDropdown 
-          chapters={chapters}
+          chapters={subjectChapters}
           selectedChapter={selectedChapter}
           onSelectChapter={setSelectedChapter}
         />
@@ -93,11 +106,11 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <Video className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
-            <span className="text-xs text-muted-foreground">({videoTiles.length})</span>
+            <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
           </div>
           <div className="-mx-4 px-4">
             <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
-              {videoTiles.map((video) => (
+              {subjectVideos.map((video) => (
                 <VideoCard 
                   key={video.id} 
                   video={video} 
@@ -113,11 +126,11 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <HelpCircle className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
-            <span className="text-xs text-muted-foreground">({practiceTiles.length})</span>
+            <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
           </div>
           <div className="-mx-4 px-4">
             <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
-              {practiceTiles.map((practice) => (
+              {subjectPractice.map((practice) => (
                 <PracticeCard 
                   key={practice.id} 
                   practice={practice} 
@@ -133,7 +146,7 @@ const Index = () => {
 
       <VideoPlayerSheet 
         video={selectedVideo}
-        videos={videoTiles}
+        videos={subjectVideos}
         chapter={selectedChapter}
         isOpen={!!selectedVideo}
         onClose={() => setSelectedVideo(null)}
