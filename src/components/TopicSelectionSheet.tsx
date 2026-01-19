@@ -57,7 +57,7 @@ export const TopicSelectionSheet = ({
 
           {/* Sheet */}
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[85vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90vh] overflow-hidden"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -83,59 +83,53 @@ export const TopicSelectionSheet = ({
             </div>
 
             {/* Topics list */}
-            <div className="px-5 pb-safe overflow-y-auto max-h-[calc(85vh-100px)]">
-              <div className="space-y-3 pb-6">
+            <div className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)]">
+              <div className="space-y-2 pb-6">
                 {topics.map((topic, index) => {
                   const listened = isListened?.(topic.id) ?? false;
                   return (
                     <motion.button
                       key={topic.id}
                       onClick={() => handleSelectTopic(topic)}
-                      className={`w-full text-left bg-card border rounded-xl p-4 transition-colors ${
+                      className={`w-full text-left bg-card border rounded-xl p-3 transition-colors ${
                         listened 
                           ? 'border-primary/30 bg-primary/5' 
                           : 'border-border hover:border-primary/50'
                       }`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: index * 0.03 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           listened ? 'bg-primary/20' : 'bg-primary/10'
                         }`}>
                           {listened ? (
-                            <CheckCircle className="w-5 h-5 text-primary" />
+                            <CheckCircle className="w-4 h-4 text-primary" />
                           ) : (
-                            <Sparkles className="w-5 h-5 text-primary" />
+                            <Sparkles className="w-4 h-4 text-primary" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-foreground text-sm truncate">
                               {topic.title}
                             </h3>
                             {listened && (
-                              <span className="text-xs text-primary font-medium">Listened</span>
+                              <span className="text-xs text-primary font-medium">✓</span>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                            {topic.description}
-                          </p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                              {getSubjectName(topic.subjectId)}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(topic.flashSummary.difficulty)}`}>
-                              {topic.flashSummary.difficulty}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {topic.duration}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {topic.description}
                             </span>
                           </div>
                         </div>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                          <Clock className="w-3 h-3" />
+                          {topic.duration}
+                        </span>
                       </div>
                     </motion.button>
                   );
