@@ -187,35 +187,36 @@ export const DailyDownloadPlayer = ({
               </div>
             </div>
 
-            {/* Time display */}
-            <div className="flex justify-between w-full max-w-sm mb-8 text-xs text-muted-foreground">
-              <span>{formatTime(currentSeconds)}</span>
-              <span>{formatTime(totalSeconds)}</span>
+            {/* Time display with speed control */}
+            <div className="flex justify-between items-center w-full max-w-sm mb-8">
+              <span className="text-xs text-muted-foreground">{formatTime(currentSeconds)}</span>
+              
+              {/* Playback speed - centered below progress */}
+              <button
+                onClick={() => { lightTap(); cyclePlaybackRate(); }}
+                className="px-3 py-1 rounded-full bg-muted/80 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                {playbackRate}x
+              </button>
+              
+              <span className="text-xs text-muted-foreground">{formatTime(totalSeconds)}</span>
             </div>
 
             {/* Playback controls */}
             <div className="flex items-center justify-center w-full max-w-sm">
               {/* Left controls */}
-              <div className="flex items-center gap-2 flex-1 justify-end">
-                {/* Playback speed */}
-                <button
-                  onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                  className="w-12 h-8 rounded-full bg-muted text-sm font-medium text-foreground"
-                >
-                  {playbackRate}x
-                </button>
-
+              <div className="flex items-center flex-1 justify-end">
                 {/* 15s rewind */}
                 <button
                   onClick={() => handleSkip('backward')}
-                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                  className="p-3 rounded-full hover:bg-muted transition-colors"
                 >
-                  <SkipBack className="w-5 h-5 text-muted-foreground" />
+                  <SkipBack className="w-6 h-6 text-muted-foreground" />
                 </button>
               </div>
 
               {/* Play/Pause - Center */}
-              <div className="mx-6">
+              <div className="mx-8">
                 <motion.button
                   onClick={handlePlayPause}
                   className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
@@ -230,17 +231,14 @@ export const DailyDownloadPlayer = ({
               </div>
 
               {/* Right controls */}
-              <div className="flex items-center gap-2 flex-1 justify-start">
+              <div className="flex items-center flex-1 justify-start">
                 {/* 15s forward */}
                 <button
                   onClick={() => handleSkip('forward')}
-                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                  className="p-3 rounded-full hover:bg-muted transition-colors"
                 >
-                  <SkipForward className="w-5 h-5 text-muted-foreground" />
+                  <SkipForward className="w-6 h-6 text-muted-foreground" />
                 </button>
-
-                {/* More options placeholder for symmetry */}
-                <div className="w-12 h-8" />
               </div>
             </div>
           </div>
