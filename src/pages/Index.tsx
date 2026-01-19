@@ -178,7 +178,7 @@ const Index = () => {
 
       <BottomNav activeTab={activeTab} onTabChange={(tab) => {
         setActiveTab(tab);
-        if (tab === 'studyprep') {
+        if (tab === 'study') {
           setShowReviewBoard(true);
         }
       }} />
