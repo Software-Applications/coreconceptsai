@@ -81,7 +81,7 @@ export const FlashSummaryCard = ({
         className="relative bg-card border border-border rounded-2xl shadow-lg overflow-hidden cursor-grab active:cursor-grabbing"
         style={{ x, rotate, scale }}
         drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
+        dragConstraints={{ left: -180, right: 180 }}
         dragElastic={0.7}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
@@ -124,13 +124,31 @@ export const FlashSummaryCard = ({
         </div>
 
         {/* Swipe hint */}
-        <div className="px-5 pb-4 flex justify-between text-xs text-muted-foreground">
+        <div className="px-5 pb-3 flex justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Check className="w-3 h-3" /> Swipe left: Got it
           </span>
           <span className="flex items-center gap-1">
             Swipe right: Review <Bookmark className="w-3 h-3" />
           </span>
+        </div>
+
+        {/* Tap actions (mobile-friendly) */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="flex-1 h-10 rounded-xl bg-muted text-foreground text-sm font-semibold"
+          >
+            Got it
+          </button>
+          <button
+            type="button"
+            onClick={onPin}
+            className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+          >
+            Pin for review
+          </button>
         </div>
       </motion.div>
     </div>
