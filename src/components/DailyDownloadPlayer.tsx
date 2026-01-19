@@ -194,59 +194,54 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Playback controls */}
-            <div className="flex items-center gap-6">
-              {/* Playback speed */}
-              <button
-                onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                className="px-3 py-1 rounded-full bg-muted text-sm font-medium text-foreground"
-              >
-                {playbackRate}x
-              </button>
+            <div className="flex items-center justify-center w-full max-w-sm">
+              {/* Left controls */}
+              <div className="flex items-center gap-2 flex-1 justify-end">
+                {/* Playback speed */}
+                <button
+                  onClick={() => { lightTap(); cyclePlaybackRate(); }}
+                  className="w-12 h-8 rounded-full bg-muted text-sm font-medium text-foreground"
+                >
+                  {playbackRate}x
+                </button>
 
-              {/* Skip back */}
-              <button
-                onClick={() => handleSkip('backward')}
-                className="p-3 rounded-full hover:bg-muted transition-colors"
-              >
-                <SkipBack className="w-6 h-6 text-foreground" />
-              </button>
+                {/* 15s rewind */}
+                <button
+                  onClick={() => handleSkip('backward')}
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                >
+                  <SkipBack className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
 
-              {/* 15s rewind */}
-              <button
-                onClick={() => handleSkip('backward')}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-              >
-                <Rewind className="w-5 h-5 text-muted-foreground" />
-              </button>
+              {/* Play/Pause - Center */}
+              <div className="mx-6">
+                <motion.button
+                  onClick={handlePlayPause}
+                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-8 h-8" />
+                  ) : (
+                    <Play className="w-8 h-8 ml-1" />
+                  )}
+                </motion.button>
+              </div>
 
-              {/* Play/Pause */}
-              <motion.button
-                onClick={handlePlayPause}
-                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
-                whileTap={{ scale: 0.9 }}
-              >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8" />
-                ) : (
-                  <Play className="w-8 h-8 ml-1" />
-                )}
-              </motion.button>
+              {/* Right controls */}
+              <div className="flex items-center gap-2 flex-1 justify-start">
+                {/* 15s forward */}
+                <button
+                  onClick={() => handleSkip('forward')}
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                >
+                  <SkipForward className="w-5 h-5 text-muted-foreground" />
+                </button>
 
-              {/* 15s forward */}
-              <button
-                onClick={() => handleSkip('forward')}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-              >
-                <FastForward className="w-5 h-5 text-muted-foreground" />
-              </button>
-
-              {/* Skip forward */}
-              <button
-                onClick={() => handleSkip('forward')}
-                className="p-3 rounded-full hover:bg-muted transition-colors"
-              >
-                <SkipForward className="w-6 h-6 text-foreground" />
-              </button>
+                {/* More options placeholder for symmetry */}
+                <div className="w-12 h-8" />
+              </div>
             </div>
           </div>
 
