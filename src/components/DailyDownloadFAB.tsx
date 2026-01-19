@@ -54,9 +54,9 @@ export const DailyDownloadFAB = ({ onClick, unlistenedCount = 0 }: DailyDownload
             className="fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            transition={springTransition}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ ...springTransition, delay: 0.8 }}
           >
             {/* Pulsing glow ring */}
             <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-30" />
