@@ -9,7 +9,7 @@ import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import { generateMockTranscript, type TranscriptSegment } from '@/data/dailyDownloadData';
+import { generateMockTranscript, type TranscriptSegment, type TranscriptWord } from '@/data/dailyDownloadData';
 
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;
@@ -319,7 +319,7 @@ export const DailyDownloadPlayer = ({
                         ref={isActive ? activeSegmentRef : null}
                         className={`text-sm leading-relaxed transition-all duration-300 ${
                           isActive 
-                            ? 'text-foreground font-medium' 
+                            ? 'text-foreground' 
                             : isPast 
                               ? 'text-muted-foreground/60' 
                               : 'text-muted-foreground/40'
@@ -328,7 +328,29 @@ export const DailyDownloadPlayer = ({
                         {isActive && (
                           <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full mr-2 animate-pulse" />
                         )}
-                        {segment.text}
+                        {isActive ? (
+                          segment.words.map((word, wordIndex) => {
+                            const isWordActive = currentSeconds >= word.startTime && currentSeconds < word.endTime;
+                            const isWordPast = currentSeconds >= word.endTime;
+                            
+                            return (
+                              <span
+                                key={wordIndex}
+                                className={`transition-all duration-150 ${
+                                  isWordActive 
+                                    ? 'text-primary font-semibold' 
+                                    : isWordPast 
+                                      ? 'text-foreground font-medium' 
+                                      : 'text-muted-foreground/70'
+                                }`}
+                              >
+                                {word.word}{' '}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          segment.text
+                        )}
                       </p>
                     );
                   })}
