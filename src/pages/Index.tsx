@@ -7,13 +7,25 @@ import { ChapterDropdown } from "@/components/ChapterDropdown";
 import { VideoCard } from "@/components/VideoCard";
 import { PracticeCard } from "@/components/PracticeCard";
 import { BottomNav } from "@/components/BottomNav";
+import { DailyDownloadFAB } from "@/components/DailyDownloadFAB";
+import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
+import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
+import { ReviewBoard } from "@/components/ReviewBoard";
+import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
+import { dailyDownloadTopics, type DailyDownloadTopic } from "@/data/dailyDownloadData";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
+  
+  // Daily Download state
+  const [showTopicSelection, setShowTopicSelection] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
+  const [showReviewBoard, setShowReviewBoard] = useState(false);
+  const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
   
   // Filter content by selected subject
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
@@ -27,6 +39,22 @@ const Index = () => {
     setSelectedSubject(subject);
     const newChapters = chapters.filter(ch => ch.subjectId === subject.id);
     setSelectedChapter(newChapters[0]);
+  };
+
+  // Daily Download handlers
+  const handleSelectTopic = (topic: DailyDownloadTopic) => {
+    setSelectedTopic(topic);
+    setShowTopicSelection(false);
+  };
+
+  const handlePinCard = (topic: DailyDownloadTopic) => {
+    const subjectName = subjects.find(s => s.id === topic.subjectId)?.name || 'Unknown';
+    pinCard(topic.flashSummary, topic.title, subjectName);
+  };
+
+  const getTopicSubjectName = () => {
+    if (!selectedTopic) return '';
+    return subjects.find(s => s.id === selectedTopic.subjectId)?.name || '';
   };
   
   const mainScrollRef = useDragScroll<HTMLElement>();
@@ -142,7 +170,18 @@ const Index = () => {
         </div>
       </section>
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Daily Download FAB */}
+      <DailyDownloadFAB 
+        onClick={() => setShowTopicSelection(true)}
+        hasPendingReviews={getPinnedCount() > 0}
+      />
+
+      <BottomNav activeTab={activeTab} onTabChange={(tab) => {
+        setActiveTab(tab);
+        if (tab === 'studyprep') {
+          setShowReviewBoard(true);
+        }
+      }} />
 
       <VideoPlayerSheet 
         video={selectedVideo}
@@ -158,6 +197,31 @@ const Index = () => {
         chapter={selectedChapter}
         isOpen={!!selectedQuiz}
         onClose={() => setSelectedQuiz(null)}
+      />
+
+      {/* Daily Download Components */}
+      <TopicSelectionSheet
+        isOpen={showTopicSelection}
+        onClose={() => setShowTopicSelection(false)}
+        topics={dailyDownloadTopics}
+        subjects={subjects}
+        onSelectTopic={handleSelectTopic}
+      />
+
+      <DailyDownloadPlayer
+        topic={selectedTopic}
+        subjectName={getTopicSubjectName()}
+        isOpen={!!selectedTopic}
+        onClose={() => setSelectedTopic(null)}
+        onPinCard={handlePinCard}
+      />
+
+      <ReviewBoard
+        isOpen={showReviewBoard}
+        onClose={() => setShowReviewBoard(false)}
+        pinnedCards={pinnedCards}
+        onUnpinCard={unpinCard}
+        onClearAll={clearAllPinned}
       />
     </div>
   );
