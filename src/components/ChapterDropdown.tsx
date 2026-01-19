@@ -3,6 +3,7 @@ import { ChevronDown, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Chapter } from "@/data/courseData";
 import { dropdownVariants, dropdownItemVariants, springTransition } from "@/lib/motionVariants";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface ChapterDropdownProps {
   chapters: Chapter[];
@@ -13,6 +14,7 @@ interface ChapterDropdownProps {
 export function ChapterDropdown({ chapters, selectedChapter, onSelectChapter }: ChapterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { lightTap, selectionChanged } = useHaptics();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -24,10 +26,21 @@ export function ChapterDropdown({ chapters, selectedChapter, onSelectChapter }: 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = () => {
+    lightTap();
+    setIsOpen(!isOpen);
+  };
+
+  const handleSelect = (chapter: Chapter) => {
+    selectionChanged();
+    onSelectChapter(chapter);
+    setIsOpen(false);
+  };
+
   return (
     <div className="relative mb-5" ref={dropdownRef}>
       <motion.button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md hover:border-primary/30"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
@@ -58,10 +71,7 @@ export function ChapterDropdown({ chapters, selectedChapter, onSelectChapter }: 
                   variants={dropdownItemVariants}
                 >
                   <button
-                    onClick={() => {
-                      onSelectChapter(chapter);
-                      setIsOpen(false);
-                    }}
+                    onClick={() => handleSelect(chapter)}
                     className={`w-full px-4 py-3 text-left flex items-center justify-between hover:bg-accent transition-colors ${
                       selectedChapter.id === chapter.id ? 'bg-accent' : ''
                     }`}

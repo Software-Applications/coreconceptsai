@@ -2,6 +2,7 @@ import { Play } from "lucide-react";
 import { motion } from "framer-motion";
 import type { VideoTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface VideoCardProps {
   video: VideoTile;
@@ -9,10 +10,17 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, onClick }: VideoCardProps) {
+  const { lightTap } = useHaptics();
+
+  const handleClick = () => {
+    lightTap();
+    onClick();
+  };
+
   return (
     <motion.button 
       className="flex-shrink-0 w-44 text-left"
-      onClick={onClick}
+      onClick={handleClick}
       whileHover={cardHover}
       whileTap={cardTap}
       transition={springTransition}
