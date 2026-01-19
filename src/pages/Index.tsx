@@ -66,7 +66,7 @@ const Index = () => {
   const mainScrollRef = useDragScroll<HTMLElement>();
   const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
   return (
@@ -142,8 +142,8 @@ const Index = () => {
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>
-          <div className="-mx-4 px-4 -my-2 py-2">
-            <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto overflow-y-visible py-2 pl-2 scrollbar-hide pr-4 snap-x snap-mandatory">
+          <div className="-mx-4 px-4">
+            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4">
               {subjectPinnedCards.slice(0, 5).map((card) => (
                 <PinnedCardPreview
                   key={card.id}
