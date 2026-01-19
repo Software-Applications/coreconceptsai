@@ -194,33 +194,38 @@ export const DailyDownloadPlayer = ({
           </header>
 
           {/* Main content */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
-            {/* Topic icon */}
-            <motion.div
-              className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6"
-              animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Headphones className="w-16 h-16 text-primary" />
-            </motion.div>
+          <div className="flex-1 flex flex-col px-6 overflow-hidden">
+            {/* Compact player section */}
+            <div className="flex items-center gap-4 py-4">
+              {/* Topic icon - smaller */}
+              <motion.div
+                className="w-16 h-16 shrink-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+                animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Headphones className="w-8 h-8 text-primary" />
+              </motion.div>
 
-            {/* Title */}
-            <h1 className="text-xl font-bold text-foreground text-center mb-2">
-              {topic.title}
-            </h1>
-            <p className="text-sm text-muted-foreground text-center mb-8 max-w-xs">
-              {topic.description}
-            </p>
+              {/* Title and description */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-bold text-foreground truncate">
+                  {topic.title}
+                </h1>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {topic.description}
+                </p>
+              </div>
+            </div>
 
-            {/* Waveform visualization */}
-            <div className="flex items-center justify-center gap-0.5 h-16 mb-8">
+            {/* Waveform visualization - compact */}
+            <div className="flex items-center justify-center gap-0.5 h-10 mb-3">
               {waveformBars.map((bar, i) => (
                 <motion.div
                   key={i}
                   className="w-1 bg-primary/60 rounded-full"
                   animate={isPlaying ? {
-                    height: [bar.height * 0.3, bar.height, bar.height * 0.5, bar.height * 0.8, bar.height * 0.3],
-                  } : { height: bar.height * 0.3 }}
+                    height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
+                  } : { height: bar.height * 0.2 }}
                   transition={{
                     duration: 1,
                     repeat: Infinity,
@@ -232,7 +237,7 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Progress bar */}
-            <div className="w-full max-w-sm mb-2">
+            <div className="w-full max-w-sm mx-auto mb-1">
               <div className="h-1 bg-muted rounded-full overflow-hidden">
                 <motion.div 
                   className="h-full bg-primary rounded-full"
@@ -242,10 +247,9 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Time display with speed control */}
-            <div className="flex justify-between items-center w-full max-w-sm mb-8">
+            <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-3">
               <span className="text-xs text-muted-foreground">{formatTime(currentSeconds)}</span>
               
-              {/* Playback speed - centered below progress */}
               <button
                 onClick={() => { lightTap(); cyclePlaybackRate(); }}
                 className="px-3 py-1 rounded-full bg-muted/80 text-xs font-medium text-foreground hover:bg-muted transition-colors"
@@ -256,52 +260,47 @@ export const DailyDownloadPlayer = ({
               <span className="text-xs text-muted-foreground">{formatTime(totalSeconds)}</span>
             </div>
 
-            {/* Playback controls */}
-            <div className="flex items-center justify-center w-full max-w-sm">
-              {/* Left controls */}
+            {/* Playback controls - compact */}
+            <div className="flex items-center justify-center w-full max-w-sm mx-auto mb-4">
               <div className="flex items-center flex-1 justify-end">
-                {/* 15s rewind */}
                 <button
                   onClick={() => handleSkip('backward')}
-                  className="p-3 rounded-full hover:bg-muted transition-colors"
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
                 >
-                  <SkipBack className="w-6 h-6 text-muted-foreground" />
+                  <SkipBack className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Play/Pause - Center */}
-              <div className="mx-8">
+              <div className="mx-6">
                 <motion.button
                   onClick={handlePlayPause}
-                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                  className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
                   whileTap={{ scale: 0.9 }}
                 >
                   {isPlaying ? (
-                    <Pause className="w-8 h-8" />
+                    <Pause className="w-7 h-7" />
                   ) : (
-                    <Play className="w-8 h-8 ml-1" />
+                    <Play className="w-7 h-7 ml-0.5" />
                   )}
                 </motion.button>
               </div>
 
-              {/* Right controls */}
               <div className="flex items-center flex-1 justify-start">
-                {/* 15s forward */}
                 <button
                   onClick={() => handleSkip('forward')}
-                  className="p-3 rounded-full hover:bg-muted transition-colors"
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
                 >
-                  <SkipForward className="w-6 h-6 text-muted-foreground" />
+                  <SkipForward className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
             </div>
 
-            {/* Transcript section */}
-            <div className="w-full max-w-sm mt-6">
-              <p className="text-xs text-muted-foreground mb-2 text-center">Transcript</p>
+            {/* Transcript section - flex-grow to fill remaining space */}
+            <div className="flex-1 flex flex-col min-h-0 pb-safe">
+              <p className="text-xs text-muted-foreground mb-2 text-center shrink-0">Transcript</p>
               <div
                 ref={transcriptRef}
-                className="h-40 overflow-y-auto scrollbar-none bg-muted/30 rounded-xl p-4 cursor-grab overscroll-contain"
+                className="flex-1 overflow-y-auto scrollbar-none bg-muted/30 rounded-xl p-4 cursor-grab overscroll-contain"
                 style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
                 onMouseDown={handleTranscriptMouseDown}
                 onMouseMove={handleTranscriptMouseMove}
