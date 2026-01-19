@@ -27,6 +27,18 @@ export const DailyDownloadFAB = ({ onClick, hasPendingReviews = false }: DailyDo
       animate={{ scale: 1, opacity: 1 }}
     >
       <Headphones className="w-6 h-6" />
+      
+      {/* Notification badge */}
+      {hasPendingReviews && (
+        <motion.div
+          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={springTransition}
+        >
+          !
+        </motion.div>
+      )}
     </motion.button>
   );
 };
