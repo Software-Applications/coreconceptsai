@@ -118,7 +118,7 @@ export const TopicSelectionSheet = ({
             </div>
 
             {/* Topics list grouped by chapter */}
-            <div className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)]">
+            <div className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none [-webkit-overflow-scrolling:touch]">
               <div className="space-y-3 pb-6">
                 {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
                   const isExpanded = expandedChapters.has(chapter.id);
