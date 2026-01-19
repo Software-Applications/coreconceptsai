@@ -119,12 +119,15 @@ export const TopicSelectionSheet = ({
     return groups;
   }, [topics]);
 
-  // Expand first chapter by default when sheet opens
+  // Expand first chapter by default when sheet opens, reset when closed
   useEffect(() => {
-    if (isOpen && groupedTopics.length > 0 && expandedChapters.size === 0) {
+    if (isOpen && groupedTopics.length > 0) {
+      // Auto-expand first chapter on open
       setExpandedChapters(new Set([groupedTopics[0].chapter.id]));
+    } else if (!isOpen) {
+      // Reset all expanded chapters when closed
+      setExpandedChapters(new Set());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, groupedTopics]);
 
   return (
