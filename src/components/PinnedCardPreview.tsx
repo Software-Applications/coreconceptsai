@@ -13,7 +13,7 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
 
   return (
     <motion.button
-      className="flex-shrink-0 w-32 sm:w-36 md:w-40 bg-card border border-border rounded-xl p-3 text-left snap-start"
+      className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-card border border-border rounded-xl p-3 text-left snap-start"
       whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}
       whileTap={{ scale: 0.98 }}
       transition={springTransition}
@@ -22,13 +22,15 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
         onClick();
       }}
     >
-      {/* Emoji */}
-      <span className="text-lg block mb-2">{card.flashSummary.visualContent}</span>
-
-      {/* Topic title */}
-      <h4 className="text-xs font-medium text-foreground leading-normal line-clamp-2">
-        {card.topicTitle}
+      {/* Flashcard title - Primary */}
+      <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2 mb-1.5">
+        {card.flashSummary.visualContent}
       </h4>
+
+      {/* Topic title - Secondary */}
+      <p className="text-xs text-muted-foreground leading-normal truncate">
+        {card.topicTitle}
+      </p>
     </motion.button>
   );
 };
