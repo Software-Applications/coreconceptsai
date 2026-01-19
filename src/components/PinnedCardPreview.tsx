@@ -13,7 +13,7 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
 
   return (
     <motion.button
-      className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-card border border-border rounded-xl p-3 text-left snap-start"
+      className="flex-shrink-0 w-40 h-24 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between"
       whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}
       whileTap={{ scale: 0.98 }}
       transition={springTransition}
@@ -23,12 +23,12 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
       }}
     >
       {/* Flashcard title - Primary */}
-      <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2 mb-1.5">
+      <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
         {card.flashSummary.visualContent}
       </h4>
 
       {/* Topic title - Secondary */}
-      <p className="text-xs text-muted-foreground leading-normal line-clamp-2">
+      <p className="text-xs text-muted-foreground leading-normal line-clamp-1 mt-auto">
         {card.topicTitle}
       </p>
     </motion.button>
