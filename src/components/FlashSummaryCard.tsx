@@ -1,6 +1,4 @@
-import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion';
-import { Check, Bookmark, X } from 'lucide-react';
-import { useHaptics } from '@/hooks/useHaptics';
+import { X } from 'lucide-react';
 import type { FlashSummary } from '@/data/dailyDownloadData';
 
 interface FlashSummaryCardProps {
@@ -10,89 +8,26 @@ interface FlashSummaryCardProps {
   onPin: () => void;
 }
 
-const SWIPE_THRESHOLD = 80;
-
 export const FlashSummaryCard = ({
   flashSummary,
   topicTitle,
   onDismiss,
   onPin
 }: FlashSummaryCardProps) => {
-  const { selectionChanged, successNotification } = useHaptics();
-  const x = useMotionValue(0);
-  
-  // Transform x position to rotation and opacity
-  const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
-  const dismissOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0]);
-  const pinOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1]);
-  const scale = useTransform(x, [-200, 0, 200], [0.95, 1, 0.95]);
-
-  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
-    
-    // Use either distance OR velocity to trigger action
-    if (offset < -SWIPE_THRESHOLD || velocity < -500) {
-      // Swiped left - Dismiss (Got it!)
-      successNotification();
-      onDismiss();
-    } else if (offset > SWIPE_THRESHOLD || velocity > 500) {
-      // Swiped right - Pin for review
-      successNotification();
-      onPin();
-    }
-    // Reset position handled by dragConstraints
-  };
-
-  const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (Math.abs(info.offset.x) > 30) {
-      selectionChanged();
-    }
-  };
-
   const getDifficultyColor = (difficulty: FlashSummary['difficulty']) => {
     switch (difficulty) {
-      case 'easy': return 'bg-green-500/20 text-green-600 dark:text-green-400';
-      case 'medium': return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
-      case 'hard': return 'bg-red-500/20 text-red-600 dark:text-red-400';
+      case 'easy':
+        return 'bg-green-500/20 text-green-600 dark:text-green-400';
+      case 'medium':
+        return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
+      case 'hard':
+        return 'bg-red-500/20 text-red-600 dark:text-red-400';
     }
   };
 
   return (
     <div className="relative w-full max-w-sm mx-auto">
-      {/* Background indicators */}
-      <motion.div 
-        className="absolute inset-0 flex items-center justify-start pl-8 bg-green-500/20 rounded-2xl"
-        style={{ opacity: dismissOpacity }}
-      >
-        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-          <Check className="w-8 h-8" />
-          <span className="font-semibold">Got it!</span>
-        </div>
-      </motion.div>
-      
-      <motion.div 
-        className="absolute inset-0 flex items-center justify-end pr-8 bg-primary/20 rounded-2xl"
-        style={{ opacity: pinOpacity }}
-      >
-        <div className="flex items-center gap-2 text-primary">
-          <span className="font-semibold">Pin for review</span>
-          <Bookmark className="w-8 h-8" />
-        </div>
-      </motion.div>
-
-      {/* Swipeable card */}
-      <motion.div
-        className="relative bg-card border border-border rounded-2xl shadow-lg overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y"
-        style={{ x, rotate, scale }}
-        drag="x"
-        dragDirectionLock
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={1}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
-        whileTap={{ cursor: 'grabbing' }}
-      >
+      <div className="relative bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
         {/* Close button */}
         <button 
           onClick={onDismiss}
@@ -129,17 +64,7 @@ export const FlashSummaryCard = ({
           </ul>
         </div>
 
-        {/* Swipe hint */}
-        <div className="px-5 pb-3 flex justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Check className="w-3 h-3" /> Swipe left: Got it
-          </span>
-          <span className="flex items-center gap-1">
-            Swipe right: Review <Bookmark className="w-3 h-3" />
-          </span>
-        </div>
-
-        {/* Tap actions (mobile-friendly) */}
+        {/* Tap actions */}
         <div className="px-5 pb-5 flex gap-3">
           <button
             type="button"
@@ -156,7 +81,7 @@ export const FlashSummaryCard = ({
             Pin for review
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
