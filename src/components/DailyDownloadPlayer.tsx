@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, Headphones
+  X, Play, Pause, Headphones, RotateCcw, RotateCw
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
@@ -315,8 +315,23 @@ export const DailyDownloadPlayer = ({
               </span>
             </div>
 
-            {/* Playback controls - compact (skip buttons removed - Web Speech API doesn't support seeking) */}
-            <div className="flex items-center justify-center w-full max-w-sm mx-auto mb-4">
+            {/* Playback controls */}
+            <div className="flex items-center justify-center gap-6 w-full max-w-sm mx-auto mb-4">
+              {/* Rewind button - restarts from beginning */}
+              <motion.button
+                onClick={() => {
+                  lightTap();
+                  stop();
+                  setHasStarted(false);
+                }}
+                className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center"
+                whileTap={{ scale: 0.9 }}
+                aria-label="Restart"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </motion.button>
+
+              {/* Play/Pause */}
               <motion.button
                 onClick={handlePlayPause}
                 className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
@@ -327,6 +342,23 @@ export const DailyDownloadPlayer = ({
                 ) : (
                   <Play className="w-7 h-7 ml-0.5" />
                 )}
+              </motion.button>
+
+              {/* Forward button - skip to end / show flash card */}
+              <motion.button
+                onClick={() => {
+                  lightTap();
+                  stop();
+                  if (topic) {
+                    setShowFlashCard(true);
+                    onTopicListened?.(topic.id);
+                  }
+                }}
+                className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center"
+                whileTap={{ scale: 0.9 }}
+                aria-label="Skip to summary"
+              >
+                <RotateCw className="w-5 h-5" />
               </motion.button>
             </div>
 
