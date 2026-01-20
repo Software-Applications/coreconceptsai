@@ -6,19 +6,10 @@ interface MermaidDiagramProps {
   title: string;
 }
 
-// Initialize mermaid with a theme
+// Initialize mermaid with neutral theme colors (CSS variables not supported)
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'base',
-  themeVariables: {
-    primaryColor: 'hsl(var(--primary))',
-    primaryTextColor: 'hsl(var(--primary-foreground))',
-    primaryBorderColor: 'hsl(var(--primary))',
-    lineColor: 'hsl(var(--muted-foreground))',
-    secondaryColor: 'hsl(var(--muted))',
-    tertiaryColor: 'hsl(var(--background))',
-    fontSize: '12px',
-  },
+  theme: 'neutral',
   flowchart: {
     curve: 'basis',
     padding: 10,
