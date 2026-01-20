@@ -176,6 +176,100 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
     stopProgressTracking();
   }, [stopProgressTracking]);
 
+  // Seek to a specific character position (approximate - restarts from that point)
+  const seekToChar = useCallback((charIndex: number) => {
+    const text = textRef.current;
+    if (!text) return;
+    
+    // Clamp to valid range
+    const clampedIndex = Math.max(0, Math.min(charIndex, text.length - 1));
+    
+    // Find a good word boundary to start from
+    let startIndex = clampedIndex;
+    // Search backward for a space to start at a word boundary
+    while (startIndex > 0 && text[startIndex] !== ' ') {
+      startIndex--;
+    }
+    if (startIndex > 0) startIndex++; // Move past the space
+    
+    // Get remaining text from this position
+    const remainingText = text.substring(startIndex);
+    
+    window.speechSynthesis.cancel();
+    stopProgressTracking();
+    
+    // Update progress state
+    const progressPercent = (startIndex / text.length) * 100;
+    setProgress(progressPercent);
+    setCurrentCharIndex(startIndex);
+    
+    const utterance = new SpeechSynthesisUtterance(remainingText);
+    utteranceRef.current = utterance;
+    
+    utterance.rate = playbackRate;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    const voice = getPreferredVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+    
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setIsPaused(false);
+      // Start tracking with offset
+      const wordCount = remainingText.split(/\s+/).length;
+      const estimatedDurationMs = (wordCount / 150) * 60 * 1000 / playbackRate;
+      
+      startTimeRef.current = Date.now();
+      
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      
+      progressIntervalRef.current = window.setInterval(() => {
+        const elapsed = Date.now() - startTimeRef.current;
+        const remainingProgress = (elapsed / estimatedDurationMs) * (100 - progressPercent);
+        const totalProgress = Math.min(progressPercent + remainingProgress, 99);
+        const estimatedCharIndex = Math.floor((totalProgress / 100) * text.length);
+        
+        setProgress(totalProgress);
+        setCurrentCharIndex(estimatedCharIndex);
+        optionsRef.current.onProgress?.(estimatedCharIndex, totalProgress);
+      }, 50);
+    };
+    
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+      setProgress(100);
+      setCurrentCharIndex(text.length);
+      stopProgressTracking();
+      optionsRef.current.onEnd?.();
+    };
+    
+    utterance.onboundary = (event) => {
+      if (event.charIndex > 0) {
+        const actualCharIndex = startIndex + event.charIndex;
+        setCurrentCharIndex(actualCharIndex);
+        const progressPercent = (actualCharIndex / text.length) * 100;
+        setProgress(progressPercent);
+      }
+    };
+    
+    utterance.onerror = (event) => {
+      if (event.error !== 'canceled' && event.error !== 'interrupted') {
+        console.error('Speech synthesis error:', event.error);
+      }
+      setIsPlaying(false);
+      setIsPaused(false);
+      stopProgressTracking();
+    };
+    
+    window.speechSynthesis.speak(utterance);
+  }, [playbackRate, getPreferredVoice, stopProgressTracking]);
+
   const toggle = useCallback(() => {
     if (isPlaying) {
       pause();
@@ -209,12 +303,14 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
     currentCharIndex,
     progress,
     playbackRate,
+    textLength: textRef.current.length,
     speak,
     pause,
     resume,
     stop,
     toggle,
     setRate,
-    cyclePlaybackRate
+    cyclePlaybackRate,
+    seekToChar
   };
 };
