@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Video, HelpCircle, ChevronRight, Bookmark, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ const Index = () => {
   const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
-  const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
+  const { pinnedCards, pinCard, unpinCard, clearAllPinned } = usePinnedCards();
   const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
   const { markAsWatched, isWatched, getWatchedCount } = useWatchedVideos();
   const { isCompleted: isPracticeCompleted, getBestScore, getCompletedCount } = useCompletedPractice();
@@ -370,7 +370,6 @@ const Index = () => {
         isOpen={showTopicSelection}
         onClose={() => setShowTopicSelection(false)}
         topics={subjectTopics}
-        subjects={subjects}
         onSelectTopic={handleSelectTopic}
         isListened={isListened}
         hasProgress={hasAudioProgress}

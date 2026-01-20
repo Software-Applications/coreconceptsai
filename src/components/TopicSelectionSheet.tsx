@@ -4,14 +4,13 @@ import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw } from 'lucide-
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import type { Subject, Chapter } from '@/data/courseData';
+import type { Chapter } from '@/data/courseData';
 import { chapters } from '@/data/courseData';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
   onClose: () => void;
   topics: DailyDownloadTopic[];
-  subjects: Subject[];
   onSelectTopic: (topic: DailyDownloadTopic) => void;
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
@@ -21,7 +20,6 @@ export const TopicSelectionSheet = ({
   isOpen,
   onClose,
   topics,
-  subjects,
   onSelectTopic,
   isListened,
   hasProgress

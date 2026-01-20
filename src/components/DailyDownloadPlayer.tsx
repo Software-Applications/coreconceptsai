@@ -9,7 +9,7 @@ import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import { generateMockTranscript, type TranscriptSegment, type TranscriptWord } from '@/data/dailyDownloadData';
+import { generateMockTranscript } from '@/data/dailyDownloadData';
 
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;
