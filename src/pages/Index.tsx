@@ -7,7 +7,7 @@ import { ChapterDropdown } from "@/components/ChapterDropdown";
 import { VideoCard } from "@/components/VideoCard";
 import { PracticeCard } from "@/components/PracticeCard";
 import { BottomNav } from "@/components/BottomNav";
-import { DailyDownloadFAB } from "@/components/DailyDownloadFAB";
+import { DailyDownloadCard } from "@/components/DailyDownloadCard";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
@@ -199,6 +199,14 @@ const Index = () => {
           )}
         </div>
 
+        {/* Daily Download Inline Card */}
+        <div className="py-3">
+          <DailyDownloadCard 
+            onClick={() => setShowTopicSelection(true)}
+            unlistenedCount={unlistenedCount}
+          />
+        </div>
+
         {/* Section Divider */}
         <div className="border-t border-border/50 my-2" />
 
@@ -266,11 +274,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Daily Download FAB */}
-      <DailyDownloadFAB 
-        onClick={() => setShowTopicSelection(true)}
-        unlistenedCount={unlistenedCount}
-      />
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 
