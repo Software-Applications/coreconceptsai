@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Video, HelpCircle, ChevronRight, Bookmark, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
@@ -21,6 +22,7 @@ import { useWatchedVideos } from "@/hooks/useWatchedVideos";
 import { useCompletedPractice } from "@/hooks/useCompletedPractice";
 import { useAudioProgress } from "@/hooks/useAudioProgress";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useConfetti } from "@/hooks/useConfetti";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { dailyDownloadTopics, type DailyDownloadTopic, type PinnedCard } from "@/data/dailyDownloadData";
 
@@ -43,6 +45,12 @@ const Index = () => {
   const { isCompleted: isPracticeCompleted, getBestScore, getCompletedCount } = useCompletedPractice();
   const { hasProgress: hasAudioProgress } = useAudioProgress();
   const { lightTap } = useHaptics();
+  const { celebrate } = useConfetti();
+  
+  // Track previous counts to detect completion
+  const prevWatchedCount = useRef(0);
+  const prevCompletedPracticeCount = useRef(0);
+  const prevListenedCount = useRef(0);
   
   // Ensure theme toggle doesn't cause hydration issues
   useEffect(() => {
@@ -56,10 +64,51 @@ const Index = () => {
   const subjectTopics = dailyDownloadTopics.filter(t => t.subjectId === selectedSubject.id);
   const subjectPinnedCards = pinnedCards.filter(c => c.subjectName === selectedSubject.name);
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
+  const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
   const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
   const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
+  
+  // Check for completion celebrations
+  useEffect(() => {
+    // Videos completion check
+    if (watchedCount === subjectVideos.length && 
+        watchedCount > 0 && 
+        prevWatchedCount.current === subjectVideos.length - 1) {
+      celebrate();
+      toast.success("🎉 All videos completed!", {
+        description: `You've watched all ${subjectVideos.length} videos in ${selectedSubject.name}!`
+      });
+    }
+    prevWatchedCount.current = watchedCount;
+  }, [watchedCount, subjectVideos.length, celebrate, selectedSubject.name]);
+
+  useEffect(() => {
+    // Practice sets completion check
+    if (completedPracticeCount === subjectPractice.length && 
+        completedPracticeCount > 0 && 
+        prevCompletedPracticeCount.current === subjectPractice.length - 1) {
+      celebrate();
+      toast.success("🎉 All practice sets completed!", {
+        description: `You've finished all ${subjectPractice.length} practice sets in ${selectedSubject.name}!`
+      });
+    }
+    prevCompletedPracticeCount.current = completedPracticeCount;
+  }, [completedPracticeCount, subjectPractice.length, celebrate, selectedSubject.name]);
+
+  useEffect(() => {
+    // Daily Download completion check
+    if (listenedCount === subjectTopics.length && 
+        listenedCount > 0 && 
+        prevListenedCount.current === subjectTopics.length - 1) {
+      celebrate();
+      toast.success("🎉 All Daily Downloads completed!", {
+        description: `You've listened to all ${subjectTopics.length} topics in ${selectedSubject.name}!`
+      });
+    }
+    prevListenedCount.current = listenedCount;
+  }, [listenedCount, subjectTopics.length, celebrate, selectedSubject.name]);
   
   // Reset chapter when subject changes
   const handleSubjectChange = (subject: typeof subjects[0]) => {
