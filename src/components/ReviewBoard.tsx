@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bookmark, Trash2, Clock } from 'lucide-react';
+import { X, Bookmark, Trash2, Clock, Expand } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { PinnedCard } from '@/data/dailyDownloadData';
@@ -20,6 +21,7 @@ export const ReviewBoard = ({
   onClearAll
 }: ReviewBoardProps) => {
   const { lightTap, errorNotification } = useHaptics();
+  const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
 
   const handleUnpin = (cardId: string) => {
     lightTap();
@@ -29,6 +31,11 @@ export const ReviewBoard = ({
   const handleClearAll = () => {
     errorNotification();
     onClearAll();
+  };
+
+  const handleExpand = (card: PinnedCard) => {
+    lightTap();
+    setExpandedCard(card);
   };
 
   const formatDate = (dateString: string) => {
@@ -119,9 +126,17 @@ export const ReviewBoard = ({
                       <div className="text-xl font-bold text-foreground">
                         {card.flashSummary.visualContent}
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(card.flashSummary.difficulty)}`}>
-                        {card.flashSummary.difficulty}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(card.flashSummary.difficulty)}`}>
+                          {card.flashSummary.difficulty}
+                        </span>
+                        <button
+                          onClick={() => handleExpand(card)}
+                          className="p-1.5 rounded-full hover:bg-background/50 transition-colors"
+                        >
+                          <Expand className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Card content */}
@@ -155,7 +170,7 @@ export const ReviewBoard = ({
                         ))}
                         {card.flashSummary.bulletPoints.length > 2 && (
                           <li className="text-xs text-primary ml-6">
-                            +1 more point
+                            +{card.flashSummary.bulletPoints.length - 2} more point{card.flashSummary.bulletPoints.length - 2 > 1 ? 's' : ''}
                           </li>
                         )}
                       </ul>
@@ -171,6 +186,96 @@ export const ReviewBoard = ({
               </div>
             )}
           </div>
+
+          {/* Expanded Card Modal */}
+          <AnimatePresence>
+            {expandedCard && (
+              <motion.div
+                className="fixed inset-0 z-60 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setExpandedCard(null)}
+              >
+                <motion.div
+                  className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={springTransition}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal header */}
+                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 text-center relative">
+                    <button
+                      onClick={() => setExpandedCard(null)}
+                      className="absolute top-3 right-3 p-2 rounded-full hover:bg-background/50 transition-colors"
+                    >
+                      <X className="w-5 h-5 text-foreground" />
+                    </button>
+                    <div className="text-4xl font-bold text-foreground mb-2">
+                      {expandedCard.flashSummary.visualContent}
+                    </div>
+                    <span className={`text-xs px-3 py-1 rounded-full ${getDifficultyColor(expandedCard.flashSummary.difficulty)}`}>
+                      {expandedCard.flashSummary.difficulty}
+                    </span>
+                  </div>
+
+                  {/* Modal content */}
+                  <div className="p-6 overflow-y-auto flex-1">
+                    <div className="mb-4">
+                      <h3 className="font-bold text-foreground text-lg">
+                        {expandedCard.topicTitle}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {expandedCard.subjectName}
+                      </p>
+                    </div>
+
+                    {/* All bullet points */}
+                    <ul className="space-y-3 mb-4">
+                      {expandedCard.flashSummary.bulletPoints.map((point, i) => (
+                        <li key={i} className="flex gap-3 text-sm text-foreground">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Visual type info */}
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Type</p>
+                      <p className="text-sm text-foreground font-medium capitalize">
+                        {expandedCard.flashSummary.visualType}
+                      </p>
+                    </div>
+
+                    {/* Timestamp */}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
+                      <Clock className="w-3 h-3" />
+                      <span>Pinned {formatDate(expandedCard.pinnedAt)}</span>
+                    </div>
+                  </div>
+
+                  {/* Modal footer */}
+                  <div className="p-4 border-t border-border">
+                    <button
+                      onClick={() => {
+                        handleUnpin(expandedCard.id);
+                        setExpandedCard(null);
+                      }}
+                      className="w-full py-3 rounded-xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove from Review Board
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
