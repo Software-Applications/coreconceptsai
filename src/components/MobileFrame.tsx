@@ -11,8 +11,8 @@ export const MobileFrame = ({ children }: MobileFrameProps) => {
         {/* Phone frame (only visible on larger screens) */}
         <div className="mobile-frame-bezel" />
         
-        {/* App content */}
-        <div className="mobile-frame-content">
+        {/* App content - relative positioning for absolute children */}
+        <div className="mobile-frame-content relative">
           {children}
         </div>
       </div>

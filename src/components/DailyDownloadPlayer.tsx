@@ -276,7 +276,7 @@ export const DailyDownloadPlayer = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 bg-background flex flex-col"
+          className="absolute inset-0 z-50 bg-background flex flex-col"
           initial={{ opacity: 0, y: '100%' }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: '100%' }}

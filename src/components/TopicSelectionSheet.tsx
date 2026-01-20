@@ -132,7 +132,7 @@ export const TopicSelectionSheet = ({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/50 z-50"
+            className="absolute inset-0 bg-black/50 z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -141,7 +141,7 @@ export const TopicSelectionSheet = ({
 
           {/* Sheet */}
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90vh] overflow-hidden"
+            className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90%] overflow-hidden"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -169,7 +169,7 @@ export const TopicSelectionSheet = ({
             {/* Topics list grouped by chapter */}
             <div
               ref={scrollContainerRef}
-              className="px-5 pb-safe overflow-y-auto max-h-[calc(90vh-100px)] scrollbar-none overscroll-contain cursor-grab"
+              className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-100px)] scrollbar-none overscroll-contain cursor-grab"
               style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
               onMouseDown={handleScrollMouseDown}
               onMouseMove={handleScrollMouseMove}

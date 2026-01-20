@@ -32,7 +32,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
