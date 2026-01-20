@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useMemo, type MouseEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, SkipBack, SkipForward, 
-  Rewind, FastForward, Headphones
+  X, Play, Pause, Headphones
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
-import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
@@ -30,24 +29,34 @@ export const DailyDownloadPlayer = ({
 }: DailyDownloadPlayerProps) => {
   const { lightTap, mediumTap, successNotification } = useHaptics();
   const [showFlashCard, setShowFlashCard] = useState(false);
-  const [mockProgress, setMockProgress] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
   
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
   const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0 });
   
+  const handleSpeechEnd = useCallback(() => {
+    if (topic) {
+      setShowFlashCard(true);
+      onTopicListened?.(topic.id);
+    }
+  }, [topic, onTopicListened]);
+
   const {
     isPlaying,
+    isPaused,
+    isSpeaking,
+    currentCharIndex,
     progress,
     playbackRate,
-    toggle,
-    skipForward,
-    skipBackward,
-    cyclePlaybackRate,
-    formatTime
-  } = useAudioPlayer(topic?.audioUrl || null, {
-    onEnded: () => setShowFlashCard(true)
+    speak,
+    pause,
+    resume,
+    stop,
+    cyclePlaybackRate
+  } = useSpeechSynthesis({
+    onEnd: handleSpeechEnd
   });
 
   // Generate transcript for current topic
@@ -56,17 +65,62 @@ export const DailyDownloadPlayer = ({
     return generateMockTranscript(topic);
   }, [topic]);
 
-  // Calculate current time in seconds
-  const displayProgress = progress > 0 ? progress : mockProgress;
-  const currentSeconds = (displayProgress / 100) * 632;
-  const totalSeconds = 632;
+  // Get full transcript text for speech
+  const fullTranscriptText = useMemo(() => {
+    return transcript.map(seg => seg.text).join(' ');
+  }, [transcript]);
 
-  // Find active transcript segment
+  // Estimate total duration based on text length and speaking rate (~150 words/min)
+  const estimatedDuration = useMemo(() => {
+    const wordCount = fullTranscriptText.split(/\s+/).length;
+    return Math.max((wordCount / 150) * 60, 60); // At least 60 seconds
+  }, [fullTranscriptText]);
+
+  // Calculate current time in seconds based on character progress
+  const currentSeconds = useMemo(() => {
+    if (fullTranscriptText.length === 0) return 0;
+    return (currentCharIndex / fullTranscriptText.length) * estimatedDuration;
+  }, [currentCharIndex, fullTranscriptText.length, estimatedDuration]);
+
+  // Find active transcript segment based on character index
   const activeSegmentIndex = useMemo(() => {
-    return transcript.findIndex(
-      seg => currentSeconds >= seg.startTime && currentSeconds < seg.endTime
-    );
-  }, [transcript, currentSeconds]);
+    if (!isSpeaking && !hasStarted) return -1;
+    
+    let charCount = 0;
+    for (let i = 0; i < transcript.length; i++) {
+      const segmentLength = transcript[i].text.length + 1; // +1 for space
+      if (currentCharIndex < charCount + segmentLength) {
+        return i;
+      }
+      charCount += segmentLength;
+    }
+    return transcript.length - 1;
+  }, [transcript, currentCharIndex, isSpeaking, hasStarted]);
+
+  // Calculate word-level progress within active segment
+  const activeWordIndex = useMemo(() => {
+    if (activeSegmentIndex < 0) return -1;
+    const segment = transcript[activeSegmentIndex];
+    if (!segment) return -1;
+    
+    // Calculate character offset within this segment
+    let prevCharsCount = 0;
+    for (let i = 0; i < activeSegmentIndex; i++) {
+      prevCharsCount += transcript[i].text.length + 1;
+    }
+    const charInSegment = currentCharIndex - prevCharsCount;
+    
+    // Find which word we're on
+    let charCount = 0;
+    for (let i = 0; i < segment.words.length; i++) {
+      const wordLength = segment.words[i].word.length + 1;
+      if (charInSegment < charCount + wordLength) {
+        return i;
+      }
+      charCount += wordLength;
+    }
+    return segment.words.length - 1;
+  }, [activeSegmentIndex, currentCharIndex, transcript]);
 
   // Auto-scroll to active segment
   useEffect(() => {
@@ -78,30 +132,19 @@ export const DailyDownloadPlayer = ({
     }
   }, [activeSegmentIndex]);
 
-  // Mock progress simulation for demo
-  useEffect(() => {
-    if (!isPlaying || !topic) return;
-    
-    const interval = setInterval(() => {
-      setMockProgress(prev => {
-        const next = prev + (100 / 632) * playbackRate; // Simulate 10:32 duration
-        if (next >= 100) {
-          setShowFlashCard(true);
-          onTopicListened?.(topic.id);
-          return 100;
-        }
-        return next;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, playbackRate, topic, onTopicListened]);
-
   // Reset state when topic changes
   useEffect(() => {
-    setMockProgress(0);
+    stop();
     setShowFlashCard(false);
-  }, [topic?.id]);
+    setHasStarted(false);
+  }, [topic?.id, stop]);
+
+  // Format time helper
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
 
   // Transcript drag handlers
   const handleTranscriptMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -129,17 +172,17 @@ export const DailyDownloadPlayer = ({
 
   const handlePlayPause = () => {
     mediumTap();
-    toggle();
-  };
-
-  const handleSkip = (direction: 'forward' | 'backward') => {
-    lightTap();
-    if (direction === 'forward') {
-      skipForward(15);
-      setMockProgress(prev => Math.min(prev + (15 / 632) * 100, 100));
+    if (!hasStarted) {
+      // First time playing - start speech
+      setHasStarted(true);
+      speak(fullTranscriptText);
+    } else if (isPlaying) {
+      pause();
+    } else if (isPaused) {
+      resume();
     } else {
-      skipBackward(15);
-      setMockProgress(prev => Math.max(prev - (15 / 632) * 100, 0));
+      // Restart from beginning
+      speak(fullTranscriptText);
     }
   };
 
@@ -241,7 +284,7 @@ export const DailyDownloadPlayer = ({
               <div className="h-1 bg-muted rounded-full overflow-hidden">
                 <motion.div 
                   className="h-full bg-primary rounded-full"
-                  style={{ width: `${displayProgress}%` }}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
@@ -257,42 +300,22 @@ export const DailyDownloadPlayer = ({
                 {playbackRate}x
               </button>
               
-              <span className="text-xs text-muted-foreground">{formatTime(totalSeconds)}</span>
+              <span className="text-xs text-muted-foreground">{formatTime(estimatedDuration)}</span>
             </div>
 
-            {/* Playback controls - compact */}
+            {/* Playback controls - compact (skip buttons removed - Web Speech API doesn't support seeking) */}
             <div className="flex items-center justify-center w-full max-w-sm mx-auto mb-4">
-              <div className="flex items-center flex-1 justify-end">
-                <button
-                  onClick={() => handleSkip('backward')}
-                  className="p-2 rounded-full hover:bg-muted transition-colors"
-                >
-                  <SkipBack className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </div>
-
-              <div className="mx-6">
-                <motion.button
-                  onClick={handlePlayPause}
-                  className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
-                  whileTap={{ scale: 0.9 }}
-                >
-                  {isPlaying ? (
-                    <Pause className="w-7 h-7" />
-                  ) : (
-                    <Play className="w-7 h-7 ml-0.5" />
-                  )}
-                </motion.button>
-              </div>
-
-              <div className="flex items-center flex-1 justify-start">
-                <button
-                  onClick={() => handleSkip('forward')}
-                  className="p-2 rounded-full hover:bg-muted transition-colors"
-                >
-                  <SkipForward className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </div>
+              <motion.button
+                onClick={handlePlayPause}
+                className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                whileTap={{ scale: 0.9 }}
+              >
+                {isPlaying ? (
+                  <Pause className="w-7 h-7" />
+                ) : (
+                  <Play className="w-7 h-7 ml-0.5" />
+                )}
+              </motion.button>
             </div>
 
             {/* Transcript section - flex-grow to fill remaining space */}
@@ -330,8 +353,8 @@ export const DailyDownloadPlayer = ({
                         )}
                         {isActive ? (
                           segment.words.map((word, wordIndex) => {
-                            const isWordActive = currentSeconds >= word.startTime && currentSeconds < word.endTime;
-                            const isWordPast = currentSeconds >= word.endTime;
+                            const isWordActive = wordIndex === activeWordIndex;
+                            const isWordPast = wordIndex < activeWordIndex;
                             
                             return (
                               <span
