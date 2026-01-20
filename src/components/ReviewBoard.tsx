@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bookmark, Trash2, Expand, Clock } from 'lucide-react';
+import { X, Bookmark, Trash2, Clock } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { springTransition } from '@/lib/motionVariants';
@@ -118,11 +118,14 @@ export const ReviewBoard = ({
                 {pinnedCards.map((card, index) => (
                   <motion.div
                     key={card.id}
-                    className="bg-card border border-border rounded-xl overflow-hidden"
+                    className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -100 }}
                     transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.01, borderColor: 'hsl(var(--primary) / 0.5)' }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => handleExpand(card)}
                   >
                     {/* Card header */}
                     <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4">
@@ -135,20 +138,15 @@ export const ReviewBoard = ({
                             {card.subjectName}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleExpand(card)}
-                            className="p-1.5 rounded-full hover:bg-background/50 transition-colors"
-                          >
-                            <Expand className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button
-                            onClick={() => handleUnpin(card.id)}
-                            className="p-1.5 rounded-full hover:bg-destructive/10 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnpin(card.id);
+                          }}
+                          className="p-1.5 rounded-full hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                        </button>
                       </div>
                     </div>
 
