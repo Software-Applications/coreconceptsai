@@ -210,8 +210,12 @@ export const ReviewBoard = ({
                     >
                       <X className="w-5 h-5 text-foreground" />
                     </button>
+                    {/* Card counter */}
+                    <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-background/50 text-xs font-medium text-foreground">
+                      {pinnedCards.findIndex(c => c.id === expandedCard.id) + 1} / {pinnedCards.length}
+                    </div>
                     {/* Topic title as header */}
-                    <h2 className="text-lg font-bold text-foreground pr-8">
+                    <h2 className="text-lg font-bold text-foreground mt-6 pr-8">
                       {expandedCard.topicTitle}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -222,7 +226,7 @@ export const ReviewBoard = ({
                   {/* Modal content */}
                   <div
                     ref={expandedContentScrollRef}
-                    className="p-6 overflow-y-auto scrollbar-hide flex-1 overscroll-contain cursor-grab select-none"
+                    className="p-6 flex-1 overflow-y-auto scrollbar-hide overscroll-contain cursor-grab select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
                   >
 
@@ -237,14 +241,6 @@ export const ReviewBoard = ({
                         </li>
                       ))}
                     </ul>
-
-                    {/* Visual type info */}
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Type</p>
-                      <p className="text-sm text-foreground font-medium capitalize">
-                        {expandedCard.flashSummary.visualType}
-                      </p>
-                    </div>
 
                     {/* Timestamp */}
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
