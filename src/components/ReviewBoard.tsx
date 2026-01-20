@@ -74,7 +74,7 @@ export const ReviewBoard = ({
           transition={springTransition}
         >
           {/* Header */}
-          <header className="flex items-center justify-between p-4 pt-safe border-b border-border">
+          <header className="flex items-center justify-between p-4 pt-14 sm:pt-14 border-b border-border">
             <button
               onClick={() => { lightTap(); onClose(); }}
               className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
