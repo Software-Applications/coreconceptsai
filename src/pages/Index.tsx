@@ -12,7 +12,7 @@ import { DailyDownloadFAB } from "@/components/DailyDownloadFAB";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+
 import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
@@ -350,14 +350,6 @@ const Index = () => {
                   ))}
                 </ul>
 
-                {/* Visual diagram */}
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Concept Map</p>
-                  <MermaidDiagram 
-                    bulletPoints={expandedPinnedCard.flashSummary.bulletPoints}
-                    title={expandedPinnedCard.flashSummary.visualContent}
-                  />
-                </div>
 
                 {/* Timestamp */}
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
