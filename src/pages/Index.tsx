@@ -155,29 +155,14 @@ const Index = () => {
           </div>
           
           {subjectPinnedCards.length === 0 ? (
-            <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-muted/50 border border-border/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Bookmark className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    No pinned cards yet
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-0.5">
-                    Pin cards from your Daily Download
-                  </p>
-                </div>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                <Bookmark className="w-6 h-6 text-muted-foreground" />
               </div>
-              <button
-                onClick={() => {
-                  lightTap();
-                  setShowTopicSelection(true);
-                }}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-              >
-                Start
-              </button>
+              <p className="text-sm text-muted-foreground">No pinned cards yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">
+                Listen to Daily Download and pin cards to review later
+              </p>
             </div>
           ) : (
             <div className="-mx-4 px-4 -my-2 py-2">
