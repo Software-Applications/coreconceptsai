@@ -2,6 +2,7 @@ import { Home, BookOpen, Video, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { buttonTap, springTransition } from "@/lib/motionVariants";
 import { useHaptics } from "@/hooks/useHaptics";
+import { toast } from "sonner";
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,10 +10,10 @@ interface BottomNavProps {
 }
 
 const navItems = [
-  { id: "home", icon: Home, label: "Home" },
-  { id: "library", icon: BookOpen, label: "Textbooks" },
-  { id: "study", icon: Video, label: "Study Prep" },
-  { id: "account", icon: User, label: "Account" },
+  { id: "home", icon: Home, label: "Home", active: true },
+  { id: "library", icon: BookOpen, label: "Textbooks", active: false },
+  { id: "study", icon: Video, label: "Study Prep", active: false },
+  { id: "account", icon: User, label: "Account", active: false },
 ];
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
@@ -20,6 +21,16 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   const handleTabChange = (tab: string) => {
     mediumTap();
+    const navItem = navItems.find(item => item.id === tab);
+    
+    if (navItem && !navItem.active) {
+      toast("Coming Soon", {
+        description: `The ${navItem.label} section is under development.`,
+        duration: 2000
+      });
+      return;
+    }
+    
     onTabChange(tab);
   };
 

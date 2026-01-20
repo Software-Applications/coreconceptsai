@@ -64,6 +64,20 @@ export const ExpandedCardModal = ({
     onNavigate(nextCard);
   };
 
+  // Swipe handlers
+  const handleDragEnd = (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const swipeThreshold = 50;
+    const velocityThreshold = 500;
+    
+    if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      // Swipe left - go to next
+      handleNext();
+    } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+      // Swipe right - go to previous
+      handlePrevious();
+    }
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -80,6 +94,11 @@ export const ExpandedCardModal = ({
           exit={{ scale: 0.9, opacity: 0 }}
           transition={springTransition}
           onClick={(e) => e.stopPropagation()}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
+          style={{ touchAction: 'pan-y' }}
         >
           {/* Modal header */}
           <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-5 relative">

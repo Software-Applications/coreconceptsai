@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import { Play, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import type { VideoTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
@@ -7,9 +7,10 @@ import { useHaptics } from "@/hooks/useHaptics";
 interface VideoCardProps {
   video: VideoTile;
   onClick: () => void;
+  isWatched?: boolean;
 }
 
-export function VideoCard({ video, onClick }: VideoCardProps) {
+export function VideoCard({ video, onClick, isWatched = false }: VideoCardProps) {
   const { lightTap } = useHaptics();
 
   const handleClick = () => {
@@ -29,9 +30,15 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
         <img 
           src={video.thumbnail} 
           alt={video.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${isWatched ? 'opacity-75' : ''}`}
         />
         <div className="absolute inset-0 bg-black/20" />
+        {isWatched && (
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full">
+            <CheckCircle className="w-3 h-3" />
+            <span>Watched</span>
+          </div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div 
             className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1"

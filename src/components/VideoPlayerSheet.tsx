@@ -10,9 +10,10 @@ interface VideoPlayerSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onVideoSelect: (video: VideoTile) => void;
+  onVideoWatched?: (videoId: number) => void;
 }
 
-export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect }: VideoPlayerSheetProps) {
+export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect, onVideoWatched }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isKeyPointsExpanded, setIsKeyPointsExpanded] = useState(false);
@@ -51,7 +52,13 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           <div className="absolute inset-0 bg-black/30" />
           <div className="absolute inset-0 flex items-center justify-center">
             <button 
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={() => {
+                setIsPlaying(!isPlaying);
+                // Mark as watched when user plays the video
+                if (!isPlaying && video && onVideoWatched) {
+                  onVideoWatched(video.id);
+                }
+              }}
               className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-xl active:scale-95 pl-1"
             >
               {isPlaying ? (

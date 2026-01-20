@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Sparkles, CheckCircle, ChevronDown } from 'lucide-react';
+import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
@@ -14,6 +14,7 @@ interface TopicSelectionSheetProps {
   subjects: Subject[];
   onSelectTopic: (topic: DailyDownloadTopic) => void;
   isListened?: (topicId: string) => boolean;
+  hasProgress?: (topicId: string) => boolean;
 }
 
 export const TopicSelectionSheet = ({
@@ -22,7 +23,8 @@ export const TopicSelectionSheet = ({
   topics,
   subjects,
   onSelectTopic,
-  isListened
+  isListened,
+  hasProgress
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
@@ -230,6 +232,7 @@ export const TopicSelectionSheet = ({
                             <div className="pt-2 space-y-2 pl-2">
                               {chapterTopics.map((topic, index) => {
                                 const listened = isListened?.(topic.id) ?? false;
+                                const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                                 return (
                                   <motion.button
                                     key={topic.id}
@@ -237,7 +240,9 @@ export const TopicSelectionSheet = ({
                                     className={`w-full text-left bg-card border rounded-xl p-3 transition-colors touch-pan-y ${
                                       listened 
                                         ? 'border-primary/30 bg-primary/5' 
-                                        : 'border-border hover:border-primary/50'
+                                        : hasResume
+                                          ? 'border-amber-500/50 bg-amber-500/5'
+                                          : 'border-border hover:border-primary/50'
                                     }`}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -245,10 +250,12 @@ export const TopicSelectionSheet = ({
                                   >
                                     <div className="flex items-center gap-3">
                                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                        listened ? 'bg-primary/20' : 'bg-primary/10'
+                                        listened ? 'bg-primary/20' : hasResume ? 'bg-amber-500/20' : 'bg-primary/10'
                                       }`}>
                                         {listened ? (
                                           <CheckCircle className="w-4 h-4 text-primary" />
+                                        ) : hasResume ? (
+                                          <RotateCcw className="w-4 h-4 text-amber-500" />
                                         ) : (
                                           <Sparkles className="w-4 h-4 text-primary" />
                                         )}
@@ -260,6 +267,9 @@ export const TopicSelectionSheet = ({
                                           </h3>
                                           {listened && (
                                             <span className="text-xs text-primary font-medium">✓</span>
+                                          )}
+                                          {hasResume && (
+                                            <span className="text-xs text-amber-500 font-medium">Resume</span>
                                           )}
                                         </div>
                                         <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
