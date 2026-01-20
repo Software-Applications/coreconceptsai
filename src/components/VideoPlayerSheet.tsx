@@ -25,7 +25,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
   const upNextVideos = videos.filter(v => v.id !== video.id);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
@@ -102,13 +102,13 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
         {/* Key Points */}
         {isKeyPointsExpanded && (
           <div 
-            className="fixed inset-0 z-50 bg-black/60" 
+            className="absolute inset-0 z-50 bg-black/60" 
             onClick={() => setIsKeyPointsExpanded(false)} 
           />
         )}
         <div className={`bg-card border border-border rounded-xl p-4 transition-all ${
           isKeyPointsExpanded 
-            ? 'fixed inset-[10%] z-50 overflow-y-auto shadow-2xl' 
+            ? 'absolute inset-[10%] z-50 overflow-y-auto shadow-2xl' 
             : 'mx-4 mb-4 min-h-[315px]'
         }`}>
           <div className="flex items-center justify-between mb-2">
