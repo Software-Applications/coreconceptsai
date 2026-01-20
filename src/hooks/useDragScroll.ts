@@ -72,6 +72,9 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     let scrollLeft = 0;
 
     const handleMouseDown = (e: MouseEvent) => {
+      // Prevent parent drag-scroll containers (e.g. main vertical scroll) from also starting.
+      e.stopPropagation();
+
       isDown = true;
       element.style.cursor = 'grabbing';
       startX = e.pageX - element.offsetLeft;
@@ -92,7 +95,10 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDown) return;
+      // Keep horizontal drag-scroll isolated (don’t let the main container interpret this as vertical drag).
       e.preventDefault();
+      e.stopPropagation();
+
       const x = e.pageX - element.offsetLeft;
       const walkX = (x - startX) * 1.5;
       element.scrollLeft = scrollLeft - walkX;
