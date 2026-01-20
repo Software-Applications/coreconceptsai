@@ -201,11 +201,12 @@ export const DailyDownloadPlayer = ({
     }
   };
 
-  // Generate waveform bars
-  const waveformBars = Array.from({ length: 40 }, (_, i) => ({
-    height: Math.random() * 60 + 20,
-    delay: i * 0.02
-  }));
+  // Generate waveform bars - memoized to prevent re-renders
+  const waveformBars = useMemo(() => 
+    Array.from({ length: 40 }, (_, i) => ({
+      height: Math.random() * 60 + 20,
+      delay: i * 0.02
+    })), []);
 
   if (!topic) return null;
 
