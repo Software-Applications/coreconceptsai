@@ -154,8 +154,9 @@ const Index = () => {
             <div className="-mx-4 px-4 -my-2 py-2">
               <div
                 ref={pinnedCardsScrollRef}
-                className="flex gap-3 overflow-x-auto overflow-y-hidden py-2 scrollbar-hide items-stretch pr-4 pl-1 snap-x snap-mandatory overscroll-x-contain overscroll-y-none touch-pan-x select-none"
-                style={{ WebkitOverflowScrolling: 'touch' }}
+                data-drag-scroll="x"
+                className="flex gap-3 overflow-x-auto overflow-y-hidden py-2 scrollbar-hide items-stretch pr-4 pl-1 snap-x snap-mandatory overscroll-x-contain overscroll-y-none select-none"
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
                 {subjectPinnedCards.slice(0, 5).map((card) => (
                   <PinnedCardPreview

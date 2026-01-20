@@ -14,6 +14,10 @@ export function useDragScroll<T extends HTMLElement>(): RefObject<T> {
     let scrollTop: number;
 
     const handleMouseDown = (e: MouseEvent) => {
+      // If the user is interacting with a horizontal drag-scroll region, don't start vertical drag-scroll.
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[data-drag-scroll="x"]')) return;
+
       isDown = true;
       element.style.cursor = 'grabbing';
       startX = e.pageX - element.offsetLeft;
@@ -70,38 +74,58 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     let isDown = false;
     let startX = 0;
     let scrollLeft = 0;
+    let activePointerId: number | null = null;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      // Prevent parent drag-scroll containers (e.g. main vertical scroll) from also starting.
+    const handlePointerDown = (e: PointerEvent) => {
+      // Only respond to primary mouse button; allow touch/pen.
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
       e.stopPropagation();
+      e.preventDefault();
 
       isDown = true;
-      element.style.cursor = 'grabbing';
-      startX = e.pageX - element.offsetLeft;
+      activePointerId = e.pointerId;
+      startX = e.clientX;
       scrollLeft = element.scrollLeft;
+
+      if (e.pointerType === 'mouse') {
+        element.style.cursor = 'grabbing';
+      } else {
+        // Ensure we keep receiving move events (helps inside nested scroll containers in native shells).
+        try {
+          element.setPointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+      }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!isDown) return;
-      isDown = false;
-      element.style.cursor = 'grab';
-    };
+      if (activePointerId !== e.pointerId) return;
 
-    const handleMouseLeave = () => {
-      if (!isDown) return;
-      isDown = false;
-      element.style.cursor = 'grab';
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDown) return;
-      // Keep horizontal drag-scroll isolated (don’t let the main container interpret this as vertical drag).
-      e.preventDefault();
       e.stopPropagation();
+      e.preventDefault();
 
-      const x = e.pageX - element.offsetLeft;
-      const walkX = (x - startX) * 1.5;
+      const walkX = (e.clientX - startX) * 1.25;
       element.scrollLeft = scrollLeft - walkX;
+    };
+
+    const endPointerDrag = (e?: PointerEvent) => {
+      if (!isDown) return;
+      if (e && activePointerId !== e.pointerId) return;
+
+      isDown = false;
+      activePointerId = null;
+      element.style.cursor = 'grab';
+
+      if (e && e.pointerType !== 'mouse') {
+        try {
+          element.releasePointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+      }
     };
 
     const handleDragStart = (e: DragEvent) => {
@@ -110,17 +134,22 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     };
 
     element.style.cursor = 'grab';
-    element.addEventListener('mousedown', handleMouseDown);
-    element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('mouseup', handleMouseUp);
+
+    // Pointer events (works for mouse + touch + pen, including Capacitor shells)
+    element.addEventListener('pointerdown', handlePointerDown, { passive: false });
+    element.addEventListener('pointermove', handlePointerMove, { passive: false });
+    element.addEventListener('pointerup', endPointerDrag);
+    element.addEventListener('pointercancel', endPointerDrag);
+    element.addEventListener('pointerleave', endPointerDrag);
+
     element.addEventListener('dragstart', handleDragStart);
 
     return () => {
-      element.removeEventListener('mousedown', handleMouseDown);
-      element.removeEventListener('mousemove', handleMouseMove);
-      element.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('pointerdown', handlePointerDown as any);
+      element.removeEventListener('pointermove', handlePointerMove as any);
+      element.removeEventListener('pointerup', endPointerDrag as any);
+      element.removeEventListener('pointercancel', endPointerDrag as any);
+      element.removeEventListener('pointerleave', endPointerDrag as any);
       element.removeEventListener('dragstart', handleDragStart);
     };
   }, []);
