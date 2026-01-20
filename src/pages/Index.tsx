@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, Bookmark, X, Clock, Trash2 } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, Bookmark, X, Clock, Trash2, ChevronLeft, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
@@ -308,6 +308,10 @@ const Index = () => {
                 >
                   <X className="w-5 h-5 text-foreground" />
                 </button>
+                {/* Card counter */}
+                <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-background/50 text-xs font-medium text-foreground">
+                  {pinnedCards.findIndex(c => c.id === expandedPinnedCard.id) + 1} / {pinnedCards.length}
+                </div>
                 <div className="text-4xl font-bold text-foreground mb-2">
                   {expandedPinnedCard.flashSummary.visualContent}
                 </div>
@@ -371,17 +375,50 @@ const Index = () => {
               </div>
 
               {/* Modal footer */}
-              <div className="p-4 border-t border-border">
+              <div className="p-4 border-t border-border space-y-3">
+                {/* Navigation buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      lightTap();
+                      const currentIndex = pinnedCards.findIndex(c => c.id === expandedPinnedCard.id);
+                      const prevIndex = currentIndex > 0 ? currentIndex - 1 : pinnedCards.length - 1;
+                      setExpandedPinnedCard(pinnedCards[prevIndex]);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => {
+                      lightTap();
+                      const currentIndex = pinnedCards.findIndex(c => c.id === expandedPinnedCard.id);
+                      const nextIndex = currentIndex < pinnedCards.length - 1 ? currentIndex + 1 : 0;
+                      setExpandedPinnedCard(pinnedCards[nextIndex]);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  >
+                    Next Card
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Remove button */}
                 <button
                   onClick={() => {
                     lightTap();
+                    const currentIndex = pinnedCards.findIndex(c => c.id === expandedPinnedCard.id);
+                    const nextCard = pinnedCards.length > 1 
+                      ? pinnedCards[currentIndex < pinnedCards.length - 1 ? currentIndex + 1 : currentIndex - 1]
+                      : null;
                     unpinCard(expandedPinnedCard.id);
-                    setExpandedPinnedCard(null);
+                    setExpandedPinnedCard(nextCard);
                   }}
-                  className="w-full py-3 rounded-xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl text-destructive font-medium hover:bg-destructive/10 transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Remove from Review Board
+                  Remove
                 </button>
               </div>
             </motion.div>
