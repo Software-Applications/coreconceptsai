@@ -308,7 +308,7 @@ const Index = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal header */}
-              <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 text-center relative">
+              <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-5 relative">
                 <button
                   onClick={() => setExpandedPinnedCard(null)}
                   className="absolute top-3 right-3 p-2 rounded-full hover:bg-background/50 transition-colors"
@@ -319,18 +319,13 @@ const Index = () => {
                 <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-background/50 text-xs font-medium text-foreground">
                   {pinnedCards.findIndex(c => c.id === expandedPinnedCard.id) + 1} / {pinnedCards.length}
                 </div>
-                <div className="text-4xl font-bold text-foreground mb-2">
-                  {expandedPinnedCard.flashSummary.visualContent}
-                </div>
-                <span className={`text-xs px-3 py-1 rounded-full ${
-                  expandedPinnedCard.flashSummary.difficulty === 'easy' 
-                    ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                    : expandedPinnedCard.flashSummary.difficulty === 'medium'
-                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                    : 'bg-red-500/20 text-red-600 dark:text-red-400'
-                }`}>
-                  {expandedPinnedCard.flashSummary.difficulty}
-                </span>
+                {/* Topic title as header */}
+                <h2 className="text-lg font-bold text-foreground mt-6 pr-8">
+                  {expandedPinnedCard.topicTitle}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {expandedPinnedCard.subjectName}
+                </p>
               </div>
 
               {/* Modal content - drag to scroll (no visible scrollbar) */}
@@ -339,14 +334,6 @@ const Index = () => {
                 className="p-6 flex-1 overflow-y-auto scrollbar-hide overscroll-contain cursor-grab select-none"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
               >
-                <div className="mb-4">
-                  <h3 className="font-bold text-foreground text-lg">
-                    {expandedPinnedCard.topicTitle}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {expandedPinnedCard.subjectName}
-                  </p>
-                </div>
 
                 {/* All bullet points */}
                 <ul className="space-y-3 mb-4">
