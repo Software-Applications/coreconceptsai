@@ -280,27 +280,38 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Progress bar */}
-            <div className="w-full max-w-sm mx-auto mb-1">
-              <div className="h-1 bg-muted rounded-full overflow-hidden">
+            <div className="w-full max-w-sm mx-auto mb-2">
+              <div className="h-2 bg-muted rounded-full overflow-hidden relative">
                 <motion.div 
                   className="h-full bg-primary rounded-full"
-                  style={{ width: `${progress}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.1, ease: "linear" }}
+                />
+                {/* Progress knob */}
+                <motion.div
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background"
+                  style={{ left: `calc(${Math.min(progress, 98)}% - 8px)` }}
                 />
               </div>
             </div>
 
             {/* Time display with speed control */}
-            <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-3">
-              <span className="text-xs text-muted-foreground">{formatTime(currentSeconds)}</span>
+            <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-4">
+              <span className="text-sm font-medium text-foreground tabular-nums">
+                {formatTime(currentSeconds)}
+              </span>
               
               <button
                 onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                className="px-3 py-1 rounded-full bg-muted/80 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                className="px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
               >
                 {playbackRate}x
               </button>
               
-              <span className="text-xs text-muted-foreground">{formatTime(estimatedDuration)}</span>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {formatTime(estimatedDuration)}
+              </span>
             </div>
 
             {/* Playback controls - compact (skip buttons removed - Web Speech API doesn't support seeking) */}
