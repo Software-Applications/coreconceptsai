@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
@@ -30,18 +31,22 @@ export const DailyDownloadPlayer = ({
   const { lightTap, mediumTap, successNotification } = useHaptics();
   const [showFlashCard, setShowFlashCard] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const { saveProgress, getProgress, clearProgress } = useAudioProgress();
   
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
   const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0 });
+  const lastSaveTime = useRef<number>(0);
   
   const handleSpeechEnd = useCallback(() => {
     if (topic) {
       setShowFlashCard(true);
       onTopicListened?.(topic.id);
+      clearProgress(topic.id); // Clear saved progress on completion
     }
-  }, [topic, onTopicListened]);
+  }, [topic, onTopicListened, clearProgress]);
 
   const {
     isPlaying,
@@ -138,7 +143,31 @@ export const DailyDownloadPlayer = ({
     stop();
     setShowFlashCard(false);
     setHasStarted(false);
-  }, [topic?.id, stop]);
+    setShowResumePrompt(false);
+    
+    // Check if there's saved progress for this topic
+    if (topic) {
+      const savedProgress = getProgress(topic.id);
+      if (savedProgress !== null && savedProgress > 0) {
+        setShowResumePrompt(true);
+      }
+    }
+  }, [topic?.id, stop, getProgress, topic]);
+
+  // Auto-save progress every 5 seconds while playing
+  useEffect(() => {
+    if (!isPlaying || !topic) return;
+    
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSaveTime.current > 5000) {
+        saveProgress(topic.id, currentCharIndex);
+        lastSaveTime.current = now;
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isPlaying, topic, currentCharIndex, saveProgress]);
 
   // Format time helper
   const formatTime = useCallback((seconds: number) => {
@@ -176,6 +205,7 @@ export const DailyDownloadPlayer = ({
     if (!hasStarted) {
       // First time playing - start speech
       setHasStarted(true);
+      setShowResumePrompt(false);
       speak(fullTranscriptText);
     } else if (isPlaying) {
       pause();
@@ -187,9 +217,39 @@ export const DailyDownloadPlayer = ({
     }
   };
 
+  const handleResume = () => {
+    mediumTap();
+    setHasStarted(true);
+    setShowResumePrompt(false);
+    
+    if (topic) {
+      const savedCharIndex = getProgress(topic.id);
+      speak(fullTranscriptText);
+      if (savedCharIndex !== null && savedCharIndex > 0) {
+        // Small delay to let speech start before seeking
+        setTimeout(() => {
+          seekToChar(savedCharIndex);
+        }, 100);
+      }
+    }
+  };
+
+  const handleStartFresh = () => {
+    mediumTap();
+    setHasStarted(true);
+    setShowResumePrompt(false);
+    if (topic) {
+      clearProgress(topic.id);
+    }
+    speak(fullTranscriptText);
+  };
+
   const handleDismissFlashCard = () => {
     successNotification();
     setShowFlashCard(false);
+    if (topic) {
+      clearProgress(topic.id);
+    }
     onClose();
   };
 
@@ -198,6 +258,7 @@ export const DailyDownloadPlayer = ({
       successNotification();
       onPinCard(topic);
       setShowFlashCard(false);
+      clearProgress(topic.id);
       onClose();
     }
   };
@@ -244,11 +305,15 @@ export const DailyDownloadPlayer = ({
             <div className="flex items-center gap-4 py-4">
               {/* Topic icon - smaller */}
               <motion.div
-                className="w-16 h-16 shrink-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+                className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center ${
+                  showResumePrompt 
+                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/5' 
+                    : 'bg-gradient-to-br from-primary/20 to-primary/5'
+                }`}
                 animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Headphones className="w-8 h-8 text-primary" />
+                <Headphones className={`w-8 h-8 ${showResumePrompt ? 'text-amber-500' : 'text-primary'}`} />
               </motion.div>
 
               {/* Title and description */}
@@ -384,39 +449,62 @@ export const DailyDownloadPlayer = ({
               </span>
             </div>
 
-            {/* Playback controls */}
-            <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto mb-4">
-              {/* Skip back 15s */}
-              <motion.button
-                onClick={() => {
-                  lightTap();
-                  if (!hasStarted) return;
-                  // Estimate chars for 15 seconds: ~150 words/min = 2.5 words/sec, ~5 chars/word = ~12.5 chars/sec
-                  const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-                  const skipChars = Math.floor(charsPerSecond * 15);
-                  const newCharIndex = Math.max(0, currentCharIndex - skipChars);
-                  seekToChar(newCharIndex);
-                }}
-                className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
-                whileTap={{ scale: 0.9 }}
-                aria-label="Skip back 15 seconds"
-              >
-                <SkipBack className="w-5 h-5" />
-                <span className="text-[10px] font-semibold -mt-0.5">15</span>
-              </motion.button>
+            {/* Resume prompt or playback controls */}
+            {showResumePrompt ? (
+              <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto mb-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  You have saved progress for this topic
+                </p>
+                <div className="flex gap-3 w-full">
+                  <motion.button
+                    onClick={handleStartFresh}
+                    className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Start Over
+                  </motion.button>
+                  <motion.button
+                    onClick={handleResume}
+                    className="flex-1 py-3 rounded-xl bg-amber-500 text-white font-medium"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Resume
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto mb-4">
+                {/* Skip back 15s */}
+                <motion.button
+                  onClick={() => {
+                    lightTap();
+                    if (!hasStarted) return;
+                    // Estimate chars for 15 seconds: ~150 words/min = 2.5 words/sec, ~5 chars/word = ~12.5 chars/sec
+                    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+                    const skipChars = Math.floor(charsPerSecond * 15);
+                    const newCharIndex = Math.max(0, currentCharIndex - skipChars);
+                    seekToChar(newCharIndex);
+                  }}
+                  className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Skip back 15 seconds"
+                >
+                  <SkipBack className="w-5 h-5" />
+                  <span className="text-[10px] font-semibold -mt-0.5">15</span>
+                </motion.button>
 
-              {/* Play/Pause */}
-              <motion.button
-                onClick={handlePlayPause}
-                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
-                whileTap={{ scale: 0.9 }}
-              >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8" />
-                ) : (
-                  <Play className="w-8 h-8 ml-1" />
-                )}
-              </motion.button>
+                {/* Play/Pause */}
+                <motion.button
+                  onClick={handlePlayPause}
+                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-8 h-8" />
+                  ) : (
+                    <Play className="w-8 h-8 ml-1" />
+                  )}
+                </motion.button>
 
               {/* Skip forward 15s */}
               <motion.button
@@ -445,7 +533,8 @@ export const DailyDownloadPlayer = ({
                 <SkipForward className="w-5 h-5" />
                 <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
-            </div>
+              </div>
+            )}
 
             {/* Transcript section - flex-grow to fill remaining space */}
             <div className="flex-1 flex flex-col min-h-0 pb-safe">

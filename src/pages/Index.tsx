@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, Bookmark } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Video, HelpCircle, ChevronRight, Bookmark, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
@@ -16,6 +17,9 @@ import { ExpandedCardModal } from "@/components/ExpandedCardModal";
 import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
+import { useWatchedVideos } from "@/hooks/useWatchedVideos";
+import { useCompletedPractice } from "@/hooks/useCompletedPractice";
+import { useAudioProgress } from "@/hooks/useAudioProgress";
 import { useHaptics } from "@/hooks/useHaptics";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { dailyDownloadTopics, type DailyDownloadTopic, type PinnedCard } from "@/data/dailyDownloadData";
@@ -25,6 +29,8 @@ const Index = () => {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   
   // Daily Download state
   const [showTopicSelection, setShowTopicSelection] = useState(false);
@@ -33,7 +39,15 @@ const Index = () => {
   const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
   const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
   const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
+  const { markAsWatched, isWatched, getWatchedCount } = useWatchedVideos();
+  const { isCompleted: isPracticeCompleted, getBestScore, getCompletedCount } = useCompletedPractice();
+  const { hasProgress: hasAudioProgress } = useAudioProgress();
   const { lightTap } = useHaptics();
+  
+  // Ensure theme toggle doesn't cause hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Filter content by selected subject
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
@@ -42,6 +56,8 @@ const Index = () => {
   const subjectTopics = dailyDownloadTopics.filter(t => t.subjectId === selectedSubject.id);
   const subjectPinnedCards = pinnedCards.filter(c => c.subjectName === selectedSubject.name);
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
+  const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
+  const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
   const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
   
@@ -78,9 +94,27 @@ const Index = () => {
   return (
     <div className="h-screen bg-background flex flex-col w-full safe-area-inset overflow-hidden">
       {/* Header */}
-      <header className="px-4 pt-4 pb-2">
-        <h1 className="text-2xl font-bold text-foreground mt-4">Home</h1>
-        <div className="w-12 h-1 bg-primary mt-2 rounded-full" />
+      <header className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mt-4">Home</h1>
+          <div className="w-12 h-1 bg-primary mt-2 rounded-full" />
+        </div>
+        {mounted && (
+          <button
+            onClick={() => {
+              lightTap();
+              setTheme(theme === 'dark' ? 'light' : 'dark');
+            }}
+            className="mt-4 p-2 rounded-full hover:bg-muted transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-foreground" />
+            ) : (
+              <Moon className="w-5 h-5 text-foreground" />
+            )}
+          </button>
+        )}
       </header>
 
       {/* Subject Chips */}
@@ -203,10 +237,10 @@ const Index = () => {
             {/* Progress Indicators */}
             <div className="flex gap-3 mt-2">
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                {subjectVideos.length} videos to watch
+                {watchedCount} of {subjectVideos.length} videos watched
               </span>
               <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-foreground font-medium">
-                {subjectPractice.length} practice sets pending
+                {completedPracticeCount} of {subjectPractice.length} practice sets done
               </span>
             </div>
           </div>
@@ -230,7 +264,8 @@ const Index = () => {
                 <VideoCard 
                   key={video.id} 
                   video={video} 
-                  onClick={() => setSelectedVideo(video)} 
+                  onClick={() => setSelectedVideo(video)}
+                  isWatched={isWatched(video.id)}
                 />
               ))}
             </div>
@@ -250,7 +285,9 @@ const Index = () => {
                 <PracticeCard 
                   key={practice.id} 
                   practice={practice} 
-                  onClick={() => setSelectedQuiz(practice)} 
+                  onClick={() => setSelectedQuiz(practice)}
+                  isCompleted={isPracticeCompleted(practice.id)}
+                  bestScore={getBestScore(practice.id)}
                 />
               ))}
             </div>
@@ -269,6 +306,7 @@ const Index = () => {
         isOpen={!!selectedVideo}
         onClose={() => setSelectedVideo(null)}
         onVideoSelect={setSelectedVideo}
+        onVideoWatched={markAsWatched}
       />
 
       <PracticeQuizSheet 
@@ -286,6 +324,7 @@ const Index = () => {
         subjects={subjects}
         onSelectTopic={handleSelectTopic}
         isListened={isListened}
+        hasProgress={hasAudioProgress}
       />
 
       <DailyDownloadPlayer
