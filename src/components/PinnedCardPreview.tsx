@@ -13,7 +13,7 @@ export const PinnedCardPreview = ({ card, onClick }: PinnedCardPreviewProps) => 
 
   return (
     <motion.button
-      className="flex-shrink-0 w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between"
+      className="flex-shrink-0 w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between select-none snap-start"
       whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}
       whileTap={{ scale: 0.98 }}
       transition={springTransition}
