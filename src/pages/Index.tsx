@@ -141,7 +141,7 @@ const Index = () => {
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
   return (
-    <div className="h-screen bg-background flex flex-col w-full safe-area-inset overflow-hidden">
+    <div className="h-full bg-background flex flex-col w-full safe-area-inset overflow-hidden relative">
       {/* Header */}
       <header className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div>
