@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, Headphones, RotateCcw, RotateCw
+  X, Play, Pause, Headphones, SkipBack, SkipForward
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
@@ -54,7 +54,8 @@ export const DailyDownloadPlayer = ({
     pause,
     resume,
     stop,
-    cyclePlaybackRate
+    cyclePlaybackRate,
+    seekToChar
   } = useSpeechSynthesis({
     onEnd: handleSpeechEnd
   });
@@ -316,49 +317,65 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Playback controls */}
-            <div className="flex items-center justify-center gap-6 w-full max-w-sm mx-auto mb-4">
-              {/* Rewind button - restarts from beginning */}
+            <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto mb-4">
+              {/* Skip back 15s */}
               <motion.button
                 onClick={() => {
                   lightTap();
-                  stop();
-                  setHasStarted(false);
+                  if (!hasStarted) return;
+                  // Estimate chars for 15 seconds: ~150 words/min = 2.5 words/sec, ~5 chars/word = ~12.5 chars/sec
+                  const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+                  const skipChars = Math.floor(charsPerSecond * 15);
+                  const newCharIndex = Math.max(0, currentCharIndex - skipChars);
+                  seekToChar(newCharIndex);
                 }}
-                className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center"
+                className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
                 whileTap={{ scale: 0.9 }}
-                aria-label="Restart"
+                aria-label="Skip back 15 seconds"
               >
-                <RotateCcw className="w-5 h-5" />
+                <SkipBack className="w-5 h-5" />
+                <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
 
               {/* Play/Pause */}
               <motion.button
                 onClick={handlePlayPause}
-                className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
                 whileTap={{ scale: 0.9 }}
               >
                 {isPlaying ? (
-                  <Pause className="w-7 h-7" />
+                  <Pause className="w-8 h-8" />
                 ) : (
-                  <Play className="w-7 h-7 ml-0.5" />
+                  <Play className="w-8 h-8 ml-1" />
                 )}
               </motion.button>
 
-              {/* Forward button - skip to end / show flash card */}
+              {/* Skip forward 15s */}
               <motion.button
                 onClick={() => {
                   lightTap();
-                  stop();
-                  if (topic) {
-                    setShowFlashCard(true);
-                    onTopicListened?.(topic.id);
+                  if (!hasStarted) return;
+                  const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+                  const skipChars = Math.floor(charsPerSecond * 15);
+                  const newCharIndex = currentCharIndex + skipChars;
+                  
+                  // If skipping past end, show flash card
+                  if (newCharIndex >= fullTranscriptText.length) {
+                    stop();
+                    if (topic) {
+                      setShowFlashCard(true);
+                      onTopicListened?.(topic.id);
+                    }
+                  } else {
+                    seekToChar(newCharIndex);
                   }
                 }}
-                className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center"
+                className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
                 whileTap={{ scale: 0.9 }}
-                aria-label="Skip to summary"
+                aria-label="Skip forward 15 seconds"
               >
-                <RotateCw className="w-5 h-5" />
+                <SkipForward className="w-5 h-5" />
+                <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
             </div>
 
