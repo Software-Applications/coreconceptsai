@@ -125,41 +125,35 @@ export const ReviewBoard = ({
                     transition={{ delay: index * 0.05 }}
                   >
                     {/* Card header */}
-                    <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 flex items-center justify-between">
-                      <div className="text-xl font-bold text-foreground">
-                        {card.flashSummary.visualContent}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyColor(card.flashSummary.difficulty)}`}>
-                          {card.flashSummary.difficulty}
-                        </span>
-                        <button
-                          onClick={() => handleExpand(card)}
-                          className="p-1.5 rounded-full hover:bg-background/50 transition-colors"
-                        >
-                          <Expand className="w-4 h-4 text-muted-foreground" />
-                        </button>
+                    <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 pr-2">
+                          <h3 className="font-semibold text-foreground text-sm">
+                            {card.topicTitle}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {card.subjectName}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleExpand(card)}
+                            className="p-1.5 rounded-full hover:bg-background/50 transition-colors"
+                          >
+                            <Expand className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => handleUnpin(card.id)}
+                            className="p-1.5 rounded-full hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Card content */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-foreground text-sm">
-                            {card.topicTitle}
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            {card.subjectName}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleUnpin(card.id)}
-                          className="p-2 rounded-full hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                        </button>
-                      </div>
+                    <div className="p-4 pt-3">
 
                       {/* Bullet points preview */}
                       <ul className="space-y-2 mb-3">
@@ -209,19 +203,20 @@ export const ReviewBoard = ({
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Modal header */}
-                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 text-center relative">
+                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-5 relative">
                     <button
                       onClick={() => setExpandedCard(null)}
                       className="absolute top-3 right-3 p-2 rounded-full hover:bg-background/50 transition-colors"
                     >
                       <X className="w-5 h-5 text-foreground" />
                     </button>
-                    <div className="text-4xl font-bold text-foreground mb-2">
-                      {expandedCard.flashSummary.visualContent}
-                    </div>
-                    <span className={`text-xs px-3 py-1 rounded-full ${getDifficultyColor(expandedCard.flashSummary.difficulty)}`}>
-                      {expandedCard.flashSummary.difficulty}
-                    </span>
+                    {/* Topic title as header */}
+                    <h2 className="text-lg font-bold text-foreground pr-8">
+                      {expandedCard.topicTitle}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {expandedCard.subjectName}
+                    </p>
                   </div>
 
                   {/* Modal content */}
@@ -230,14 +225,6 @@ export const ReviewBoard = ({
                     className="p-6 overflow-y-auto scrollbar-hide flex-1 overscroll-contain cursor-grab select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
                   >
-                    <div className="mb-4">
-                      <h3 className="font-bold text-foreground text-lg">
-                        {expandedCard.topicTitle}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {expandedCard.subjectName}
-                      </p>
-                    </div>
 
                     {/* All bullet points */}
                     <ul className="space-y-3 mb-4">
