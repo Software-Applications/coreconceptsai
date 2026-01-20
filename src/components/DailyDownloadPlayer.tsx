@@ -281,18 +281,86 @@ export const DailyDownloadPlayer = ({
               ))}
             </div>
 
-            {/* Progress bar */}
+            {/* Seekable Progress bar */}
             <div className="w-full max-w-sm mx-auto mb-2">
-              <div className="h-2 bg-muted rounded-full overflow-hidden relative">
+              <div 
+                className="h-2 bg-muted rounded-full overflow-visible relative cursor-pointer group"
+                onClick={(e) => {
+                  if (!hasStarted) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+                  const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
+                  lightTap();
+                  seekToChar(targetChar);
+                }}
+                onMouseDown={(e) => {
+                  if (!hasStarted) return;
+                  e.preventDefault();
+                  
+                  const progressBar = e.currentTarget;
+                  const rect = progressBar.getBoundingClientRect();
+                  
+                  const handleDrag = (moveEvent: globalThis.MouseEvent) => {
+                    const clickX = moveEvent.clientX - rect.left;
+                    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+                    const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
+                    seekToChar(targetChar);
+                  };
+                  
+                  const handleDragEnd = () => {
+                    document.removeEventListener('mousemove', handleDrag);
+                    document.removeEventListener('mouseup', handleDragEnd);
+                  };
+                  
+                  document.addEventListener('mousemove', handleDrag);
+                  document.addEventListener('mouseup', handleDragEnd);
+                }}
+                onTouchStart={(e) => {
+                  if (!hasStarted) return;
+                  
+                  const progressBar = e.currentTarget;
+                  const rect = progressBar.getBoundingClientRect();
+                  
+                  const handleTouchMove = (moveEvent: TouchEvent) => {
+                    const touch = moveEvent.touches[0];
+                    const clickX = touch.clientX - rect.left;
+                    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+                    const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
+                    seekToChar(targetChar);
+                  };
+                  
+                  const handleTouchEnd = () => {
+                    document.removeEventListener('touchmove', handleTouchMove);
+                    document.removeEventListener('touchend', handleTouchEnd);
+                  };
+                  
+                  document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                  document.addEventListener('touchend', handleTouchEnd);
+                  
+                  // Handle initial touch position
+                  const touch = e.touches[0];
+                  const clickX = touch.clientX - rect.left;
+                  const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+                  const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
+                  lightTap();
+                  seekToChar(targetChar);
+                }}
+              >
+                {/* Track background with larger touch target */}
+                <div className="absolute inset-y-0 -inset-x-0 py-2 -my-2" />
+                
+                {/* Progress fill */}
                 <motion.div 
-                  className="h-full bg-primary rounded-full"
+                  className="h-full bg-primary rounded-full pointer-events-none"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.1, ease: "linear" }}
                 />
-                {/* Progress knob */}
+                
+                {/* Progress knob - larger on hover/drag */}
                 <motion.div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background"
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background pointer-events-none group-hover:scale-125 transition-transform"
                   style={{ left: `calc(${Math.min(progress, 98)}% - 8px)` }}
                 />
               </div>
