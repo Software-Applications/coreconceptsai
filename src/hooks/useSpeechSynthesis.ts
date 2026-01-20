@@ -14,6 +14,12 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const textRef = useRef<string>('');
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const optionsRef = useRef(options);
+  
+  // Keep options ref updated
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   // Load available voices
   useEffect(() => {
@@ -36,7 +42,7 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
       v.name.includes('Samantha') || 
       v.name.includes('Karen') ||
       v.name.includes('Daniel') ||
-      v.name.includes('Google') && v.lang.startsWith('en')
+      (v.name.includes('Google') && v.lang.startsWith('en'))
     );
     return preferred || voices.find(v => v.lang.startsWith('en')) || voices[0];
   }, []);
@@ -45,6 +51,9 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
     window.speechSynthesis.cancel();
     
     textRef.current = text;
+    setCurrentCharIndex(0);
+    setProgress(0);
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
     
@@ -66,7 +75,7 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
       setIsPlaying(false);
       setIsPaused(false);
       setProgress(100);
-      options.onEnd?.();
+      optionsRef.current.onEnd?.();
     };
     
     utterance.onboundary = (event) => {
@@ -74,11 +83,12 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
       setCurrentCharIndex(charIndex);
       const progressPercent = (charIndex / text.length) * 100;
       setProgress(progressPercent);
-      options.onBoundary?.(charIndex);
+      optionsRef.current.onBoundary?.(charIndex);
     };
     
     utterance.onerror = (event) => {
-      if (event.error !== 'canceled') {
+      // Ignore 'canceled' and 'interrupted' errors - these are expected when stopping/restarting
+      if (event.error !== 'canceled' && event.error !== 'interrupted') {
         console.error('Speech synthesis error:', event.error);
       }
       setIsPlaying(false);
@@ -86,7 +96,7 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
     };
     
     window.speechSynthesis.speak(utterance);
-  }, [playbackRate, getPreferredVoice, options]);
+  }, [playbackRate, getPreferredVoice]);
 
   const pause = useCallback(() => {
     window.speechSynthesis.pause();
