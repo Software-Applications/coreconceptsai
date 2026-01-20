@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Headphones, ChevronRight } from 'lucide-react';
+import { Headphones } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 
@@ -47,8 +47,6 @@ export const DailyDownloadCard = ({ onClick, unlistenedCount = 0 }: DailyDownloa
           </p>
         </div>
       </div>
-      
-      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
     </motion.button>
   );
 };
