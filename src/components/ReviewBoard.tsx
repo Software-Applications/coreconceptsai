@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bookmark, Trash2, Clock, Expand } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useDragScroll } from '@/hooks/useDragScroll';
 import { springTransition } from '@/lib/motionVariants';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
@@ -22,6 +23,8 @@ export const ReviewBoard = ({
 }: ReviewBoardProps) => {
   const { lightTap, errorNotification } = useHaptics();
   const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
+  const contentScrollRef = useDragScroll<HTMLDivElement>();
+  const expandedContentScrollRef = useDragScroll<HTMLDivElement>();
 
   const handleUnpin = (cardId: string) => {
     lightTap();
@@ -97,7 +100,7 @@ export const ReviewBoard = ({
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 pb-safe">
+          <div ref={contentScrollRef} className="flex-1 overflow-y-auto scrollbar-hide p-4 pb-safe">
             {pinnedCards.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-8">
                 <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -222,7 +225,11 @@ export const ReviewBoard = ({
                   </div>
 
                   {/* Modal content */}
-                  <div className="p-6 overflow-y-auto flex-1">
+                  <div
+                    ref={expandedContentScrollRef}
+                    className="p-6 overflow-y-auto scrollbar-hide flex-1 overscroll-contain cursor-grab select-none"
+                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                  >
                     <div className="mb-4">
                       <h3 className="font-bold text-foreground text-lg">
                         {expandedCard.topicTitle}
