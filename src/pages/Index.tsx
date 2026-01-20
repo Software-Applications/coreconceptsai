@@ -327,8 +327,8 @@ const Index = () => {
                 </span>
               </div>
 
-              {/* Modal content */}
-              <div className="p-6 overflow-y-auto flex-1">
+              {/* Modal content - native scroll with drag */}
+              <div className="p-6 flex-1 overflow-y-scroll overscroll-contain touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="mb-4">
                   <h3 className="font-bold text-foreground text-lg">
                     {expandedPinnedCard.topicTitle}
