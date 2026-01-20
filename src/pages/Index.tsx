@@ -152,7 +152,7 @@ const Index = () => {
               </button>
             </div>
             <div className="-mx-4 px-4 -my-2 py-2">
-              <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-auto py-2 scrollbar-hide items-stretch pr-4 pl-1">
+              <div ref={pinnedCardsScrollRef} className="flex gap-3 overflow-x-scroll py-2 scrollbar-hide items-stretch pr-4 pl-1 snap-x snap-mandatory overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {subjectPinnedCards.slice(0, 5).map((card) => (
                   <PinnedCardPreview
                     key={card.id}
