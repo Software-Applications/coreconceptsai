@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bookmark, Trash2, Clock, Expand, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Bookmark, Trash2, Expand, Clock } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { springTransition } from '@/lib/motionVariants';
+import { ExpandedCardModal } from '@/components/ExpandedCardModal';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
 interface ReviewBoardProps {
@@ -24,7 +25,6 @@ export const ReviewBoard = ({
   const { lightTap, errorNotification } = useHaptics();
   const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
   const contentScrollRef = useDragScroll<HTMLDivElement>();
-  const expandedContentScrollRef = useDragScroll<HTMLDivElement>();
 
   const handleUnpin = (cardId: string) => {
     lightTap();
@@ -185,130 +185,13 @@ export const ReviewBoard = ({
           </div>
 
           {/* Expanded Card Modal */}
-          <AnimatePresence>
-            {expandedCard && (
-              <motion.div
-                className="fixed inset-0 z-60 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setExpandedCard(null)}
-              >
-                <motion.div
-                  className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  transition={springTransition}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Modal header */}
-                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-5 relative">
-                    <button
-                      onClick={() => setExpandedCard(null)}
-                      className="absolute top-3 right-3 p-2 rounded-full hover:bg-background/50 transition-colors"
-                    >
-                      <X className="w-5 h-5 text-foreground" />
-                    </button>
-                    {/* Card counter */}
-                    <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-background/50 text-xs font-medium text-foreground">
-                      {pinnedCards.findIndex(c => c.id === expandedCard.id) + 1} / {pinnedCards.length}
-                    </div>
-                    {/* Topic title as header */}
-                    <h2 className="text-lg font-bold text-foreground mt-6 pr-8">
-                      {expandedCard.topicTitle}
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {expandedCard.subjectName}
-                    </p>
-                  </div>
-
-                  {/* Modal content */}
-                  <div
-                    ref={expandedContentScrollRef}
-                    className="p-6 flex-1 overflow-y-auto scrollbar-hide overscroll-contain cursor-grab select-none"
-                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-                  >
-
-                    {/* All bullet points */}
-                    <ul className="space-y-3 mb-4">
-                      {expandedCard.flashSummary.bulletPoints.map((point, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-foreground">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
-                            {i + 1}
-                          </span>
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* Timestamp */}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
-                      <Clock className="w-3 h-3" />
-                      <span>Pinned {formatDate(expandedCard.pinnedAt)}</span>
-                    </div>
-                  </div>
-
-                  {/* Modal footer */}
-                  {(() => {
-                    const currentIndex = pinnedCards.findIndex(c => c.id === expandedCard.id);
-                    const isFirstCard = currentIndex === 0;
-                    const isLastCard = currentIndex === pinnedCards.length - 1;
-                    
-                    return (
-                      <div className="p-4 border-t border-border space-y-3">
-                        {/* Navigation buttons */}
-                        <div className="flex gap-2">
-                          <button
-                            disabled={isFirstCard}
-                            onClick={() => {
-                              if (!isFirstCard) {
-                                lightTap();
-                                setExpandedCard(pinnedCards[currentIndex - 1]);
-                              }
-                            }}
-                            className={`flex-1 py-2.5 rounded-xl bg-muted text-foreground font-medium transition-colors flex items-center justify-center gap-2 text-sm ${
-                              isFirstCard ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted/80'
-                            }`}
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                            Previous
-                          </button>
-                          <button
-                            disabled={isLastCard}
-                            onClick={() => {
-                              if (!isLastCard) {
-                                lightTap();
-                                setExpandedCard(pinnedCards[currentIndex + 1]);
-                              }
-                            }}
-                            className={`flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium transition-colors flex items-center justify-center gap-2 text-sm ${
-                              isLastCard ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary/90'
-                            }`}
-                          >
-                            Next
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                        
-                        {/* Remove button */}
-                        <button
-                          onClick={() => {
-                            handleUnpin(expandedCard.id);
-                            setExpandedCard(null);
-                          }}
-                          className="w-full py-2.5 rounded-xl text-destructive font-medium hover:bg-destructive/10 transition-colors flex items-center justify-center gap-2 text-sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remove
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <ExpandedCardModal
+            card={expandedCard}
+            cards={pinnedCards}
+            onClose={() => setExpandedCard(null)}
+            onNavigate={setExpandedCard}
+            onRemove={onUnpinCard}
+          />
         </motion.div>
       )}
     </AnimatePresence>
