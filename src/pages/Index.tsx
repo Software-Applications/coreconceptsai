@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, Bookmark } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, Bookmark, X, Clock, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
@@ -14,8 +15,10 @@ import { ReviewBoard } from "@/components/ReviewBoard";
 import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
+import { useHaptics } from "@/hooks/useHaptics";
+import { springTransition } from "@/lib/motionVariants";
 import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
-import { dailyDownloadTopics, type DailyDownloadTopic } from "@/data/dailyDownloadData";
+import { dailyDownloadTopics, type DailyDownloadTopic, type PinnedCard } from "@/data/dailyDownloadData";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -27,8 +30,10 @@ const Index = () => {
   const [showTopicSelection, setShowTopicSelection] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
+  const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
   const { pinnedCards, pinCard, unpinCard, clearAllPinned, getPinnedCount } = usePinnedCards();
   const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
+  const { lightTap } = useHaptics();
   
   // Filter content by selected subject
   const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
@@ -151,7 +156,7 @@ const Index = () => {
                   <PinnedCardPreview
                     key={card.id}
                     card={card}
-                    onClick={() => setShowReviewBoard(true)}
+                    onClick={() => setExpandedPinnedCard(card)}
                   />
                 ))}
               </div>
@@ -276,6 +281,113 @@ const Index = () => {
         onUnpinCard={unpinCard}
         onClearAll={clearAllPinned}
       />
+
+      {/* Expanded Pinned Card Modal */}
+      <AnimatePresence>
+        {expandedPinnedCard && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setExpandedPinnedCard(null)}
+          >
+            <motion.div
+              className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={springTransition}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 text-center relative">
+                <button
+                  onClick={() => setExpandedPinnedCard(null)}
+                  className="absolute top-3 right-3 p-2 rounded-full hover:bg-background/50 transition-colors"
+                >
+                  <X className="w-5 h-5 text-foreground" />
+                </button>
+                <div className="text-4xl font-bold text-foreground mb-2">
+                  {expandedPinnedCard.flashSummary.visualContent}
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full ${
+                  expandedPinnedCard.flashSummary.difficulty === 'easy' 
+                    ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                    : expandedPinnedCard.flashSummary.difficulty === 'medium'
+                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                    : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                }`}>
+                  {expandedPinnedCard.flashSummary.difficulty}
+                </span>
+              </div>
+
+              {/* Modal content */}
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="mb-4">
+                  <h3 className="font-bold text-foreground text-lg">
+                    {expandedPinnedCard.topicTitle}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {expandedPinnedCard.subjectName}
+                  </p>
+                </div>
+
+                {/* All bullet points */}
+                <ul className="space-y-3 mb-4">
+                  {expandedPinnedCard.flashSummary.bulletPoints.map((point, i) => (
+                    <li key={i} className="flex gap-3 text-sm text-foreground">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Visual type info */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Type</p>
+                  <p className="text-sm text-foreground font-medium capitalize">
+                    {expandedPinnedCard.flashSummary.visualType}
+                  </p>
+                </div>
+
+                {/* Timestamp */}
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
+                  <Clock className="w-3 h-3" />
+                  <span>Pinned {(() => {
+                    const date = new Date(expandedPinnedCard.pinnedAt);
+                    const now = new Date();
+                    const diffMs = now.getTime() - date.getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMs / 3600000);
+                    const diffDays = Math.floor(diffMs / 86400000);
+                    if (diffMins < 60) return `${diffMins}m ago`;
+                    if (diffHours < 24) return `${diffHours}h ago`;
+                    return `${diffDays}d ago`;
+                  })()}</span>
+                </div>
+              </div>
+
+              {/* Modal footer */}
+              <div className="p-4 border-t border-border">
+                <button
+                  onClick={() => {
+                    lightTap();
+                    unpinCard(expandedPinnedCard.id);
+                    setExpandedPinnedCard(null);
+                  }}
+                  className="w-full py-3 rounded-xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Remove from Review Board
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
