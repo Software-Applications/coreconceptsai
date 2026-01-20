@@ -73,6 +73,7 @@ const Index = () => {
   const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const expandedPinnedCardScrollRef = useDragScroll<HTMLDivElement>();
   
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
 
@@ -332,8 +333,12 @@ const Index = () => {
                 </span>
               </div>
 
-              {/* Modal content - native scroll with drag */}
-              <div className="p-6 flex-1 overflow-y-scroll overscroll-contain touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* Modal content - drag to scroll (no visible scrollbar) */}
+              <div
+                ref={expandedPinnedCardScrollRef}
+                className="p-6 flex-1 overflow-y-auto scrollbar-hide overscroll-contain cursor-grab select-none"
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+              >
                 <div className="mb-4">
                   <h3 className="font-bold text-foreground text-lg">
                     {expandedPinnedCard.topicTitle}
