@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, Bookmark, Sun, Moon } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
@@ -69,8 +70,12 @@ const Index = () => {
   const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
   const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
+  const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(subjectPinnedCards.length > 0);
   
-  // Check for completion celebrations
+  // Auto-expand when cards are added, auto-collapse when empty
+  useEffect(() => {
+    setIsPinnedCardsOpen(subjectPinnedCards.length > 0);
+  }, [subjectPinnedCards.length]);
   useEffect(() => {
     // Videos completion check
     if (watchedCount === subjectVideos.length && 
@@ -216,55 +221,65 @@ const Index = () => {
 
         {/* My Pinned Cards Section */}
         <div className="py-2 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-medium text-foreground">My Pinned Cards</h3>
+          <Collapsible open={isPinnedCardsOpen} onOpenChange={setIsPinnedCardsOpen}>
+            <div className="flex items-center justify-between mb-3">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <Bookmark className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-medium text-foreground">My Pinned Cards</h3>
+                  {subjectPinnedCards.length > 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      {subjectPinnedCards.length}
+                    </span>
+                  )}
+                  <ChevronDown 
+                    className="w-4 h-4 text-muted-foreground transition-transform duration-200" 
+                    style={{ transform: isPinnedCardsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                  />
+                </button>
+              </CollapsibleTrigger>
               {subjectPinnedCards.length > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                  {subjectPinnedCards.length}
-                </span>
+                <button 
+                  onClick={() => setShowReviewBoard(true)}
+                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                >
+                  See All
+                  <ChevronRight className="w-3 h-3" />
+                </button>
               )}
             </div>
-            {subjectPinnedCards.length > 0 && (
-              <button 
-                onClick={() => setShowReviewBoard(true)}
-                className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-              >
-                See All
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          
-          {subjectPinnedCards.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                <Bookmark className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">No pinned cards yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Listen to Daily Download and pin cards to review later
-              </p>
-            </div>
-          ) : (
-            <div className="-mx-4 px-4 -my-2 py-2">
-              <div
-                ref={pinnedCardsScrollRef}
-                data-drag-scroll="x"
-                className="flex gap-3 overflow-x-auto overflow-y-hidden py-2 scrollbar-hide items-stretch pr-4 pl-1 snap-x snap-mandatory overscroll-x-contain overscroll-y-none select-none"
-                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-              >
-                {subjectPinnedCards.slice(0, 5).map((card) => (
-                  <PinnedCardPreview
-                    key={card.id}
-                    card={card}
-                    onClick={() => setExpandedPinnedCard(card)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+            
+            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+              {subjectPinnedCards.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                    <Bookmark className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No pinned cards yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Listen to Daily Download and pin cards to review later
+                  </p>
+                </div>
+              ) : (
+                <div className="-mx-4 px-4 -my-2 py-2">
+                  <div
+                    ref={pinnedCardsScrollRef}
+                    data-drag-scroll="x"
+                    className="flex gap-3 overflow-x-auto overflow-y-hidden py-2 scrollbar-hide items-stretch pr-4 pl-1 snap-x snap-mandatory overscroll-x-contain overscroll-y-none select-none"
+                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                  >
+                    {subjectPinnedCards.slice(0, 5).map((card) => (
+                      <PinnedCardPreview
+                        key={card.id}
+                        card={card}
+                        onClick={() => setExpandedPinnedCard(card)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Daily Download Inline Card */}
