@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon } from "lucide-react";
+import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -24,16 +24,33 @@ import { useCompletedPractice } from "@/hooks/useCompletedPractice";
 import { useAudioProgress } from "@/hooks/useAudioProgress";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useConfetti } from "@/hooks/useConfetti";
-import { subjects, videoTiles, practiceTiles, chapters, type VideoTile, type PracticeTile } from "@/data/courseData";
-import { dailyDownloadTopics, type DailyDownloadTopic, type PinnedCard } from "@/data/dailyDownloadData";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useChapters } from "@/hooks/useChapters";
+import { useTopics, type DailyDownloadTopic } from "@/hooks/useTopics";
+import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/data/courseData";
+import { type PinnedCard } from "@/data/dailyDownloadData";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
-  const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  
+  // Fetch data from Supabase
+  const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
+  const { data: allChapters = [], isLoading: chaptersLoading } = useChapters();
+  const { data: allTopics = [], isLoading: topicsLoading } = useTopics();
+  
+  // Set default subject when data loads
+  useEffect(() => {
+    if (subjects.length > 0 && !selectedSubjectId) {
+      setSelectedSubjectId(subjects[0].id);
+    }
+  }, [subjects, selectedSubjectId]);
+  
+  const selectedSubject = subjects.find(s => s.id === selectedSubjectId) || subjects[0];
   
   // Daily Download state
   const [showTopicSelection, setShowTopicSelection] = useState(false);
@@ -59,18 +76,25 @@ const Index = () => {
   }, []);
   
   // Filter content by selected subject
-  const subjectChapters = chapters.filter(ch => ch.subjectId === selectedSubject.id);
-  const subjectVideos = videoTiles.filter(v => v.subjectId === selectedSubject.id);
-  const subjectPractice = practiceTiles.filter(p => p.subjectId === selectedSubject.id);
-  const subjectTopics = dailyDownloadTopics.filter(t => t.subjectId === selectedSubject.id);
-  const subjectPinnedCards = pinnedCards.filter(c => c.subjectName === selectedSubject.name);
+  const subjectChapters = selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [];
+  const subjectVideos = selectedSubject ? videoTiles.filter(v => v.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
+  const subjectPractice = selectedSubject ? practiceTiles.filter(p => p.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
+  const subjectTopics = selectedSubject ? allTopics.filter(t => t.subjectId === selectedSubject.id) : [];
+  const subjectPinnedCards = selectedSubject ? pinnedCards.filter(c => c.subjectName === selectedSubject.name) : [];
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
   const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
-  const [selectedChapter, setSelectedChapter] = useState(subjectChapters[0]);
+  const [selectedChapter, setSelectedChapter] = useState<typeof subjectChapters[0] | null>(null);
   const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(subjectPinnedCards.length > 0);
+  
+  // Set default chapter when subject changes
+  useEffect(() => {
+    if (subjectChapters.length > 0) {
+      setSelectedChapter(subjectChapters[0]);
+    }
+  }, [selectedSubject?.id, subjectChapters.length]);
   
   // Auto-expand when cards are added, auto-collapse when empty
   useEffect(() => {
@@ -117,9 +141,7 @@ const Index = () => {
   
   // Reset chapter when subject changes
   const handleSubjectChange = (subject: typeof subjects[0]) => {
-    setSelectedSubject(subject);
-    const newChapters = chapters.filter(ch => ch.subjectId === subject.id);
-    setSelectedChapter(newChapters[0]);
+    setSelectedSubjectId(subject.id);
   };
 
   // Daily Download handlers
@@ -188,7 +210,7 @@ const Index = () => {
               }`}
             >
               <img 
-                src={subject.imageUrl} 
+                src={subject.image_url || ''} 
                 alt={subject.name}
                 className="w-8 h-8 rounded-lg object-cover"
               />

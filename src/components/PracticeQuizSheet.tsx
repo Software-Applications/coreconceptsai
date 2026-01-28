@@ -1,6 +1,7 @@
 import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuizProgress } from "@/hooks/useQuizProgress";
-import type { PracticeTile, Chapter } from "@/data/courseData";
+import type { PracticeTile } from "@/data/courseData";
+import type { Chapter } from "@/hooks/useChapters";
 
 interface PracticeQuizSheetProps {
   quiz: PracticeTile | null;

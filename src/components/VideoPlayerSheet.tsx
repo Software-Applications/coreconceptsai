@@ -1,7 +1,8 @@
 import { X, Play, Pause, Expand } from "lucide-react";
 import { useState } from "react";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
-import type { VideoTile, Chapter } from "@/data/courseData";
+import type { VideoTile } from "@/data/courseData";
+import type { Chapter } from "@/hooks/useChapters";
 
 interface VideoPlayerSheetProps {
   video: VideoTile | null;

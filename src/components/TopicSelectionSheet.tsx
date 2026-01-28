@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
-import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import type { Chapter } from '@/data/courseData';
-import { chapters } from '@/data/courseData';
+import type { DailyDownloadTopic } from '@/hooks/useTopics';
+import type { Chapter } from '@/hooks/useChapters';
+import { useChapters } from '@/hooks/useChapters';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
@@ -25,7 +25,8 @@ export const TopicSelectionSheet = ({
   hasProgress
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
-  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const { data: allChapters = [] } = useChapters();
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const dragState = useRef({
@@ -80,7 +81,7 @@ export const TopicSelectionSheet = ({
     onSelectTopic(topic);
   };
 
-  const toggleChapter = (chapterId: number) => {
+  const toggleChapter = (chapterId: string) => {
     if (dragState.current.didDrag) return;
     lightTap();
     setExpandedChapters(prev => {
@@ -97,7 +98,7 @@ export const TopicSelectionSheet = ({
   // Group topics by chapter
   const groupedTopics = useMemo(() => {
     const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
-    const chapterMap = new Map<number, DailyDownloadTopic[]>();
+    const chapterMap = new Map<string, DailyDownloadTopic[]>();
 
     topics.forEach(topic => {
       if (!chapterMap.has(topic.chapterId)) {
@@ -107,17 +108,17 @@ export const TopicSelectionSheet = ({
     });
 
     chapterMap.forEach((topicList, chapterId) => {
-      const chapter = chapters.find(c => c.id === chapterId);
+      const chapter = allChapters.find(c => c.id === chapterId);
       if (chapter) {
         groups.push({ chapter, topics: topicList });
       }
     });
 
-    // Sort by chapter id
-    groups.sort((a, b) => a.chapter.id - b.chapter.id);
+    // Sort by chapter number
+    groups.sort((a, b) => a.chapter.chapter_number - b.chapter.chapter_number);
 
     return groups;
-  }, [topics]);
+  }, [topics, allChapters]);
 
   // Reset all expanded chapters when sheet closes
   useEffect(() => {
@@ -197,7 +198,7 @@ export const TopicSelectionSheet = ({
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                             <span className="text-xs font-bold text-primary">
-                              {chapter.id}
+                              {chapter.chapter_number}
                             </span>
                           </div>
                           <div className="text-left">
