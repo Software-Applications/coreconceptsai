@@ -14,7 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chapters: {
+        Row: {
+          chapter_number: number
+          created_at: string | null
+          id: string
+          subject_id: string
+          title: string
+        }
+        Insert: {
+          chapter_number: number
+          created_at?: string | null
+          id?: string
+          subject_id: string
+          title: string
+        }
+        Update: {
+          chapter_number?: number
+          created_at?: string | null
+          id?: string
+          subject_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_summaries: {
+        Row: {
+          ai_generated: boolean | null
+          bullet_points: string[] | null
+          created_at: string | null
+          difficulty: string | null
+          id: string
+          topic_id: string
+          visual_content: string | null
+          visual_type: string | null
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          bullet_points?: string[] | null
+          created_at?: string | null
+          difficulty?: string | null
+          id?: string
+          topic_id: string
+          visual_content?: string | null
+          visual_type?: string | null
+        }
+        Update: {
+          ai_generated?: boolean | null
+          bullet_points?: string[] | null
+          created_at?: string | null
+          difficulty?: string | null
+          id?: string
+          topic_id?: string
+          visual_content?: string | null
+          visual_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_summaries_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinned_cards: {
+        Row: {
+          flash_summary_id: string
+          id: string
+          pinned_at: string | null
+          user_id: string
+        }
+        Insert: {
+          flash_summary_id: string
+          id?: string
+          pinned_at?: string | null
+          user_id: string
+        }
+        Update: {
+          flash_summary_id?: string
+          id?: string
+          pinned_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_cards_flash_summary_id_fkey"
+            columns: ["flash_summary_id"]
+            isOneToOne: false
+            referencedRelation: "flash_summaries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          chapter_id: string
+          completed_at: string | null
+          id: string
+          quiz_id: number
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          completed_at?: string | null
+          id?: string
+          quiz_id: number
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          completed_at?: string | null
+          id?: string
+          quiz_id?: number
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          image_url: string | null
+          name: string
+          textbook_image_url: string | null
+          textbook_title: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          textbook_image_url?: string | null
+          textbook_title?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          textbook_image_url?: string | null
+          textbook_title?: string | null
+        }
+        Relationships: []
+      }
+      topics: {
+        Row: {
+          audio_url: string | null
+          chapter_id: string
+          created_at: string | null
+          description: string | null
+          duration: string | null
+          generated_audio_url: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          audio_url?: string | null
+          chapter_id: string
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          generated_audio_url?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          audio_url?: string | null
+          chapter_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          generated_audio_url?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topics_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_progress: {
+        Row: {
+          completed: boolean | null
+          id: string
+          listened_at: string | null
+          progress_percentage: number | null
+          topic_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          id?: string
+          listened_at?: string | null
+          progress_percentage?: number | null
+          topic_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          id?: string
+          listened_at?: string | null
+          progress_percentage?: number | null
+          topic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
