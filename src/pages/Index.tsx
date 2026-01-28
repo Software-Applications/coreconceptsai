@@ -50,7 +50,19 @@ const Index = () => {
     }
   }, [subjects, selectedSubjectId]);
   
-  const selectedSubject = subjects.find(s => s.id === selectedSubjectId) || subjects[0];
+  const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
+  
+  // Show loading state while data is being fetched
+  const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
+  
+  if (isLoading || !selectedSubject) {
+    return (
+      <div className="h-full bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading content...</p>
+      </div>
+    );
+  }
   
   // Daily Download state
   const [showTopicSelection, setShowTopicSelection] = useState(false);
