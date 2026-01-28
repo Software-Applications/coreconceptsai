@@ -8,8 +8,50 @@ import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
-import type { DailyDownloadTopic } from '@/data/dailyDownloadData';
-import { generateMockTranscript } from '@/data/dailyDownloadData';
+import type { DailyDownloadTopic } from '@/hooks/useTopics';
+
+// Helper to generate mock transcript (moved from dailyDownloadData.ts)
+const generateMockTranscript = (topic: DailyDownloadTopic) => {
+  const durationParts = topic.duration.split(':');
+  const totalSeconds = parseInt(durationParts[0]) * 60 + parseInt(durationParts[1]);
+  
+  const segments: { id: string; startTime: number; endTime: number; text: string; words: { word: string; startTime: number; endTime: number }[] }[] = [];
+  const segmentDuration = 15;
+  
+  const generateWordsWithTiming = (text: string, startTime: number, endTime: number) => {
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    const duration = endTime - startTime;
+    const wordDuration = duration / words.length;
+    return words.map((word, index) => ({
+      word,
+      startTime: startTime + (index * wordDuration),
+      endTime: startTime + ((index + 1) * wordDuration)
+    }));
+  };
+  
+  const createSegment = (id: string, startTime: number, endTime: number, text: string) => ({
+    id, startTime, endTime, text,
+    words: generateWordsWithTiming(text, startTime, endTime)
+  });
+  
+  // Introduction
+  segments.push(createSegment(`${topic.id}-0`, 0, 15, `Welcome to today's Daily Download. We're going to explore ${topic.title}. ${topic.description}`));
+  
+  // Content based on flash summary bullet points
+  const bulletPoints = topic.flashSummary.bulletPoints;
+  bulletPoints.forEach((point, index) => {
+    const startTime = 15 + (index * segmentDuration * 3);
+    segments.push(createSegment(`${topic.id}-${index + 1}a`, startTime, startTime + segmentDuration, `Let's talk about our ${index === 0 ? 'first' : index === 1 ? 'second' : 'third'} key concept. ${point}`));
+    segments.push(createSegment(`${topic.id}-${index + 1}b`, startTime + segmentDuration, startTime + segmentDuration * 2, `This is really important to understand because it forms the foundation of how we approach this topic in practice.`));
+    segments.push(createSegment(`${topic.id}-${index + 1}c`, startTime + segmentDuration * 2, startTime + segmentDuration * 3, `Take a moment to think about how this concept connects to what you already know about the subject.`));
+  });
+  
+  // Conclusion
+  segments.push(createSegment(`${topic.id}-end`, totalSeconds - 30, totalSeconds - 15, `To summarize what we've learned: ${topic.flashSummary.bulletPoints[0].split(' - ')[0]}, and the key principles we discussed.`));
+  segments.push(createSegment(`${topic.id}-outro`, totalSeconds - 15, totalSeconds, `That's all for today's Daily Download on ${topic.title}. Great job! Don't forget to review the flash card summary.`));
+  
+  return segments.sort((a, b) => a.startTime - b.startTime).filter((seg, index, arr) => index === 0 || seg.startTime !== arr[index - 1].startTime);
+};
 
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;

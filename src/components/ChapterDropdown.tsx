@@ -1,13 +1,13 @@
 import { useRef, useEffect, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Chapter } from "@/data/courseData";
+import type { Chapter } from "@/hooks/useChapters";
 import { dropdownVariants, dropdownItemVariants, springTransition } from "@/lib/motionVariants";
 import { useHaptics } from "@/hooks/useHaptics";
 
 interface ChapterDropdownProps {
   chapters: Chapter[];
-  selectedChapter: Chapter;
+  selectedChapter: Chapter | null;
   onSelectChapter: (chapter: Chapter) => void;
 }
 
@@ -37,6 +37,8 @@ export function ChapterDropdown({ chapters, selectedChapter, onSelectChapter }: 
     setIsOpen(false);
   };
 
+  if (!selectedChapter) return null;
+  
   return (
     <div className="relative mb-5" ref={dropdownRef}>
       <motion.button 
