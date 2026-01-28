@@ -31,44 +31,26 @@ import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/
 import { type PinnedCard } from "@/data/dailyDownloadData";
 
 const Index = () => {
+  // ALL HOOKS MUST BE CALLED FIRST - before any conditional returns
   const [activeTab, setActiveTab] = useState("home");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [showTopicSelection, setShowTopicSelection] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
+  const [showReviewBoard, setShowReviewBoard] = useState(false);
+  const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<{ id: string; subject_id: string; chapter_number: number; title: string; created_at: string | null } | null>(null);
+  const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(false);
   
   // Fetch data from Supabase
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
   const { data: allChapters = [], isLoading: chaptersLoading } = useChapters();
   const { data: allTopics = [], isLoading: topicsLoading } = useTopics();
   
-  // Set default subject when data loads
-  useEffect(() => {
-    if (subjects.length > 0 && !selectedSubjectId) {
-      setSelectedSubjectId(subjects[0].id);
-    }
-  }, [subjects, selectedSubjectId]);
-  
-  const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
-  
-  // Show loading state while data is being fetched
-  const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
-  
-  if (isLoading || !selectedSubject) {
-    return (
-      <div className="h-full bg-background flex flex-col items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading content...</p>
-      </div>
-    );
-  }
-  
-  // Daily Download state
-  const [showTopicSelection, setShowTopicSelection] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
-  const [showReviewBoard, setShowReviewBoard] = useState(false);
-  const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
+  // Custom hooks
   const { pinnedCards, pinCard, unpinCard, clearAllPinned } = usePinnedCards();
   const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
   const { markAsWatched, isWatched, getWatchedCount } = useWatchedVideos();
@@ -77,17 +59,35 @@ const Index = () => {
   const { lightTap } = useHaptics();
   const { celebrate } = useConfetti();
   
-  // Track previous counts to detect completion
+  // Refs
   const prevWatchedCount = useRef(0);
   const prevCompletedPracticeCount = useRef(0);
   const prevListenedCount = useRef(0);
+  
+  // Scroll refs
+  const mainScrollRef = useDragScroll<HTMLElement>();
+  const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  
+  // Set default subject when data loads
+  useEffect(() => {
+    if (subjects.length > 0 && !selectedSubjectId) {
+      setSelectedSubjectId(subjects[0].id);
+    }
+  }, [subjects, selectedSubjectId]);
   
   // Ensure theme toggle doesn't cause hydration issues
   useEffect(() => {
     setMounted(true);
   }, []);
   
-  // Filter content by selected subject
+  // Derived state
+  const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
+  const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
+  
+  // Filter content by selected subject (safe even when selectedSubject is undefined)
   const subjectChapters = selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [];
   const subjectVideos = selectedSubject ? videoTiles.filter(v => v.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
   const subjectPractice = selectedSubject ? practiceTiles.filter(p => p.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
@@ -98,8 +98,17 @@ const Index = () => {
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
   const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
-  const [selectedChapter, setSelectedChapter] = useState<typeof subjectChapters[0] | null>(null);
-  const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(subjectPinnedCards.length > 0);
+  // Set default chapter when subject changes
+  useEffect(() => {
+    if (subjectChapters.length > 0 && !selectedChapter) {
+      setSelectedChapter(subjectChapters[0]);
+    }
+  }, [selectedSubject?.id, subjectChapters, selectedChapter]);
+  
+  // Auto-expand pinned cards when cards are added
+  useEffect(() => {
+    setIsPinnedCardsOpen(subjectPinnedCards.length > 0);
+  }, [subjectPinnedCards.length]);
   
   // Set default chapter when subject changes
   useEffect(() => {
@@ -114,6 +123,7 @@ const Index = () => {
   }, [subjectPinnedCards.length]);
   useEffect(() => {
     // Videos completion check
+    if (!selectedSubject) return;
     if (watchedCount === subjectVideos.length && 
         watchedCount > 0 && 
         prevWatchedCount.current === subjectVideos.length - 1) {
@@ -123,10 +133,11 @@ const Index = () => {
       });
     }
     prevWatchedCount.current = watchedCount;
-  }, [watchedCount, subjectVideos.length, celebrate, selectedSubject.name]);
+  }, [watchedCount, subjectVideos.length, celebrate, selectedSubject]);
 
   useEffect(() => {
     // Practice sets completion check
+    if (!selectedSubject) return;
     if (completedPracticeCount === subjectPractice.length && 
         completedPracticeCount > 0 && 
         prevCompletedPracticeCount.current === subjectPractice.length - 1) {
@@ -136,10 +147,11 @@ const Index = () => {
       });
     }
     prevCompletedPracticeCount.current = completedPracticeCount;
-  }, [completedPracticeCount, subjectPractice.length, celebrate, selectedSubject.name]);
+  }, [completedPracticeCount, subjectPractice.length, celebrate, selectedSubject]);
 
   useEffect(() => {
     // Daily Download completion check
+    if (!selectedSubject) return;
     if (listenedCount === subjectTopics.length && 
         listenedCount > 0 && 
         prevListenedCount.current === subjectTopics.length - 1) {
@@ -149,7 +161,7 @@ const Index = () => {
       });
     }
     prevListenedCount.current = listenedCount;
-  }, [listenedCount, subjectTopics.length, celebrate, selectedSubject.name]);
+  }, [listenedCount, subjectTopics.length, celebrate, selectedSubject]);
   
   // Reset chapter when subject changes
   const handleSubjectChange = (subject: typeof subjects[0]) => {
@@ -172,12 +184,15 @@ const Index = () => {
     return subjects.find(s => s.id === selectedTopic.subjectId)?.name || '';
   };
   
-  const mainScrollRef = useDragScroll<HTMLElement>();
-  const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  
-  const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  // Show loading state while data is being fetched
+  if (isLoading || !selectedSubject) {
+    return (
+      <div className="h-full bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading content...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-background flex flex-col w-full safe-area-inset overflow-hidden relative">
