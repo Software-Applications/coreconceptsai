@@ -5,219 +5,138 @@
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Phase 1: Enable Lovable Cloud + Database Schema                    │
+│  Phase 1: Enable Supabase + Database Schema ✅ COMPLETE             │
 │  (Foundation for everything else)                                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Phase 2: Custom Content Management                                 │
+│  Phase 2: Custom Content Management ✅ COMPLETE                     │
 │  (Subjects, topics, and flash summaries in database)                │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Phase 3: AI-Powered Content Generation                             │
-│  (Gemini for summaries + ElevenLabs for audio)                      │
+│  Phase 3: AI-Powered Content Generation ⏳ IN PROGRESS              │
+│  (Gemini for summaries, browser TTS for audio)                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  Phase 4: Authentication (upcoming)                                 │
+│  (Email/password login for progress sync)                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 1: Supabase Backend Setup
+## Phase 1: Supabase Backend Setup ✅ COMPLETE
 
-### 1.1 Enable Lovable Cloud
-- Activate Lovable Cloud for database, authentication, and edge functions
-- This provides the Supabase backend automatically
+### 1.1 Database Connected
+- External Supabase project connected
+- RLS policies configured for public content and private user data
 
-### 1.2 Database Schema
+### 1.2 Database Schema ✅
+All tables created:
+- `subjects` - Custom subjects with textbook info
+- `chapters` - Chapters within subjects
+- `topics` - Daily Download topics with audio fields
+- `flash_summaries` - Flash cards linked to topics
+- `user_progress` - Listened topics per user
+- `pinned_cards` - User's pinned flash cards
+- `quiz_attempts` - Quiz scores and attempts
 
-**Tables to create:**
-
-| Table | Purpose |
-|-------|---------|
-| `subjects` | Custom subjects (replacing hardcoded array) |
-| `chapters` | Chapters within subjects |
-| `topics` | Daily Download topics with content |
-| `flash_summaries` | Flash cards linked to topics |
-| `user_progress` | Listened topics per user |
-| `pinned_cards` | User's pinned flash cards |
-| `quiz_attempts` | Quiz scores and attempts |
-
-**Schema Design:**
-```sql
--- Subjects table
-CREATE TABLE subjects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  color TEXT DEFAULT 'bg-navy-800',
-  image_url TEXT,
-  textbook_title TEXT,
-  textbook_image_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Topics table
-CREATE TABLE topics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE,
-  chapter_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT,
-  duration TEXT,
-  audio_url TEXT,
-  generated_audio_url TEXT, -- AI-generated audio
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Flash summaries table
-CREATE TABLE flash_summaries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  topic_id UUID REFERENCES topics(id) ON DELETE CASCADE,
-  visual_type TEXT CHECK (visual_type IN ('diagram', 'formula', 'analogy')),
-  visual_content TEXT,
-  bullet_points TEXT[], -- Array of 3 bullet points
-  difficulty TEXT CHECK (difficulty IN ('easy', 'medium', 'hard')),
-  ai_generated BOOLEAN DEFAULT false
-);
-
--- User progress table
-CREATE TABLE user_progress (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  topic_id UUID REFERENCES topics(id) ON DELETE CASCADE NOT NULL,
-  listened_at TIMESTAMPTZ DEFAULT now(),
-  progress_percentage INTEGER DEFAULT 0,
-  completed BOOLEAN DEFAULT false,
-  UNIQUE(user_id, topic_id)
-);
-
--- Pinned cards table
-CREATE TABLE pinned_cards (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  flash_summary_id UUID REFERENCES flash_summaries(id) ON DELETE CASCADE NOT NULL,
-  pinned_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, flash_summary_id)
-);
-```
-
-### 1.3 Authentication
-- Add simple email/password login page
-- Protect progress tracking behind authentication
-- Guest mode can still browse content (read-only)
-
-### 1.4 Migrate Hooks to Supabase
-Update these hooks to use Supabase instead of localStorage:
-- `useListenedTopics.ts` → Query `user_progress` table
-- `usePinnedCards.ts` → Query `pinned_cards` table
-- `useQuizProgress.ts` → Query `quiz_attempts` table
+### 1.3 Data Seeded ✅
+- 3 subjects (Microbiology, Chemistry, Biology)
+- 23 chapters
+- 24 topics with flash summaries
 
 ---
 
-## Phase 2: Custom Content Management
+## Phase 2: Custom Content Management ✅ COMPLETE
 
-### 2.1 Content Data Layer
-- Create React Query hooks to fetch subjects/topics from Supabase
-- Replace imports from `dailyDownloadData.ts` with database queries
-- Keep TypeScript interfaces for type safety
+### 2.1 Content Data Layer ✅
+React Query hooks created:
+- `useSubjects.ts` - Fetches subjects with textbook metadata
+- `useChapters.ts` - Fetches chapters with subject filtering
+- `useTopics.ts` - Fetches topics with flash summaries
 
-### 2.2 Admin Interface (Optional)
-- Simple form to add/edit subjects
-- Topic creation form with flash summary fields
-- Could be a separate `/admin` route (protected)
-
-### 2.3 Seed Initial Data
-- Provide SQL migration to seed your custom subjects/topics
-- Or build import functionality from JSON/CSV
+### 2.2 Component Migration ✅
+Updated to use database data:
+- `Index.tsx` - Main page with loading states
+- `ChapterDropdown.tsx` - Chapter selection
+- `TopicSelectionSheet.tsx` - Topic browsing
+- `DailyDownloadPlayer.tsx` - Audio player with transcripts
 
 ---
 
-## Phase 3: AI Content Generation with Gemini
+## Phase 3: AI Content Generation ⏳ IN PROGRESS
 
-### 3.1 Content Summary Generation
-**Edge Function: `generate-summary`**
+### 3.1 Edge Functions Created ✅
+
+**`generate-summary`**
 - Uses Lovable AI Gateway (Gemini model)
-- Input: Topic title and description
-- Output: Flash summary with bullet points
+- Generates flash card summaries with:
+  - Visual type (diagram/formula/analogy)
+  - Visual content (emoji-enhanced)
+  - 3 bullet points
+  - Difficulty rating
+- Saves to `flash_summaries` table
 
-```typescript
-// Example request to Lovable AI Gateway
-const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "google/gemini-3-flash-preview",
-    messages: [
-      { role: "system", content: "Generate educational flash card content..." },
-      { role: "user", content: `Create a flash summary for: ${topicTitle}` }
-    ],
-    tools: [{ /* structured output schema */ }]
-  }),
-});
-```
+**`generate-transcript`**
+- Uses Lovable AI Gateway (Gemini model)
+- Creates spoken educational transcripts
+- Conversational, engaging format for TTS
+- Saves to `topics.description` field
 
-### 3.2 Audio Generation
-**Edge Function: `generate-audio`**
-- Uses ElevenLabs TTS API (not Gemini - Gemini doesn't generate audio)
-- Converts topic transcript to natural speech
-- Stores generated audio URL in `topics.generated_audio_url`
+### 3.2 React Hooks Created ✅
+- `useGenerateSummary` - Triggers flash card generation
+- `useGenerateTranscript` - Triggers audio script generation
+- `useGenerateAllContent` - Generates both in sequence
 
-**Why ElevenLabs instead of browser TTS?**
-- Professional, natural-sounding voices
-- Consistent quality across devices
-- Can cache generated audio for replay
+### 3.3 UI Integration ✅
+- AI sparkle button in DailyDownloadPlayer header
+- Dropdown menu with regeneration options
+- Loading states during generation
+- Toast notifications on success/error
 
-### 3.3 User Flow
-1. User selects a topic
-2. If no generated audio exists:
-   - Call `generate-summary` edge function (Gemini)
-   - Call `generate-audio` edge function (ElevenLabs)
-   - Store results in database
-3. Play audio from stored URL (or fall back to browser TTS)
+### 3.4 Audio Strategy
+**Current: Browser TTS**
+- Uses Web Speech API for audio playback
+- Works across devices without API costs
+- Generated transcripts optimize for spoken delivery
+
+**Future: ElevenLabs (optional)**
+- Can add professional voice synthesis later
+- Would require ElevenLabs API key
+- Store generated audio in Supabase storage
+
+---
+
+## Phase 4: Authentication (Upcoming)
+
+### 4.1 Auth Page
+- Email/password login and signup
+- Protected routes for user-specific features
+
+### 4.2 Progress Sync
+- Migrate localStorage hooks to Supabase:
+  - `useListenedTopics` → `user_progress` table
+  - `usePinnedCards` → `pinned_cards` table
+  - `useQuizProgress` → `quiz_attempts` table
 
 ---
 
 ## Technical Notes
 
-### API Keys Required
-| Service | Key | Purpose |
-|---------|-----|---------|
-| Lovable AI | Auto-provisioned | Gemini content generation |
-| ElevenLabs | User must provide | Professional TTS audio |
+### API Keys Used
+| Service | Key | Status |
+|---------|-----|--------|
+| Lovable AI | LOVABLE_API_KEY | ✅ Auto-provisioned |
+| ElevenLabs | — | ⏸️ Deferred (using browser TTS) |
 
-### Files to Modify
-
-**Phase 1:**
-- Create auth page (`/auth`)
-- Add Supabase client integration
-- Create database migrations
-- Update all progress hooks
-
-**Phase 2:**
-- Create `src/hooks/useSubjects.ts` (React Query)
-- Create `src/hooks/useTopics.ts` (React Query)
-- Update `Index.tsx` to use database queries
-
-**Phase 3:**
-- Create `supabase/functions/generate-summary/index.ts`
-- Create `supabase/functions/generate-audio/index.ts`
-- Update `DailyDownloadPlayer.tsx` for AI audio playback
+### Files Modified in Phase 3
+- `supabase/functions/generate-summary/index.ts` (new)
+- `supabase/functions/generate-transcript/index.ts` (new)
+- `supabase/config.toml` (updated)
+- `src/hooks/useAIGeneration.ts` (new)
+- `src/components/DailyDownloadPlayer.tsx` (updated)
 
 ---
 
-## Estimated Effort
+## Next Steps
 
-| Phase | Complexity | Description |
-|-------|------------|-------------|
-| Phase 1 | Medium | Database setup, auth, hook migration |
-| Phase 2 | Low-Medium | Content queries, optional admin UI |
-| Phase 3 | Medium | Edge functions, AI integration |
-
----
-
-## Ready to Start?
-
-I recommend starting with **Phase 1** to establish the foundation. Would you like me to:
-1. Enable Lovable Cloud and create the database schema
-2. Add authentication
-3. Migrate the localStorage hooks to Supabase
-
-This will set up everything needed for Phases 2 and 3.
+1. **Test AI generation** - Verify edge functions work end-to-end
+2. **Add authentication** - Enable user progress sync
+3. **(Optional) Add ElevenLabs** - Professional TTS when ready
