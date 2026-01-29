@@ -7,6 +7,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useGenerateContent } from '@/hooks/useAIGeneration';
+import { useToast } from '@/hooks/use-toast';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -196,10 +197,16 @@ export const DailyDownloadPlayer = ({
     return !hasFlashSummary || !hasTranscript;
   }, [topic]);
 
+  const { toast } = useToast();
+
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
     if (isOpen && topic && needsAIContent && !isGenerating && !generateContent.isSuccess) {
       console.log('Auto-generating AI content for topic:', topic.title);
+      toast({
+        title: "✨ Generating AI Content",
+        description: `Creating personalized transcript and flash summary for "${topic.title}"...`,
+      });
       generateContent.mutate({
         topicId: topic.id,
         topicTitle: topic.title,
@@ -207,7 +214,7 @@ export const DailyDownloadPlayer = ({
         subjectName,
       });
     }
-  }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName]);
+  }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName, toast]);
 
   // Reset state when topic changes
   useEffect(() => {
