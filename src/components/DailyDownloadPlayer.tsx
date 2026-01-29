@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2, RefreshCw
+  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
-import { useGenerateSummary, useGenerateTranscript } from '@/hooks/useAIGeneration';
+import { useGenerateContent } from '@/hooks/useAIGeneration';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -78,10 +78,9 @@ export const DailyDownloadPlayer = ({
   const [showAIMenu, setShowAIMenu] = useState(false);
   const { saveProgress, getProgress, clearProgress } = useAudioProgress();
   
-  // AI generation hooks
-  const generateSummary = useGenerateSummary();
-  const generateTranscript = useGenerateTranscript();
-  const isGenerating = generateSummary.isPending || generateTranscript.isPending;
+  // AI generation hook
+  const generateContent = useGenerateContent();
+  const isGenerating = generateContent.isPending;
   
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
@@ -377,39 +376,19 @@ export const DailyDownloadPlayer = ({
                         onClick={() => {
                           mediumTap();
                           setShowAIMenu(false);
-                          generateSummary.mutate({
+                          generateContent.mutate({
                             topicId: topic.id,
                             topicTitle: topic.title,
                             topicDescription: topic.description,
                             subjectName,
-                          });
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
-                      >
-                        <RefreshCw className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Regenerate Flash Card</p>
-                          <p className="text-xs text-muted-foreground">Create new summary points</p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          mediumTap();
-                          setShowAIMenu(false);
-                          generateTranscript.mutate({
-                            topicId: topic.id,
-                            topicTitle: topic.title,
-                            topicDescription: topic.description,
-                            subjectName,
-                            bulletPoints: topic.flashSummary.bulletPoints,
                           });
                         }}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
                       >
                         <Sparkles className="w-4 h-4 text-primary" />
                         <div>
-                          <p className="text-sm font-medium text-foreground">Generate Audio Script</p>
-                          <p className="text-xs text-muted-foreground">Create spoken explanation</p>
+                          <p className="text-sm font-medium text-foreground">Generate AI Content</p>
+                          <p className="text-xs text-muted-foreground">Create transcript & flash card</p>
                         </div>
                       </button>
                     </div>

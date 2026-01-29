@@ -2,126 +2,70 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface GenerateSummaryParams {
+interface GenerateContentParams {
   topicId: string;
   topicTitle: string;
   topicDescription?: string;
   subjectName?: string;
 }
 
-interface GenerateTranscriptParams {
-  topicId: string;
-  topicTitle: string;
-  topicDescription?: string;
-  subjectName?: string;
-  bulletPoints?: string[];
+interface GenerateContentResult {
+  transcript: string;
+  flashSummary: {
+    id: string;
+    topic_id: string;
+    visual_type: string;
+    visual_content: string;
+    bullet_points: string[];
+    difficulty: string;
+    ai_generated: boolean;
+  };
 }
 
-interface FlashSummaryResult {
-  id: string;
-  topic_id: string;
-  visual_type: string;
-  visual_content: string;
-  bullet_points: string[];
-  difficulty: string;
-  ai_generated: boolean;
-}
-
-export const useGenerateSummary = () => {
+export const useGenerateContent = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: GenerateSummaryParams): Promise<FlashSummaryResult> => {
-      const { data, error } = await supabase.functions.invoke('generate-summary', {
+    mutationFn: async (params: GenerateContentParams): Promise<GenerateContentResult> => {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
         body: params,
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to generate summary');
+        throw new Error(error.message || 'Failed to generate content');
       }
 
       if (data.error) {
         throw new Error(data.error);
       }
 
-      return data.flashSummary;
+      return {
+        transcript: data.transcript,
+        flashSummary: data.flashSummary,
+      };
     },
     onSuccess: () => {
-      // Invalidate topics query to refresh flash summaries
+      // Invalidate topics query to refresh with new content
       queryClient.invalidateQueries({ queryKey: ['topics'] });
-      toast.success('Flash summary generated!', {
-        description: 'AI has created a new flash card for this topic.',
+      queryClient.invalidateQueries({ queryKey: ['topic'] });
+      toast.success('Content generated!', {
+        description: 'AI has created the transcript and flash summary.',
       });
     },
     onError: (error: Error) => {
-      console.error('Generate summary error:', error);
-      toast.error('Failed to generate summary', {
+      console.error('Generate content error:', error);
+      toast.error('Failed to generate content', {
         description: error.message,
       });
     },
   });
+};
+
+// Keep these for backwards compatibility but they now just call the unified function
+export const useGenerateSummary = () => {
+  return useGenerateContent();
 };
 
 export const useGenerateTranscript = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: GenerateTranscriptParams): Promise<string> => {
-      const { data, error } = await supabase.functions.invoke('generate-transcript', {
-        body: params,
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to generate transcript');
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      return data.transcript;
-    },
-    onSuccess: () => {
-      // Invalidate topics query to refresh descriptions
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      toast.success('Audio transcript generated!', {
-        description: 'AI has created a spoken explanation for this topic.',
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Generate transcript error:', error);
-      toast.error('Failed to generate transcript', {
-        description: error.message,
-      });
-    },
-  });
-};
-
-export const useGenerateAllContent = () => {
-  const generateSummary = useGenerateSummary();
-  const generateTranscript = useGenerateTranscript();
-
-  return useMutation({
-    mutationFn: async (params: GenerateSummaryParams & { bulletPoints?: string[] }) => {
-      // Generate summary first
-      const summary = await generateSummary.mutateAsync(params);
-      
-      // Then generate transcript using the bullet points from the summary
-      const transcript = await generateTranscript.mutateAsync({
-        ...params,
-        bulletPoints: summary.bullet_points,
-      });
-
-      return { summary, transcript };
-    },
-    onSuccess: () => {
-      toast.success('AI content generated!', {
-        description: 'Both flash summary and audio transcript are ready.',
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Generate all content error:', error);
-      // Individual mutations already show their own errors
-    },
-  });
+  return useGenerateContent();
 };
