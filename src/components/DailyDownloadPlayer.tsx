@@ -186,12 +186,36 @@ export const DailyDownloadPlayer = ({
     }
   }, [activeSegmentIndex]);
 
+  // Check if topic needs AI content generation
+  const needsAIContent = useMemo(() => {
+    if (!topic) return false;
+    // Check if flash summary has meaningful content (AI-generated content has longer bullet points)
+    const hasFlashSummary = topic.flashSummary.bulletPoints.some(bp => bp.length > 20);
+    // Check if description is substantial (AI transcripts are typically 1000+ chars)
+    const hasTranscript = topic.description.length > 500;
+    return !hasFlashSummary || !hasTranscript;
+  }, [topic]);
+
+  // Auto-generate content when topic is opened and needs AI content
+  useEffect(() => {
+    if (isOpen && topic && needsAIContent && !isGenerating && !generateContent.isSuccess) {
+      console.log('Auto-generating AI content for topic:', topic.title);
+      generateContent.mutate({
+        topicId: topic.id,
+        topicTitle: topic.title,
+        topicDescription: topic.description,
+        subjectName,
+      });
+    }
+  }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName]);
+
   // Reset state when topic changes
   useEffect(() => {
     stop();
     setShowFlashCard(false);
     setHasStarted(false);
     setShowResumePrompt(false);
+    generateContent.reset(); // Reset generation state for new topic
     
     // Check if there's saved progress for this topic
     if (topic) {
@@ -405,6 +429,30 @@ export const DailyDownloadPlayer = ({
               onClick={() => setShowAIMenu(false)} 
             />
           )}
+
+          {/* Generating overlay */}
+          <AnimatePresence>
+            {isGenerating && (
+              <motion.div
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <Sparkles className="w-10 h-10 text-primary" />
+                </motion.div>
+                <p className="text-lg font-semibold text-foreground mb-2">Generating Content</p>
+                <p className="text-sm text-muted-foreground text-center px-8">
+                  AI is creating a personalized transcript and flash summary for this topic...
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Main content */}
           <div className="flex-1 flex flex-col px-6 overflow-hidden">
