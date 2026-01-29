@@ -123,7 +123,7 @@ serve(async (req) => {
     // Step 1: Generate transcript using Google Gemini
     console.log("Step 1: Generating transcript...");
     const transcriptResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
       {
         method: "POST",
         headers: {
@@ -176,7 +176,7 @@ Create an engaging, educational transcript that helps a student understand this 
     // Step 2: Generate flash summary using Google Gemini with structured output
     console.log("Step 2: Generating flash summary...");
     const summaryResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent",
       {
         method: "POST",
         headers: {
