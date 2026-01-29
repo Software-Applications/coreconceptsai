@@ -50,24 +50,39 @@ LENGTH:
 - Ensure the pacing allows for the active prompting pauses
 
 FORMAT YOUR RESPONSE:
-Write your complete podcast transcript. The transcript should flow naturally as spoken dialogue from you (the educator) to the student. Include the active prompting questions and pauses as part of the natural flow of the transcript. Do not include any stage directions, speaker labels, or meta-commentary—just the words you would speak.
+Write your complete podcast transcript inside <transcript> tags. The transcript should flow naturally as spoken dialogue from you (the educator) to the student. Include the active prompting questions and pauses as part of the natural flow of the transcript. Do not include any stage directions, speaker labels, or meta-commentary—just the words you would speak.
 
-Your output should consist only of the transcript itself.`;
+Your output should consist only of the transcript itself within the specified tags.`;
 
 const FLASH_SUMMARY_SYSTEM_PROMPT = `You are helping students review tough topics by creating flashcard summaries. Your goal is to generate a clear, concise flashcard summary that will help students understand and remember the key concepts.
 
 Your task is to create a flashcard summary based on the transcript provided. Follow these requirements:
 
 - The flashcard summary MUST be based on the content in the transcript
+- Include the topic name as the title/header of your flashcard
 - The summary must fit on one flashcard (be concise but comprehensive)
 - Use clear, student-friendly descriptions that make the concept easy to understand
 
 You may use one or more of the following formats to best summarize the topic:
 - Visual image or illustration (described in text)
+- Storyboard
 - Flow chart
 - Formula
 - Infographic
+- Charts
 - Insights
+- Any combination of the above
+
+Before creating your flashcard, think about:
+1. What are the key concepts from the transcript?
+2. Which format(s) would best help students understand and remember this topic?
+3. How can you organize the information to fit on one flashcard while maintaining clarity?
+
+Now create your flashcard summary. Make sure to:
+- Start with the topic name as a clear header
+- Present the information in the format(s) you've chosen
+- Keep it concise enough to fit on one flashcard
+- Ensure all content comes from the transcript
 
 Output your response as a JSON object with these exact fields:
 - visual_type: one of "diagram", "formula", or "analogy"
@@ -144,10 +159,16 @@ Create an engaging, educational transcript that helps a student understand this 
     }
 
     const transcriptData = await transcriptResponse.json();
-    const transcript = transcriptData.candidates?.[0]?.content?.parts?.[0]?.text;
+    let transcript = transcriptData.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!transcript) {
       throw new Error("No transcript generated from AI");
+    }
+
+    // Extract content from <transcript> tags if present
+    const transcriptMatch = transcript.match(/<transcript>([\s\S]*?)<\/transcript>/);
+    if (transcriptMatch) {
+      transcript = transcriptMatch[1].trim();
     }
 
     console.log(`Transcript generated (${transcript.length} chars)`);
