@@ -1,93 +1,180 @@
-# Real-Time AI Content Generation with Google AI Studio
 
-## Status: ✅ Implemented
 
-## Overview
+## Plan: Google Cloud TTS with Voice Selection
 
-This plan replaced the Lovable AI gateway integration with **direct calls to Google's Generative Language API**, allowing the app to generate transcripts and flash summaries on-the-fly when a user selects a topic.
+This plan upgrades the text-to-speech system from browser-based speech synthesis to Google Cloud's Text-to-Speech API, adding a voice selection dropdown so users can choose their preferred narrator voice.
 
-## Architecture
+### What You'll Get
+
+- Premium quality neural voices from Google Cloud (much better than browser voices)
+- A voice selector dropdown in the player UI
+- 6 voice options: 3 male and 3 female voices with distinct styles
+- Persistent voice preference saved locally
+- Fallback to browser speech if TTS fails
+
+### Voice Options
+
+| Voice ID | Label | Description |
+|----------|-------|-------------|
+| en-US-Neural2-D | Oliver | Clear, professional male voice |
+| en-US-Neural2-A | Marcus | Deep, authoritative male voice |
+| en-US-Neural2-J | James | Warm, friendly male voice |
+| en-US-Neural2-F | Aria | Natural, engaging female voice |
+| en-US-Neural2-C | Emma | Soft, calming female voice |
+| en-US-Neural2-H | Sophia | Bright, energetic female voice |
+
+### Architecture Overview
 
 ```text
-User selects topic → Taps "Generate AI Content" button
-        │
-        ▼
-┌──────────────────┐      ┌─────────────────────────────┐
-│  Frontend        │      │  Supabase Edge Functions    │
-│  (React)         │─────▶│                             │
-│                  │      │  ┌─────────────────────┐    │
-│  DailyDownload   │      │  │ generate-content    │    │
-│  Player          │      │  │                     │    │
-└──────────────────┘      │  │ 1. Call Gemini API  │    │
-                          │  │    (transcript)     │    │
-                          │  │                     │    │
-                          │  │ 2. Call Gemini API  │    │
-                          │  │    (flash summary)  │    │
-                          │  │                     │    │
-                          │  │ 3. Save to DB       │    │
-                          │  │ 4. Return results   │    │
-                          │  └─────────────────────┘    │
-                          └─────────────────────────────┘
-                                       │
-                                       ▼
-                          ┌─────────────────────────────┐
-                          │  Google Generative AI API   │
-                          │  generativelanguage.        │
-                          │  googleapis.com             │
-                          │                             │
-                          │  • gemini-2.0-flash-lite    │
-                          │    (transcripts)            │
-                          │  • gemini-2.0-flash         │
-                          │    (flash summaries)        │
-                          └─────────────────────────────┘
+┌─────────────────────┐     ┌─────────────────────────┐     ┌────────────────────┐
+│  DailyDownloadPlayer│────▶│ google-tts Edge Function│────▶│ Google Cloud TTS   │
+│  (React Component)  │     │ (Supabase)              │     │ API                │
+└─────────────────────┘     └─────────────────────────┘     └────────────────────┘
+         │                            │
+         │                            │ Returns MP3 audio
+         ▼                            ▼
+   ┌──────────────┐           ┌───────────────┐
+   │ Audio Player │◀──────────│ Base64 Audio  │
+   │ (HTML5)      │           │ Blob URL      │
+   └──────────────┘           └───────────────┘
 ```
 
-## What Was Implemented
+### Implementation Steps
 
-### 1. Unified Edge Function (`supabase/functions/generate-content/index.ts`)
-- Single function that generates both transcript and flash summary
-- Uses Google Generative AI API with your configured prompts
-- Saves results to database (topics.description + flash_summaries table)
-- Returns both transcript and flash summary to frontend
+#### Step 1: Create `google-tts` Edge Function
 
-### 2. Updated Frontend Hook (`src/hooks/useAIGeneration.ts`)
-- Simplified to single `useGenerateContent()` hook
-- Calls the unified edge function
-- Invalidates queries on success to refresh UI
+A new Supabase Edge Function that:
 
-### 3. Updated Player (`src/components/DailyDownloadPlayer.tsx`)
-- Single "Generate AI Content" button in header
-- Creates both transcript and flash card in one click
-- Loading state while generating
+- Accepts transcript text, voice ID, and speaking rate
+- Calls Google Cloud Text-to-Speech API at `https://texttospeech.googleapis.com/v1/text:synthesize`
+- Uses the existing `GOOGLE_API_KEY` secret (already configured)
+- Returns base64-encoded MP3 audio
+- Handles text chunking for transcripts over 5000 bytes
 
-### 4. Deleted Old Functions
-- `supabase/functions/generate-summary/index.ts` - removed
-- `supabase/functions/generate-transcript/index.ts` - removed
+Request format:
+```text
+POST /google-tts
+{
+  text: string,
+  voiceId: string,       // e.g., "en-US-Neural2-D"
+  speakingRate: number   // 0.5 to 2.0
+}
+```
 
-## Models Used
+Response format:
+```text
+{
+  audioContent: string,  // Base64 MP3
+  durationMs: number     // Estimated duration
+}
+```
 
-| Purpose | Model | Notes |
-|---------|-------|-------|
-| Transcript | `gemini-2.0-flash-lite` | Fast, good for conversational content |
-| Flash Summary | `gemini-2.0-flash` | Structured JSON output with responseSchema |
+#### Step 2: Create `useGoogleTTS` Hook
 
-## Agent Prompts
+A React hook that manages TTS audio generation and playback:
 
-The system prompts from your AI Studio agents are embedded in the edge function:
+- Calls the edge function to generate audio from transcript text
+- Creates a Blob URL from the returned base64 audio
+- Uses HTML5 Audio element for accurate playback and timing
+- Provides play/pause, seek, skip forward/back, and playback rate controls
+- Caches generated audio by topic ID + voice ID
+- Shows loading state during audio generation
+- Falls back to browser speech synthesis if TTS fails
 
-1. **Transcript Agent** - Creates podcast-style educational content with active prompting
-2. **Flash Summary Agent** - Creates structured flashcard with visual_type, visual_content, bullet_points, difficulty
+#### Step 3: Create `useVoicePreference` Hook
 
-## User Experience Flow
+A simple hook to persist voice selection:
 
-1. User opens Topic Selection Sheet
-2. User taps a topic → DailyDownloadPlayer opens
-3. User taps the sparkle (✨) button in header
-4. "Generate AI Content" option appears
-5. Click → Shows loading spinner
-6. After ~5-10 seconds, transcript and flash card are generated
-7. Content is cached in database for future visits
+- Stores selected voice ID in localStorage
+- Returns current voice preference and setter function
+- Default voice: "en-US-Neural2-D" (Oliver)
 
-## Secrets Required
+#### Step 4: Create VoiceSelector Component
 
-- `GOOGLE_API_KEY` - Added to Supabase secrets ✅
+A compact dropdown component positioned in the player header:
+
+- Shows current voice name with an icon (User/Mic icon)
+- Opens a popover/dropdown with all available voices
+- Groups voices by gender (Male/Female)
+- Displays voice name and description
+- Saves preference on selection
+
+UI positioning in header:
+```text
+┌──────────────────────────────────────────┐
+│  [X]     Daily Download   [🎤 Oliver ▼][✨]│
+│          Biology                         │
+└──────────────────────────────────────────┘
+```
+
+Dropdown design:
+```text
+┌──────────────────────────────────────────┐
+│  Choose Voice                            │
+├──────────────────────────────────────────┤
+│  Male Voices                             │
+│  ● Oliver - Clear, professional          │
+│  ○ Marcus - Deep, authoritative          │
+│  ○ James - Warm, friendly                │
+├──────────────────────────────────────────┤
+│  Female Voices                           │
+│  ○ Aria - Natural, engaging              │
+│  ○ Emma - Soft, calming                  │
+│  ○ Sophia - Bright, energetic            │
+└──────────────────────────────────────────┘
+```
+
+#### Step 5: Update DailyDownloadPlayer Component
+
+Integrate the new TTS system:
+
+- Import and use the new `useGoogleTTS` hook instead of `useSpeechSynthesis`
+- Add `VoiceSelector` component in the header between close button and AI menu
+- Pass selected voice to the TTS hook
+- Show loading indicator while audio is being generated
+- Use real audio duration from the generated audio instead of estimates
+- Maintain backward compatibility with browser speech as fallback
+
+### Files to Create
+
+1. `supabase/functions/google-tts/index.ts` - Edge function for Google Cloud TTS API calls
+2. `src/hooks/useGoogleTTS.ts` - React hook for TTS audio generation and playback
+3. `src/hooks/useVoicePreference.ts` - React hook for persisting voice preference
+4. `src/components/VoiceSelector.tsx` - Voice selection dropdown component
+
+### Files to Modify
+
+1. `supabase/config.toml` - Add google-tts function configuration
+2. `src/components/DailyDownloadPlayer.tsx` - Integrate voice selector and new TTS hook
+
+### Technical Details
+
+**Edge Function - Text Chunking:**
+Google TTS has a 5000 byte limit per request. For longer transcripts:
+- Split text at sentence boundaries (periods, question marks)
+- Make multiple API calls for each chunk
+- Concatenate the base64 audio responses
+- Return combined audio
+
+**Audio Caching Strategy:**
+- Cache key: `${topicId}-${voiceId}`
+- Store Blob URLs in React state
+- Clear cache when component unmounts
+- Regenerate audio if voice changes
+
+**Fallback Behavior:**
+- If edge function fails (network error, API error), show toast notification
+- Automatically fall back to browser speech synthesis (`useSpeechSynthesis`)
+- Voice preference still displayed even in fallback mode
+
+**Playback Rate Handling:**
+- Store user's preferred playback rate
+- Apply rate to HTML5 Audio element
+- Available rates: 1x, 1.25x, 1.5x, 1.75x, 2x
+
+### Considerations
+
+- **Latency**: First playback will have a 1-3 second delay while audio generates
+- **API Costs**: Google Cloud TTS pricing is ~$4 per 1 million characters for Neural2 voices. Typical transcripts are 5,000-10,000 characters each
+- **Text Limits**: Transcripts over 5000 bytes will be chunked and processed in multiple API calls
+
