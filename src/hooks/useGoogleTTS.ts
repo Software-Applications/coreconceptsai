@@ -149,6 +149,15 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         }
       });
       
+      // Add pause listener to detect unexpected stops
+      audio.addEventListener('pause', () => {
+        // If audio paused but we didn't intentionally pause, sync state
+        if (!audio.ended && audioRef.current === audio) {
+          // Only reset if we think we're still playing
+          // (intentional pauses are handled via the pause() function)
+        }
+      });
+      
       audio.addEventListener('timeupdate', () => {
         const completedChunksDuration = chunkDurationsRef.current
           .slice(0, currentChunkIndexRef.current)
@@ -166,7 +175,18 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         optionsRef.current.onProgress?.(charIndex, progressPercent);
       });
       
-      audio.play().catch(console.error);
+      audio.play()
+        .then(() => {
+          // Verify audio is actually playing
+          if (!audio.paused) {
+            setIsPlaying(true);
+            setIsPaused(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Chunk playback error:', err);
+          setIsPlaying(false);
+        });
     }
   }, []);
 
@@ -350,6 +370,16 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         setProgress(100);
         optionsRef.current.onEnd?.();
       });
+      
+      // Add pause listener to detect unexpected stops (cached audio)
+      audio.addEventListener('pause', () => {
+        if (sessionIdRef.current !== currentSessionId) return;
+        // If audio stopped but not at the end, it may have been interrupted
+        if (!audio.ended && audio.currentTime < audio.duration - 0.1) {
+          // Only log, don't force state change - intentional pauses are handled separately
+          console.log('[TTS] Audio paused unexpectedly at', audio.currentTime);
+        }
+      });
 
       audio.addEventListener('error', (e) => {
         if (sessionIdRef.current !== currentSessionId) return;
@@ -369,11 +399,18 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           audio.pause();
           return;
         }
-        setIsPlaying(true);
-        setIsPaused(false);
+        // Verify audio is actually playing before setting state
+        if (!audio.paused) {
+          setIsPlaying(true);
+          setIsPaused(false);
+        } else {
+          console.warn('[TTS] audio.play() resolved but audio is paused');
+          setIsPlaying(false);
+        }
       } catch (err) {
         if (sessionIdRef.current !== currentSessionId) return;
         console.error('Playback error:', err);
+        setIsPlaying(false);
         setUseFallback(true);
         speechSynthesisRef.current.speak(text);
       }
@@ -441,6 +478,14 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
             }
           });
           
+          // Add pause listener for streaming audio
+          audio.addEventListener('pause', () => {
+            if (sessionIdRef.current !== currentSessionId) return;
+            if (!audio.ended && audio.currentTime < audio.duration - 0.1) {
+              console.log('[TTS] Streaming audio paused at', audio.currentTime);
+            }
+          });
+          
           audio.addEventListener('error', (e) => {
             if (sessionIdRef.current !== currentSessionId) return;
             const audioEl = e.target as HTMLAudioElement;
@@ -458,12 +503,19 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
                 audio.pause();
                 return;
               }
-              setIsPlaying(true);
-              setIsPaused(false);
+              // Verify audio is actually playing
+              if (!audio.paused) {
+                setIsPlaying(true);
+                setIsPaused(false);
+              } else {
+                console.warn('[TTS] Streaming audio.play() resolved but audio is paused');
+                setIsPlaying(false);
+              }
             })
             .catch((err) => {
               if (sessionIdRef.current !== currentSessionId) return;
               console.error('Playback error:', err);
+              setIsPlaying(false);
               setUseFallback(true);
               speechSynthesisRef.current.speak(text);
             });
@@ -517,15 +569,25 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const resume = useCallback(async () => {
     if (useFallbackRef.current) {
       speechSynthesisRef.current.resume();
+      setIsPlaying(true);
+      setIsPaused(false);
     } else if (audioRef.current) {
       try {
         await audioRef.current.play();
+        // Verify audio is actually playing after resume
+        if (!audioRef.current.paused) {
+          setIsPlaying(true);
+          setIsPaused(false);
+        } else {
+          console.warn('[TTS] Resume failed - audio still paused');
+          setIsPlaying(false);
+        }
       } catch (err) {
         console.error('Resume error:', err);
+        setIsPlaying(false);
+        setIsPaused(false);
       }
     }
-    setIsPlaying(true);
-    setIsPaused(false);
   }, []);
 
   const stop = useCallback(() => {
@@ -607,6 +669,13 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     seekToChar,
     cyclePlaybackRate,
     clearCache,
+    // Method to check if audio is actually playing (for state sync)
+    getActualPlayingState: () => {
+      if (useFallbackRef.current) {
+        return speechSynthesisRef.current.isPlaying;
+      }
+      return audioRef.current ? !audioRef.current.paused && !audioRef.current.ended : false;
+    },
     setPlaybackRate: (rate: number) => {
       setPlaybackRate(rate);
       playbackRateRef.current = rate;

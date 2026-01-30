@@ -118,10 +118,33 @@ export const DailyDownloadPlayer = ({
     stop,
     cyclePlaybackRate,
     seekToChar,
-    clearCache
+    clearCache,
+    getActualPlayingState
   } = useGoogleTTS({
     onEnd: handleSpeechEnd
   });
+
+  // Fallback state sync - verify waveform animation matches actual playback
+  // This catches edge cases where isPlaying state becomes stale
+  const [actuallyPlaying, setActuallyPlaying] = useState(false);
+  
+  useEffect(() => {
+    if (!hasStarted) {
+      setActuallyPlaying(false);
+      return;
+    }
+    
+    // Check every 500ms to sync state
+    const interval = setInterval(() => {
+      const actualState = getActualPlayingState();
+      setActuallyPlaying(actualState);
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, [hasStarted, getActualPlayingState]);
+  
+  // Use the combined state for waveform animation
+  const waveformShouldAnimate = isPlaying && actuallyPlaying;
 
   // Generate transcript for current topic
   const transcript = useMemo(() => {
@@ -500,7 +523,7 @@ export const DailyDownloadPlayer = ({
                 <motion.div
                   key={i}
                   className="w-1 bg-primary/60 rounded-full"
-                  animate={isPlaying ? {
+                  animate={waveformShouldAnimate ? {
                     height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
                   } : { height: bar.height * 0.2 }}
                   transition={{
