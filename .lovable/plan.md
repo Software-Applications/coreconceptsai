@@ -1,63 +1,74 @@
 
-## Fix Audio Player Perpetual Play State
+## Add Trust-Building Introduction to Core Concepts AI
 
 ### Overview
-The audio waveform visualization gets stuck in an animated "playing" state because the `isPlaying` state is not properly synchronized with actual audio playback. The waveform bars continuously animate when `isPlaying` is true, but this state can become stale if audio playback fails or stops unexpectedly.
+Add introductory copy to the Core Concepts AI topic selection sheet that builds trust in the AI's accuracy while reinforcing its promise of simplicity. This is the first meaningful interaction point where users decide to engage with the feature.
 
-### Root Causes
-1. **Missing pause event listener** - The audio element has listeners for `ended` and `error` events, but no `pause` event listener to detect when audio stops unexpectedly
-2. **Async operations breaking user gesture context** - Network fetch operations before playback can break browser autoplay policies
-3. **State not reset on playback failure** - If `audio.play()` silently fails, `isPlaying` may remain true
-4. **No periodic state verification** - No mechanism to verify the audio element's actual playing state
+### Location
+The copy will be added to **TopicSelectionSheet.tsx** as a hero section between the header and the topic list. This placement ensures users see the value proposition before browsing topics.
+
+### Design
+
+**Visual Layout:**
+```text
+┌─────────────────────────────────────┐
+│           (drag handle)             │
+├─────────────────────────────────────┤
+│  Core Concepts [AI]           [X]   │
+├─────────────────────────────────────┤
+│                                     │
+│    Master the Fundamentals          │  ← New hero section
+│                                     │
+│    Tough topics shouldn't be a      │
+│    barrier to your progress. Our    │
+│    AI breaks down high-level        │
+│    academic concepts into simple,   │
+│    digestible explanations. It's    │
+│    the "Aha!" moment you've been    │
+│    looking for, designed to help    │
+│    you learn—and retain—better.     │
+│                                     │
+│    [Start Exploring ↓]              │  ← Scroll indicator
+│                                     │
+├─────────────────────────────────────┤
+│  Chapter 1 - Topic Name             │
+│  Chapter 2 - Topic Name             │
+│  ...                                │
+└─────────────────────────────────────┘
+```
 
 ### Changes
 
-**1. src/hooks/useGoogleTTS.ts - Add pause event listener and state sync**
-- Add `pause` event listener to audio elements to detect unexpected stops
-- Check `audio.paused` property before setting `isPlaying = true`
-- Add state verification when audio element is created
-- Ensure `isPlaying` is only set to `true` after confirmed playback start
+**src/components/TopicSelectionSheet.tsx**
 
-**2. src/hooks/useGoogleTTS.ts - Create Audio element synchronously**
-- Move Audio element creation to happen immediately in the user gesture handler
-- Set `preload = "auto"` for reliable loading
-- Perform network operations after element creation (following browser best practices)
+1. **Update header section** - Replace the existing subtitle "Simplest AI explanations of tough topics" with the new value proposition
 
-**3. src/components/DailyDownloadPlayer.tsx - Add fallback state check**
-- Add a periodic check to verify waveform animation matches actual playback state
-- Use audio element's `paused` property as source of truth
+2. **Add hero introduction block** - Insert a styled section between the header and topic list containing:
+   - "Master the Fundamentals" as a headline
+   - The descriptive paragraph about breaking down complex concepts
+   - A subtle "Start Exploring" button that scrolls to the topic list
 
-### Technical Implementation
+3. **Styling**:
+   - Headline: Large, bold text (text-lg or text-xl)
+   - Body text: Muted foreground color, comfortable line height
+   - Subtle gradient or accent background to distinguish from topic list
+   - Animate entrance for polish
 
-For the useGoogleTTS hook, add a pause event handler to each audio element:
+4. **Optional: First-time only display** - Consider showing the full intro only on first visit, then collapsing to a minimal header on subsequent visits (can be added later)
 
-```typescript
-audio.addEventListener('pause', () => {
-  if (sessionIdRef.current !== currentSessionId) return;
-  // Only update if not intentionally paused
-  if (!isPaused) {
-    setIsPlaying(false);
-  }
-});
+### Content
+```
+Master the Fundamentals
+
+Tough topics shouldn't be a barrier to your progress. Our AI breaks down 
+high-level academic concepts into simple, digestible explanations. It's 
+the "Aha!" moment you've been looking for, designed to help you learn—and 
+retain—better.
+
+[Start Exploring]
 ```
 
-Verify playback actually started before setting state:
-
-```typescript
-audio.play()
-  .then(() => {
-    // Double-check audio is actually playing
-    if (!audio.paused) {
-      setIsPlaying(true);
-      setIsPaused(false);
-    }
-  })
-  .catch((err) => {
-    console.error('Playback error:', err);
-    setIsPlaying(false);
-    // Fall back to browser speech synthesis
-  });
-```
-
-### Result
-The waveform visualization will accurately reflect the audio playback state and won't get stuck in a perpetual playing animation when audio isn't actually playing.
+### Technical Notes
+- The "Start Exploring" button will use `scrollIntoView` to smoothly scroll to the first chapter
+- Animation will use framer-motion for consistency with the rest of the app
+- The hero section will be contained within the scrollable area so it scrolls away naturally
