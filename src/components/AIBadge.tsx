@@ -22,7 +22,7 @@ export const AIBadge = ({ size = 'md', className }: AIBadgeProps) => {
       className={cn(
         'inline-flex items-center justify-center font-bold text-white rounded-full whitespace-nowrap flex-shrink-0',
         'bg-gradient-to-r from-violet-500 to-purple-600',
-        'shadow-[0_0_8px_hsl(var(--primary)/0.4)]',
+        'shadow-[0_0_8px_rgba(139,92,246,0.4)]',
         sizeClasses[size],
         className
       )}
