@@ -101,7 +101,7 @@ export const ReviewBoard = ({
               No cards pinned yet
             </h2>
             <p className="text-sm text-muted-foreground">
-              Swipe right on flash cards during your Daily Download to add them here for review.
+              Swipe right on flash cards during Core Concepts AI to add them here for review.
             </p>
           </div>
         ) : (

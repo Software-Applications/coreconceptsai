@@ -156,8 +156,8 @@ export const TopicSelectionSheet = ({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-4">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Daily Download</h2>
-                <p className="text-sm text-muted-foreground">Pick a topic to learn on the go</p>
+                <h2 className="text-xl font-bold text-foreground">Core Concepts AI</h2>
+                <p className="text-sm text-muted-foreground">Simplest AI explanations of tough topics</p>
               </div>
               <button
                 onClick={() => { lightTap(); onClose(); }}
