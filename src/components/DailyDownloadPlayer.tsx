@@ -607,7 +607,7 @@ export const DailyDownloadPlayer = ({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted transition-colors text-[10px] font-medium text-foreground"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted hover:scale-105 transition-all text-[10px] font-medium text-foreground"
                 >
                   {playbackRate}x
                 </button>
