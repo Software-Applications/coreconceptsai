@@ -9,11 +9,7 @@ interface TTSRequest {
   text: string;
   voiceId?: string;
   speakingRate?: number;
-}
-
-interface TTSResponse {
-  audioContent: string;
-  durationMs: number;
+  streaming?: boolean;
 }
 
 // Split text at sentence boundaries for chunking
@@ -46,12 +42,10 @@ function splitTextIntoChunks(text: string, maxBytes: number = 4500): string[] {
 
 // Estimate duration in milliseconds based on text and speaking rate
 function estimateDuration(text: string, speakingRate: number = 1.0): number {
-  // Average speaking rate is ~150 words per minute at 1.0x
-  // Adjusted for speaking rate
   const words = text.split(/\s+/).length;
   const minutesAtNormalRate = words / 150;
   const actualMinutes = minutesAtNormalRate / speakingRate;
-  return Math.round(actualMinutes * 60 * 1000); // Convert to milliseconds
+  return Math.round(actualMinutes * 60 * 1000);
 }
 
 // Call Google Cloud TTS API for a single chunk
@@ -94,20 +88,15 @@ async function synthesizeChunk(
   return data.audioContent;
 }
 
-// Concatenate base64 MP3 chunks (simple approach - just join them)
-// Note: For proper concatenation, you'd need to decode, concatenate raw audio, and re-encode
-// This simplified approach works because MP3 is a streaming format
+// Concatenate base64 MP3 chunks
 function concatenateAudioChunks(chunks: string[]): string {
-  // For MP3, we can decode each chunk and concatenate the binary data
   const binaryChunks = chunks.map(chunk => {
     const binary = atob(chunk);
     return new Uint8Array(binary.length).map((_, i) => binary.charCodeAt(i));
   });
 
-  // Calculate total length
   const totalLength = binaryChunks.reduce((sum, chunk) => sum + chunk.length, 0);
   
-  // Concatenate all chunks
   const result = new Uint8Array(totalLength);
   let offset = 0;
   for (const chunk of binaryChunks) {
@@ -115,12 +104,76 @@ function concatenateAudioChunks(chunks: string[]): string {
     offset += chunk.length;
   }
 
-  // Convert back to base64
   let binary = '';
   for (let i = 0; i < result.length; i++) {
     binary += String.fromCharCode(result[i]);
   }
   return btoa(binary);
+}
+
+// Handle streaming response - sends chunks as they're generated
+async function handleStreamingTTS(
+  text: string,
+  voiceId: string,
+  speakingRate: number,
+  apiKey: string
+): Promise<Response> {
+  const encoder = new TextEncoder();
+  const chunks = splitTextIntoChunks(text);
+  
+  console.log(`[Streaming TTS] Processing ${chunks.length} chunks`);
+  
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Send initial metadata
+        const metadata = {
+          type: 'metadata',
+          totalChunks: chunks.length,
+          estimatedDurationMs: estimateDuration(text, speakingRate)
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(metadata)}\n\n`));
+        
+        // Process and send each chunk as it's ready
+        for (let i = 0; i < chunks.length; i++) {
+          console.log(`[Streaming TTS] Processing chunk ${i + 1}/${chunks.length}`);
+          
+          const audioContent = await synthesizeChunk(chunks[i], voiceId, speakingRate, apiKey);
+          
+          const chunkData = {
+            type: 'audio',
+            chunkIndex: i,
+            totalChunks: chunks.length,
+            audioContent,
+            chunkDurationMs: estimateDuration(chunks[i], speakingRate)
+          };
+          
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunkData)}\n\n`));
+        }
+        
+        // Send completion signal
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
+        controller.close();
+      } catch (error) {
+        console.error('[Streaming TTS] Error:', error);
+        const errorData = {
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`));
+        controller.close();
+      }
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }
 
 serve(async (req) => {
@@ -139,7 +192,7 @@ serve(async (req) => {
       );
     }
 
-    const { text, voiceId = 'en-US-Neural2-D', speakingRate = 1.0 }: TTSRequest = await req.json();
+    const { text, voiceId = 'en-US-Neural2-D', speakingRate = 1.0, streaming = false }: TTSRequest = await req.json();
 
     if (!text || typeof text !== 'string') {
       return new Response(
@@ -151,20 +204,23 @@ serve(async (req) => {
     // Validate speaking rate
     const rate = Math.max(0.5, Math.min(2.0, speakingRate));
 
-    console.log(`Processing TTS request: voiceId=${voiceId}, rate=${rate}, textLength=${text.length}`);
+    console.log(`Processing TTS request: voiceId=${voiceId}, rate=${rate}, textLength=${text.length}, streaming=${streaming}`);
 
-    // Check if we need to chunk the text
+    // Use streaming mode for faster initial playback
+    if (streaming) {
+      return handleStreamingTTS(text, voiceId, rate, apiKey);
+    }
+
+    // Non-streaming mode - return complete audio
     const encoder = new TextEncoder();
     const textBytes = encoder.encode(text).length;
 
     let audioContent: string;
 
     if (textBytes <= 4500) {
-      // Single request
       console.log('Single chunk request');
       audioContent = await synthesizeChunk(text, voiceId, rate, apiKey);
     } else {
-      // Split into chunks and process
       const chunks = splitTextIntoChunks(text);
       console.log(`Split into ${chunks.length} chunks`);
 
@@ -175,21 +231,15 @@ serve(async (req) => {
         audioChunks.push(chunkAudio);
       }
 
-      // Concatenate all audio chunks
       audioContent = concatenateAudioChunks(audioChunks);
     }
 
     const durationMs = estimateDuration(text, rate);
 
-    const response: TTSResponse = {
-      audioContent,
-      durationMs,
-    };
-
     console.log(`TTS complete: durationMs=${durationMs}`);
 
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify({ audioContent, durationMs }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

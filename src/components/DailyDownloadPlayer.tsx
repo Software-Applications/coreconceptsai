@@ -123,13 +123,6 @@ export const DailyDownloadPlayer = ({
     onEnd: handleSpeechEnd
   });
 
-  // Handle voice change - clear cache so new voice is used
-  const handleVoiceChange = useCallback((newVoiceId: string) => {
-    setVoiceId(newVoiceId);
-    // Clear the cache so the next play uses the new voice
-    clearCache();
-  }, [setVoiceId, clearCache]);
-
   // Generate transcript for current topic
   const transcript = useMemo(() => {
     if (!topic) return [];
@@ -140,6 +133,22 @@ export const DailyDownloadPlayer = ({
   const fullTranscriptText = useMemo(() => {
     return transcript.map(seg => seg.text).join(' ');
   }, [transcript]);
+
+  // Handle voice change - clear cache so new voice is used, preserving playback position
+  const handleVoiceChange = useCallback((newVoiceId: string) => {
+    const wasPlaying = isPlaying || isPaused;
+    setVoiceId(newVoiceId);
+    // Clear the cache with position saving, then restart with new voice
+    clearCache(undefined, true); // Save position before clearing
+    
+    // If audio was playing/paused, restart with new voice (will resume from saved position)
+    if (wasPlaying && hasStarted) {
+      // Small delay to ensure cache is cleared
+      setTimeout(() => {
+        speak(fullTranscriptText, newVoiceId);
+      }, 50);
+    }
+  }, [setVoiceId, clearCache, isPlaying, isPaused, hasStarted, speak, fullTranscriptText]);
 
   // Estimate total duration based on text length and speaking rate (~150 words/min)
   const estimatedDuration = useMemo(() => {
