@@ -107,6 +107,7 @@ export const DailyDownloadPlayer = ({
     isPaused,
     isSpeaking,
     isLoading: isTTSLoading,
+    isBuffering,
     currentCharIndex,
     progress,
     playbackRate,
@@ -500,16 +501,16 @@ export const DailyDownloadPlayer = ({
             </div>
 
             {/* Waveform visualization - only show when playing/paused */}
-            <div className="flex items-center justify-center gap-0.5 h-10 mb-3">
+            <div className="flex items-center justify-center gap-0.5 h-10 mb-3 relative">
               {hasStarted ? (
                 waveformBars.map((bar, i) => (
                   <motion.div
                     key={i}
-                    className="w-1 bg-primary/60 rounded-full"
-                    animate={waveformShouldAnimate ? {
+                    className={`w-1 rounded-full ${isBuffering ? 'bg-primary/30' : 'bg-primary/60'}`}
+                    animate={waveformShouldAnimate && !isBuffering ? {
                       height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
                     } : { height: bar.height * 0.3 }}
-                    transition={waveformShouldAnimate ? {
+                    transition={waveformShouldAnimate && !isBuffering ? {
                       duration: 1,
                       repeat: Infinity,
                       delay: bar.delay,
@@ -528,6 +529,22 @@ export const DailyDownloadPlayer = ({
                 ))
               )}
             </div>
+            
+            {/* Buffering indicator */}
+            <AnimatePresence>
+              {isBuffering && hasStarted && (
+                <motion.div
+                  className="flex items-center justify-center gap-2 mb-2"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                  <span className="text-xs text-muted-foreground">Buffering...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Seekable Progress bar */}
             <div className="w-full max-w-sm mx-auto mb-2">
