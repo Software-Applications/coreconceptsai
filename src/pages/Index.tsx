@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -40,7 +40,7 @@ const Index = () => {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [showTopicSelection, setShowTopicSelection] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<DailyDownloadTopic | null>(null);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<{ id: string; subject_id: string; chapter_number: number; title: string; created_at: string | null } | null>(null);
@@ -94,6 +94,12 @@ const Index = () => {
   const subjectPractice = selectedSubject ? practiceTiles.filter(p => p.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
   const subjectTopics = selectedSubject ? allTopics.filter(t => t.subjectId === selectedSubject.id) : [];
   const subjectPinnedCards = selectedSubject ? pinnedCards.filter(c => c.subjectName === selectedSubject.name) : [];
+  
+  // Derive selectedTopic from query data so it updates when AI content is generated
+  const selectedTopic = useMemo(() => {
+    if (!selectedTopicId) return null;
+    return allTopics.find(t => t.id === selectedTopicId) ?? null;
+  }, [allTopics, selectedTopicId]);
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
@@ -171,7 +177,7 @@ const Index = () => {
 
   // Daily Download handlers
   const handleSelectTopic = (topic: DailyDownloadTopic) => {
-    setSelectedTopic(topic);
+    setSelectedTopicId(topic.id);
     setShowTopicSelection(false);
   };
 
@@ -458,7 +464,7 @@ const Index = () => {
             topic={selectedTopic}
             subjectName={getTopicSubjectName()}
             isOpen={!!selectedTopic}
-            onClose={() => setSelectedTopic(null)}
+            onClose={() => setSelectedTopicId(null)}
             onPinCard={handlePinCard}
             onTopicListened={markAsListened}
           />
