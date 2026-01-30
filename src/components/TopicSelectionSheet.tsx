@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw, ArrowDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 import type { Chapter } from '@/hooks/useChapters';
 import { useChapters } from '@/hooks/useChapters';
 import { AIBadge } from './AIBadge';
+import { HeroIntro, ChapterAccordion } from './topic-selection';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
@@ -69,7 +70,6 @@ export const TopicSelectionSheet = ({
     const hadDrag = dragState.current.didDrag;
     dragState.current.isDown = false;
 
-    // Clear after click would fire, so dragging doesn't accidentally trigger selection.
     if (hadDrag) {
       window.setTimeout(() => {
         dragState.current.didDrag = false;
@@ -102,7 +102,6 @@ export const TopicSelectionSheet = ({
     chaptersStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Group topics by chapter
   const groupedTopics = useMemo(() => {
     const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
     const chapterMap = new Map<string, DailyDownloadTopic[]>();
@@ -121,13 +120,11 @@ export const TopicSelectionSheet = ({
       }
     });
 
-    // Sort by chapter number
     groups.sort((a, b) => a.chapter.chapter_number - b.chapter.chapter_number);
 
     return groups;
   }, [topics, allChapters]);
 
-  // Reset all expanded chapters when sheet closes
   useEffect(() => {
     if (!isOpen) {
       setExpandedChapters(new Set());
@@ -155,179 +152,57 @@ export const TopicSelectionSheet = ({
         exit={{ y: '100%' }}
         transition={springTransition}
       >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-            </div>
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+        </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-2">
-              <div>
-                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  Core Concepts <AIBadge />
-                </h2>
-              </div>
-              <button
-                onClick={() => { lightTap(); onClose(); }}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pb-2">
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              Core Concepts <AIBadge />
+            </h2>
+          </div>
+          <button
+            onClick={() => { lightTap(); onClose(); }}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
 
-            {/* Topics list grouped by chapter */}
-            <div
-              ref={scrollContainerRef}
-              className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-80px)] scrollbar-none overscroll-contain cursor-grab"
-              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
-              onMouseDown={handleScrollMouseDown}
-              onMouseMove={handleScrollMouseMove}
-              onMouseUp={endDrag}
-              onMouseLeave={endDrag}
-              onDragStart={(e) => e.preventDefault()}
-            >
-              {/* Hero Introduction */}
-              <motion.div
-                className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <h3 className="text-lg font-bold text-foreground mb-2">
-                  Master the Fundamentals
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                  Tough topics shouldn't be a barrier to your progress. Our AI breaks down high-level academic concepts into simple, digestible explanations. It's the "Aha!" moment you've been looking for, designed to help you learn—and retain—better.
-                </p>
-                <button
-                  onClick={handleStartExploring}
-                  className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                >
-                  Start Exploring
-                  <motion.span
-                    animate={{ y: [0, 3, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </motion.span>
-                </button>
-              </motion.div>
+        {/* Scrollable content */}
+        <div
+          ref={scrollContainerRef}
+          className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-80px)] scrollbar-none overscroll-contain cursor-grab"
+          style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+          onMouseDown={handleScrollMouseDown}
+          onMouseMove={handleScrollMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          onDragStart={(e) => e.preventDefault()}
+        >
+          <HeroIntro onStartExploring={handleStartExploring} />
 
-              {/* Chapters anchor */}
-              <div ref={chaptersStartRef} />
+          {/* Chapters anchor */}
+          <div ref={chaptersStartRef} />
 
-              <div className="space-y-3 pb-6">
-                {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
-                  const isExpanded = expandedChapters.has(chapter.id);
-                  const listenedCount = chapterTopics.filter(t => isListened?.(t.id)).length;
-                  
-                  return (
-                    <motion.div
-                      key={chapter.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: groupIndex * 0.05 }}
-                    >
-                      {/* Chapter Header */}
-                      <button
-                        onClick={() => toggleChapter(chapter.id)}
-                        className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors touch-pan-y"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-bold text-primary">
-                              {chapter.chapter_number}
-                            </span>
-                          </div>
-                          <div className="text-left">
-                            <h3 className="font-semibold text-foreground text-sm">
-                              {chapter.title.replace(/^Ch\. \d+ - /, '')}
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                              {chapterTopics.length} topics · {listenedCount} completed
-                            </p>
-                          </div>
-                        </div>
-                        <motion.div
-                          animate={{ rotate: isExpanded ? 180 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        </motion.div>
-                      </button>
-
-                      {/* Chapter Topics */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="pt-2 space-y-2 pl-2">
-                              {chapterTopics.map((topic, index) => {
-                                const listened = isListened?.(topic.id) ?? false;
-                                const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
-                                return (
-                                  <motion.button
-                                    key={topic.id}
-                                    onClick={() => handleSelectTopic(topic)}
-                                    className={`w-full text-left bg-card border rounded-xl p-3 transition-colors touch-pan-y ${
-                                      listened 
-                                        ? 'border-primary/30 bg-primary/5' 
-                                        : hasResume
-                                          ? 'border-amber-500/50 bg-amber-500/5'
-                                          : 'border-border hover:border-primary/50'
-                                    }`}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.03 }}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                        listened ? 'bg-primary/20' : hasResume ? 'bg-amber-500/20' : 'bg-primary/10'
-                                      }`}>
-                                        {listened ? (
-                                          <CheckCircle className="w-4 h-4 text-primary" />
-                                        ) : hasResume ? (
-                                          <RotateCcw className="w-4 h-4 text-amber-500" />
-                                        ) : (
-                                          <Sparkles className="w-4 h-4 text-primary" />
-                                        )}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <h3 className="font-medium text-foreground text-sm truncate">
-                                            {topic.title}
-                                          </h3>
-                                          {listened && (
-                                            <span className="text-xs text-primary font-medium">✓</span>
-                                          )}
-                                          {hasResume && (
-                                            <span className="text-xs text-amber-500 font-medium">Resume</span>
-                                          )}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
-                                          {topic.description}
-                                        </p>
-                                      </div>
-                                      <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                                        <Clock className="w-3 h-3" />
-                                        {topic.duration}
-                                      </span>
-                                    </div>
-                                  </motion.button>
-                                );
-                              })}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
+          <div className="space-y-3 pb-6">
+            {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => (
+              <ChapterAccordion
+                key={chapter.id}
+                chapter={chapter}
+                topics={chapterTopics}
+                isExpanded={expandedChapters.has(chapter.id)}
+                listenedCount={chapterTopics.filter(t => isListened?.(t.id)).length}
+                groupIndex={groupIndex}
+                onToggle={() => toggleChapter(chapter.id)}
+                onSelectTopic={handleSelectTopic}
+                isListened={isListened}
+                hasProgress={hasProgress}
+              />
+            ))}
           </div>
         </div>
       </motion.div>
