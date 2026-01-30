@@ -607,7 +607,7 @@ export const generateMockTranscript = (topic: DailyDownloadTopic): TranscriptSeg
     `${topic.id}-0`,
     0,
     15,
-    `Welcome to today's Daily Download. We're going to explore ${topic.title}. ${topic.description}`
+    `Welcome to Core Concepts AI. We're going to explore ${topic.title}. ${topic.description}`
   ));
   
   // Content based on flash summary bullet points
@@ -655,7 +655,7 @@ export const generateMockTranscript = (topic: DailyDownloadTopic): TranscriptSeg
     `${topic.id}-outro`,
     totalSeconds - 15,
     totalSeconds,
-    `That's all for today's Daily Download on ${topic.title}. Great job! Don't forget to review the flash card summary.`
+    `That's all for Core Concepts AI on ${topic.title}. Great job! Don't forget to review the flash card summary.`
   ));
   
   // Sort by start time and remove duplicates

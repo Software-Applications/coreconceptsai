@@ -39,7 +39,7 @@ const generateMockTranscript = (topic: DailyDownloadTopic) => {
   });
   
   // Introduction
-  segments.push(createSegment(`${topic.id}-0`, 0, 15, `Welcome to today's Daily Download. We're going to explore ${topic.title}. ${topic.description}`));
+  segments.push(createSegment(`${topic.id}-0`, 0, 15, `Welcome to Core Concepts AI. We're going to explore ${topic.title}. ${topic.description}`));
   
   // Content based on flash summary bullet points
   const bulletPoints = topic.flashSummary.bulletPoints;
@@ -52,7 +52,7 @@ const generateMockTranscript = (topic: DailyDownloadTopic) => {
   
   // Conclusion
   segments.push(createSegment(`${topic.id}-end`, totalSeconds - 30, totalSeconds - 15, `To summarize what we've learned: ${topic.flashSummary.bulletPoints[0].split(' - ')[0]}, and the key principles we discussed.`));
-  segments.push(createSegment(`${topic.id}-outro`, totalSeconds - 15, totalSeconds, `That's all for today's Daily Download on ${topic.title}. Great job! Don't forget to review the flash card summary.`));
+  segments.push(createSegment(`${topic.id}-outro`, totalSeconds - 15, totalSeconds, `That's all for Core Concepts AI on ${topic.title}. Great job! Don't forget to review the flash card summary.`));
   
   return segments.sort((a, b) => a.startTime - b.startTime).filter((seg, index, arr) => index === 0 || seg.startTime !== arr[index - 1].startTime);
 };
@@ -405,7 +405,7 @@ export const DailyDownloadPlayer = ({
             </button>
             <div className="text-center">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Daily Download
+                Core Concepts AI
               </p>
               <p className="text-sm text-primary font-medium">{subjectName}</p>
             </div>

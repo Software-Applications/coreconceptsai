@@ -157,7 +157,7 @@ const Index = () => {
         listenedCount > 0 && 
         prevListenedCount.current === subjectTopics.length - 1) {
       celebrate();
-      toast.success("🎉 All Daily Downloads completed!", {
+      toast.success("🎉 All Core Concepts completed!", {
         description: `You've listened to all ${subjectTopics.length} topics in ${selectedSubject.name}!`
       });
     }
@@ -307,7 +307,7 @@ const Index = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">No pinned cards yet</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
-                    Listen to Daily Download and pin cards to review later
+                    Listen to Core Concepts AI and pin cards to review later
                   </p>
                 </div>
               ) : (

@@ -78,8 +78,8 @@ export const DailyDownloadFAB = ({ onClick, unlistenedCount = 0 }: DailyDownload
           </motion.button>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-[200px] text-center">
-          <p className="font-medium">Daily Downloads</p>
-          <p className="text-xs text-muted-foreground">Quick audio summaries of today's topics</p>
+          <p className="font-medium">Core Concepts AI</p>
+          <p className="text-xs text-muted-foreground">Simplest AI explanations of tough topics</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
