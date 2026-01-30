@@ -1,76 +1,64 @@
 
 
-## Add Clever Rotating Loading Messages for AI Content Generation
+## Redesign Generating AI Content Toast & Fix Duplicate Toasts
 
-### Overview
-Enhance the AI content generation loading overlay with rotating academic-themed messages that cycle through clever phrases while the AI is "thinking." This keeps the academic vibe and makes the wait time feel more engaging.
+### Problem Identified
+There are **two issues** causing a confusing user experience:
 
-### Messages to Rotate
-```
-"Synthesizing core principles..."
-"Translating complex theories into simple insights..."
-"Distilling the essentials for you..."
-```
+1. **Duplicate success toasts**: When content generation completes, TWO toasts appear:
+   - "Content Ready" from `DailyDownloadPlayer.tsx` 
+   - "Content generated!" from `useAIGeneration.ts` hook
+   
+2. **Visual design issues**: The generating toast layout feels cluttered with too many elements stacked vertically
 
-### Location
-The changes will be made to **DailyDownloadPlayer.tsx** in the "Generating overlay" section (lines 447-467).
+### Solution
 
-### Design
+**1. Remove duplicate toasts from `useAIGeneration.ts`**
+- Remove the `toast.success()` and `toast.error()` calls from the hook's `onSuccess` and `onError` callbacks
+- Let `DailyDownloadPlayer.tsx` handle all toast notifications for content generation
+- This gives us single-source control over the toast experience
 
-**Current UI:**
+**2. Redesign the generating progress toast**
+- Cleaner, more minimal layout
+- Remove the topic title line (redundant since user just clicked it)
+- More refined animations and better visual hierarchy
+
+### Visual Design
+
+**Current (cluttered):**
 ```text
-┌─────────────────────────────────────┐
-│                                     │
-│          [Sparkles Icon]            │
-│                                     │
-│      Generating Content             │
-│                                     │
-│   AI is creating a personalized     │
-│   transcript and flash summary...   │
-│                                     │
-└─────────────────────────────────────┘
+┌──────────────────────────────────┐
+│ ⟳ Generating AI Content          │
+│ Topic: Stoichiometry Basics...   │
+│ ██████████░░░░░░░░░░ (progress)  │
+│ Analyzing key concepts...        │
+└──────────────────────────────────┘
 ```
 
-**New UI (with rotating messages):**
+**New (minimal & elegant):**
 ```text
-┌─────────────────────────────────────┐
-│                                     │
-│          [Sparkles Icon]            │
-│                                     │
-│    "Synthesizing core principles..."│  ← Rotates every 3s
-│                                     │
-│   Creating your personalized        │
-│   explanation                       │
-│                                     │
-└─────────────────────────────────────┘
+┌────────────────────────────────────────┐
+│ ✨ Synthesizing core principles...     │
+│ ████████████░░░░░░░░░░░░░ (progress)   │
+└────────────────────────────────────────┘
 ```
 
-### Changes
+### Technical Changes
 
-**src/components/DailyDownloadPlayer.tsx**
+**`src/hooks/useAIGeneration.ts`**
+- Remove `toast.success()` call from `onSuccess` callback
+- Remove `toast.error()` call from `onError` callback
+- Keep the query invalidation logic
 
-1. **Add loading messages array** - Define the three clever loading messages as a constant at the top of the file or inside the component
+**`src/components/GeneratingProgressToast.tsx`**
+- Simplify the layout to just show:
+  - Sparkles icon + rotating loading message as the main headline
+  - Slim progress bar below
+- Remove the separate "Generating AI Content" title and topic title
+- Keep smooth crossfade animation for rotating messages
 
-2. **Add rotating message state** - Create a `loadingMessageIndex` state that cycles through the messages
-
-3. **Add interval effect** - When `isGenerating` is true, start an interval that updates the message index every 3 seconds. Clean up the interval when generation completes
-
-4. **Update the overlay** - Replace the static "Generating Content" title with the rotating message. Keep a smaller static subtitle for context
-
-5. **Add smooth transitions** - Use `AnimatePresence` with `motion.p` to fade between messages for polish
-
-### Technical Details
-
-```text
-// Message rotation logic:
-- Messages array: 3 items
-- Rotation interval: 3000ms (3 seconds)
-- Animation: fade in/out (opacity 0 → 1 → 0)
-- State resets to 0 when overlay closes
-```
-
-### Visual Polish
-- The rotating message will be styled as the main headline (larger, bold)
-- Smooth crossfade animation between messages using framer-motion
-- A smaller static line beneath provides context: "Creating your personalized explanation"
+### Result
+- Only ONE toast appears during generation
+- Only ONE success/error toast appears on completion
+- Cleaner, more professional toast design that fits the academic aesthetic
 
