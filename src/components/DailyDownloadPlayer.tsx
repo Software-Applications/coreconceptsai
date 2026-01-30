@@ -517,23 +517,34 @@ export const DailyDownloadPlayer = ({
               </div>
             </div>
 
-            {/* Waveform visualization - compact */}
+            {/* Waveform visualization - only show when playing/paused */}
             <div className="flex items-center justify-center gap-0.5 h-10 mb-3">
-              {waveformBars.map((bar, i) => (
-                <motion.div
-                  key={i}
-                  className="w-1 bg-primary/60 rounded-full"
-                  animate={waveformShouldAnimate ? {
-                    height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
-                  } : { height: bar.height * 0.2 }}
-                  transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    delay: bar.delay,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
+              {hasStarted ? (
+                waveformBars.map((bar, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-1 bg-primary/60 rounded-full"
+                    animate={waveformShouldAnimate ? {
+                      height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
+                    } : { height: bar.height * 0.3 }}
+                    transition={waveformShouldAnimate ? {
+                      duration: 1,
+                      repeat: Infinity,
+                      delay: bar.delay,
+                      ease: "easeInOut"
+                    } : { duration: 0.2 }}
+                  />
+                ))
+              ) : (
+                // Static placeholder waveform before audio starts
+                waveformBars.map((bar, i) => (
+                  <div
+                    key={i}
+                    className="w-1 bg-muted-foreground/20 rounded-full"
+                    style={{ height: bar.height * 0.3 }}
+                  />
+                ))
+              )}
             </div>
 
             {/* Seekable Progress bar */}
