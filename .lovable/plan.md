@@ -1,66 +1,32 @@
 
 
-## Make Generating Toast Compact Instead of Full-Screen Modal
+## Remove Duplicate Generating Toast
 
-### Current Behavior
-The generating toast currently appears as a large centered modal that dominates the viewport because of these CSS rules:
-- `top: 50%` and `transform: translate(-50%, -50%)` - centers it vertically
-- `width: calc(100% - 2rem)` - takes nearly full width
-- `max-width: 350px` - still quite wide
+### Problem
+Currently, when AI content is being generated, **two** indicators appear simultaneously:
+1. **Top notification** (Sonner toast): "Analyzing key concepts..." with progress bar
+2. **Center overlay** (GeneratingOverlay): "Distilling the essentials for you..." with animated sparkle icon
 
-### Proposed Solution
-Reposition the toast to appear as a **compact notification at the top of the screen** (below the notch area), making it less intrusive while still being visible.
+You want to keep only the center overlay and remove the top toast.
 
-### Design Changes
-
-**Before (modal-style centered):**
-```text
-+---------------------------+
-|        [notch]            |
-|                           |
-|                           |
-|  +---------------------+  |
-|  |  ✨ Analyzing...    |  |  <-- Centered, feels like blocking modal
-|  |  ████████░░░░░░░    |  |
-|  +---------------------+  |
-|                           |
-|                           |
-+---------------------------+
-```
-
-**After (compact top notification):**
-```text
-+---------------------------+
-|        [notch]            |
-|  +---------------------+  |
-|  | ✨ Analyzing...     |  |  <-- Top position, non-intrusive
-|  | ████░░░░░           |  |
-|  +---------------------+  |
-|                           |
-|   [Content still visible] |
-|                           |
-+---------------------------+
-```
+### Solution
+Remove the Sonner toast logic entirely from `DailyDownloadPlayer.tsx`, keeping only the `GeneratingOverlay` component which already handles the generating state beautifully.
 
 ### Technical Changes
 
-**File: `src/index.css`**
+**File: `src/components/DailyDownloadPlayer.tsx`**
 
-Update the sonner toast positioning:
-- Change `top: 50%` to `top: 4rem` (below notch safe area)
-- Remove the vertical centering transform
-- Reduce `max-width` to `280px` for a more compact feel
-- Keep horizontal centering
-
-**File: `src/components/GeneratingProgressToast.tsx`**
-
-Make the toast more compact:
-- Reduce `min-width` from `280px` to `220px`
-- Use smaller gap spacing
-- Slightly smaller text size
+1. Remove the import for `GeneratingProgressToast`
+2. Remove the `generatingToastId` and `generatingForTopicId` refs
+3. Remove all three `useEffect` hooks that manage the toast lifecycle:
+   - Cleanup on unmount effect
+   - Cleanup when player closes effect  
+   - Auto-generate + toast creation effect (keep the generation trigger, remove toast parts)
+   - Toast dismissal effect on completion
+4. Keep the `<GeneratingOverlay isGenerating={isGenerating} />` component (already in place at line 500)
 
 ### Result
-- Toast appears as a subtle top notification
-- User can still see and interact with the content below
-- Feels more like a status indicator rather than a blocking modal
+- Only the elegant center overlay appears during generation
+- No more duplicate/overlapping notifications
+- Cleaner code with less state management
 
