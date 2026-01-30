@@ -72,10 +72,30 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     };
   }, []);
 
-  // Generate cache key from text and voice
+  // Generate cache key from text and voice - use more unique identifier
   const getCacheKey = useCallback((text: string, voiceId: string) => {
-    // Use a hash of the text + voiceId for the cache key
-    return `${voiceId}-${text.slice(0, 100)}-${text.length}`;
+    // Include voiceId, text length, and a checksum of text content
+    const textChecksum = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return `${voiceId}:${text.length}:${textChecksum}`;
+  }, []);
+
+  // Clear cached audio for a specific voice or all
+  const clearCache = useCallback((voiceId?: string) => {
+    if (voiceId) {
+      // Clear only entries for specific voice
+      audioCache.current.forEach((entry, key) => {
+        if (key.startsWith(`${voiceId}:`)) {
+          URL.revokeObjectURL(entry.blobUrl);
+          audioCache.current.delete(key);
+        }
+      });
+    } else {
+      // Clear all cache
+      audioCache.current.forEach((entry) => {
+        URL.revokeObjectURL(entry.blobUrl);
+      });
+      audioCache.current.clear();
+    }
   }, []);
 
   // Generate audio from text using Google TTS
@@ -328,6 +348,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     seekToTime,
     seekToChar,
     cyclePlaybackRate,
+    clearCache,
     setPlaybackRate: (rate: number) => {
       setPlaybackRate(rate);
       playbackRateRef.current = rate;
