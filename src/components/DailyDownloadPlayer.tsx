@@ -79,7 +79,6 @@ export const DailyDownloadPlayer = ({
   const [showFlashCard, setShowFlashCard] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
-  const [showAIMenu, setShowAIMenu] = useState(false);
   const { saveProgress, getProgress, clearProgress } = useAudioProgress();
   
   // Voice preference hook
@@ -417,69 +416,8 @@ export const DailyDownloadPlayer = ({
                 onVoiceChange={handleVoiceChange}
                 disabled={isPlaying || isTTSLoading}
               />
-              
-              {/* AI Generation button */}
-              <div className="relative">
-                <button
-                  onClick={() => { lightTap(); setShowAIMenu(!showAIMenu); }}
-                  disabled={isGenerating}
-                  className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
-                  title="Generate with AI"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                  ) : (
-                    <Sparkles className="w-5 h-5 text-primary" />
-                  )}
-                </button>
-                
-                {/* AI Menu dropdown */}
-                <AnimatePresence>
-                  {showAIMenu && !isGenerating && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50"
-                    >
-                      <div className="p-2">
-                        <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Generate with AI
-                        </p>
-                        <button
-                          onClick={() => {
-                            mediumTap();
-                            setShowAIMenu(false);
-                            generateContent.mutate({
-                              topicId: topic.id,
-                              topicTitle: topic.title,
-                              topicDescription: topic.description,
-                              subjectName,
-                            });
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
-                        >
-                          <Sparkles className="w-4 h-4 text-primary" />
-                          <div>
-                            <p className="text-sm font-medium text-foreground">Generate AI Content</p>
-                            <p className="text-xs text-muted-foreground">Create transcript & flash card</p>
-                          </div>
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           </header>
-          
-          {/* Click outside to close AI menu */}
-          {showAIMenu && (
-            <div 
-              className="fixed inset-0 z-40" 
-              onClick={() => setShowAIMenu(false)} 
-            />
-          )}
 
           {/* TTS Loading overlay */}
           <AnimatePresence>
