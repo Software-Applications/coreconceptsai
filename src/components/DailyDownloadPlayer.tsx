@@ -236,11 +236,46 @@ export const DailyDownloadPlayer = ({
   }, [topic]);
 
   const generatingToastId = useRef<string | number | null>(null);
+  const generatingForTopicId = useRef<string | null>(null);
+
+  // Cleanup toast on unmount or when player closes
+  useEffect(() => {
+    return () => {
+      if (generatingToastId.current) {
+        sonnerToast.dismiss(generatingToastId.current);
+        generatingToastId.current = null;
+      }
+      generatingForTopicId.current = null;
+    };
+  }, []);
+
+  // Cleanup when player closes
+  useEffect(() => {
+    if (!isOpen && generatingToastId.current) {
+      sonnerToast.dismiss(generatingToastId.current);
+      generatingToastId.current = null;
+      generatingForTopicId.current = null;
+    }
+  }, [isOpen]);
 
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
     if (isOpen && topic && needsAIContent && !isGenerating && !generateContent.isSuccess) {
+      // Prevent re-entrant generation for the same topic
+      if (generatingForTopicId.current === topic.id) {
+        return;
+      }
+      
       console.log('Auto-generating AI content for topic:', topic.title);
+      
+      // Dismiss any existing toast before creating new one
+      if (generatingToastId.current) {
+        sonnerToast.dismiss(generatingToastId.current);
+        generatingToastId.current = null;
+      }
+      
+      // Track that we're generating for this topic
+      generatingForTopicId.current = topic.id;
       
       // Show custom progress toast using sonner
       generatingToastId.current = sonnerToast.custom(
@@ -257,25 +292,24 @@ export const DailyDownloadPlayer = ({
     }
   }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName]);
 
-  // Dismiss toast when generation completes or fails
+  // Dismiss toast when generation completes or fails - use status for robustness
   useEffect(() => {
-    if (generatingToastId.current && (generateContent.isSuccess || generateContent.isError)) {
+    const status = generateContent.status;
+    
+    if (generatingToastId.current && (status === 'success' || status === 'error')) {
       sonnerToast.dismiss(generatingToastId.current);
       generatingToastId.current = null;
+      generatingForTopicId.current = null;
       
-      if (generateContent.isSuccess) {
-        sonnerToast.success("Content Ready", {
-          description: "Your personalized explanation is ready!",
-          duration: 2000,
-        });
-      } else if (generateContent.isError) {
+      // Only show error toast, success is indicated by content appearing
+      if (status === 'error') {
         sonnerToast.error("Generation Issue", {
           description: "Using fallback content. Try again later.",
           duration: 3000,
         });
       }
     }
-  }, [generateContent.isSuccess, generateContent.isError]);
+  }, [generateContent.status]);
 
   // Reset state when topic changes
   useEffect(() => {
@@ -291,12 +325,6 @@ export const DailyDownloadPlayer = ({
         setShowResumePrompt(true);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic?.id]);
-  
-  // Reset generation state separately to avoid render loop
-  useEffect(() => {
-    generateContent.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic?.id]);
 
