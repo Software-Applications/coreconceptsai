@@ -6,6 +6,7 @@ import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 import type { Chapter } from '@/hooks/useChapters';
 import { useChapters } from '@/hooks/useChapters';
+import { AIBadge } from './AIBadge';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
@@ -156,8 +157,8 @@ export const TopicSelectionSheet = ({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-4">
               <div>
-                <h2 className="text-xl font-bold text-foreground">
-                  Core Concepts <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-primary/15 text-primary border border-primary/20">AI</span>
+                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  Core Concepts <AIBadge />
                 </h2>
                 <p className="text-sm text-muted-foreground">Simplest AI explanations of tough topics</p>
               </div>

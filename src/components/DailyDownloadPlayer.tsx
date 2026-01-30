@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
+import { AIBadge } from './AIBadge';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to generate mock transcript (moved from dailyDownloadData.ts)
@@ -404,8 +405,8 @@ export const DailyDownloadPlayer = ({
               <X className="w-6 h-6 text-foreground" />
             </button>
             <div className="text-center">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center justify-center gap-1">
-                Core Concepts <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/20 normal-case">AI</span>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center justify-center gap-1.5">
+                Core Concepts <AIBadge size="sm" />
               </p>
               <p className="text-sm text-primary font-medium">{subjectName}</p>
             </div>
