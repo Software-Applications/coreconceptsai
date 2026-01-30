@@ -73,10 +73,10 @@ export const VoiceSelector = ({
         <button
           type="button"
           disabled={disabled}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Mic className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-medium text-foreground">
+          <Mic className="w-3 h-3 text-primary" />
+          <span className="text-[10px] font-medium text-foreground">
             {currentVoice.name}
           </span>
         </button>
