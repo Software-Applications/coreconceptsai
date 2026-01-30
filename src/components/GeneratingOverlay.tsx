@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 const LOADING_MESSAGES = [
-  "Synthesizing core principles...",
-  "Translating complex theories into simple insights...",
-  "Distilling the essentials for you...",
+  "Analyzing transcript for key academic terms...",
+  "Optimizing narration pace for complex topics...",
+  "Finalizing high-fidelity audio output...",
 ];
 
-const ROTATION_INTERVAL = 3000; // 3 seconds
+const ROTATION_INTERVAL = 2000; // 2 seconds
 
 interface GeneratingOverlayProps {
   isGenerating: boolean;
@@ -48,25 +48,26 @@ export const GeneratingOverlay = ({ isGenerating }: GeneratingOverlayProps) => {
             <Sparkles className="w-10 h-10 text-primary" />
           </motion.div>
           
-          {/* Rotating message with crossfade */}
-          <div className="h-8 relative flex items-center justify-center mb-2">
+          {/* Static primary title */}
+          <h2 className="text-lg font-semibold text-foreground text-center px-8 mb-2">
+            Finalizing Audio Brief
+          </h2>
+          
+          {/* Rotating sub-copy with crossfade */}
+          <div className="h-6 relative flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.p
                 key={messageIndex}
-                className="text-lg font-semibold text-foreground text-center px-8"
-                initial={{ opacity: 0, y: 10 }}
+                className="text-sm text-muted-foreground text-center px-8 absolute"
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
               >
                 {LOADING_MESSAGES[messageIndex]}
               </motion.p>
             </AnimatePresence>
           </div>
-          
-          <p className="text-sm text-muted-foreground text-center px-8">
-            Creating your personalized explanation
-          </p>
         </motion.div>
       )}
     </AnimatePresence>
