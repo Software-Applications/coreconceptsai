@@ -81,6 +81,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
 
   // Clear cached audio for a specific voice or all
   const clearCache = useCallback((voiceId?: string) => {
+    console.log(`[TTS] Clearing cache${voiceId ? ` for voice: ${voiceId}` : ' (all voices)'}`);
     if (voiceId) {
       // Clear only entries for specific voice
       audioCache.current.forEach((entry, key) => {
@@ -96,6 +97,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       });
       audioCache.current.clear();
     }
+    console.log(`[TTS] Cache size after clear: ${audioCache.current.size}`);
   }, []);
 
   // Generate audio from text using Google TTS
@@ -109,8 +111,11 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     // Check cache first
     const cached = audioCache.current.get(cacheKey);
     if (cached) {
+      console.log(`[TTS] Using cached audio for voice: ${voiceId}`);
       return cached;
     }
+
+    console.log(`[TTS] Generating new audio for voice: ${voiceId}`);
 
     try {
       setIsLoading(true);
@@ -136,6 +141,8 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       }
       const blob = new Blob([bytes], { type: 'audio/mpeg' });
       const blobUrl = URL.createObjectURL(blob);
+
+      console.log(`[TTS] Audio generated successfully for voice: ${voiceId}, blobUrl: ${blobUrl.slice(-20)}`);
 
       const entry: AudioCacheEntry = {
         blobUrl,
