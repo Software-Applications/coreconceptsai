@@ -117,10 +117,18 @@ export const DailyDownloadPlayer = ({
     resume,
     stop,
     cyclePlaybackRate,
-    seekToChar
+    seekToChar,
+    clearCache
   } = useGoogleTTS({
     onEnd: handleSpeechEnd
   });
+
+  // Handle voice change - clear cache so new voice is used
+  const handleVoiceChange = useCallback((newVoiceId: string) => {
+    setVoiceId(newVoiceId);
+    // Clear the cache so the next play uses the new voice
+    clearCache();
+  }, [setVoiceId, clearCache]);
 
   // Generate transcript for current topic
   const transcript = useMemo(() => {
@@ -398,7 +406,7 @@ export const DailyDownloadPlayer = ({
               {/* Voice selector */}
               <VoiceSelector
                 selectedVoiceId={voiceId}
-                onVoiceChange={setVoiceId}
+                onVoiceChange={handleVoiceChange}
                 disabled={isPlaying || isTTSLoading}
               />
               
