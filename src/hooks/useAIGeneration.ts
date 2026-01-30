@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 interface GenerateContentParams {
   topicId: string;
@@ -48,15 +47,9 @@ export const useGenerateContent = () => {
       // Invalidate topics query to refresh with new content
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       queryClient.invalidateQueries({ queryKey: ['topic'] });
-      toast.success('Content generated!', {
-        description: 'AI has created the transcript and flash summary.',
-      });
     },
     onError: (error: Error) => {
       console.error('Generate content error:', error);
-      toast.error('Failed to generate content', {
-        description: error.message,
-      });
     },
   });
 };
