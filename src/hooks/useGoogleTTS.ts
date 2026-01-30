@@ -234,12 +234,12 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       setError(null);
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-tts`,
+        `https://uzlkbqfxlamwetmvpqsi.supabase.co/functions/v1/google-tts`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6bGticWZ4bGFtd2V0bXZwcXNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MTk5NzQsImV4cCI6MjA4NTE5NTk3NH0.3plzfmm6lf5XkVEHFpkRaWrGCekKK0BVTf4qxUJR7kY`,
           },
           body: JSON.stringify({ text, voiceId, speakingRate, streaming: true }),
           signal,

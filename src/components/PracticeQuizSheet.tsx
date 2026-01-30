@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuizProgress } from "@/hooks/useQuizProgress";
 import type { PracticeTile } from "@/data/courseData";
@@ -10,7 +11,8 @@ interface PracticeQuizSheetProps {
   onClose: () => void;
 }
 
-export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQuizSheetProps) {
+export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetProps>(
+  function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }, ref) {
   const { getCompletionPercentage, getAttemptCount, getBestScore, recordAttempt } = useQuizProgress();
   
   if (!isOpen || !quiz || !chapter) return null;
@@ -33,7 +35,7 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+    <div ref={ref} className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 pt-14 border-b border-border">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
@@ -142,4 +144,4 @@ export function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }: PracticeQu
       </div>
     </div>
   );
-}
+});

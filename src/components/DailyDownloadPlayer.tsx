@@ -643,7 +643,7 @@ export const DailyDownloadPlayer = ({
                 <VoiceSelector
                   selectedVoiceId={voiceId}
                   onVoiceChange={handleVoiceChange}
-                  disabled={isPlaying || isTTSLoading}
+                  disabled={isTTSLoading}
                 />
               </div>
               
