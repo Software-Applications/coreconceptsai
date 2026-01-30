@@ -174,79 +174,126 @@ Create an engaging, educational transcript that helps a student understand this 
     console.log(`Transcript generated (${transcript.length} chars)`);
 
     // Step 2: Generate flash summary using Google Gemini with structured output
+    // Includes retry logic for reliability
     console.log("Step 2: Generating flash summary...");
-    const summaryResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": GOOGLE_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: FLASH_SUMMARY_SYSTEM_PROMPT }]
-          },
-          contents: [{
-            parts: [{ 
-              text: `Create a flashcard summary for this topic based on the transcript:
+    
+    const MAX_RETRIES = 3;
+    let flashSummary: FlashSummaryData | null = null;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Flash summary generation attempt ${attempt}/${MAX_RETRIES}...`);
+        
+        const summaryResponse = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": GOOGLE_API_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: FLASH_SUMMARY_SYSTEM_PROMPT }]
+              },
+              contents: [{
+                parts: [{ 
+                  text: `Create a flashcard summary for this topic based on the transcript.
 
 Topic: ${topicTitle}
 
 Transcript:
-${transcript}
+${transcript.slice(0, 4000)}
 
-Output valid JSON only.` 
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 1024,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "object",
-              properties: {
-                visual_type: { 
-                  type: "string", 
-                  enum: ["diagram", "formula", "analogy"] 
-                },
-                visual_content: { type: "string" },
-                bullet_points: { 
-                  type: "array", 
-                  items: { type: "string" } 
-                },
-                difficulty: { 
-                  type: "string", 
-                  enum: ["easy", "medium", "hard"] 
+IMPORTANT: Return ONLY a valid JSON object with these exact fields:
+- "visual_type": one of "diagram", "formula", or "analogy"
+- "visual_content": a short visual description (max 200 chars)
+- "bullet_points": array of exactly 3 short strings
+- "difficulty": one of "easy", "medium", or "hard"
+
+Keep all string values SHORT to ensure valid JSON output.` 
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 800,
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "object",
+                  properties: {
+                    visual_type: { 
+                      type: "string", 
+                      enum: ["diagram", "formula", "analogy"] 
+                    },
+                    visual_content: { type: "string" },
+                    bullet_points: { 
+                      type: "array", 
+                      items: { type: "string" },
+                      minItems: 3,
+                      maxItems: 3
+                    },
+                    difficulty: { 
+                      type: "string", 
+                      enum: ["easy", "medium", "hard"] 
+                    }
+                  },
+                  required: ["visual_type", "visual_content", "bullet_points", "difficulty"]
                 }
-              },
-              required: ["visual_type", "visual_content", "bullet_points", "difficulty"]
-            }
+              }
+            })
           }
-        })
+        );
+
+        if (!summaryResponse.ok) {
+          const errorText = await summaryResponse.text();
+          console.error(`Summary generation error (attempt ${attempt}):`, summaryResponse.status, errorText);
+          throw new Error(`Summary generation failed: ${summaryResponse.status}`);
+        }
+
+        const summaryData = await summaryResponse.json();
+        const summaryText = summaryData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!summaryText) {
+          throw new Error("No summary text in response");
+        }
+
+        console.log(`Parsing flash summary JSON (attempt ${attempt})...`);
+        const parsed = JSON.parse(summaryText);
+        
+        // Validate required fields
+        if (!parsed.visual_type || !parsed.visual_content || !Array.isArray(parsed.bullet_points) || !parsed.difficulty) {
+          throw new Error("Missing required fields in parsed JSON");
+        }
+        
+        flashSummary = parsed as FlashSummaryData;
+        console.log(`Flash summary parsed successfully on attempt ${attempt}`);
+        break; // Success, exit retry loop
+        
+      } catch (parseError) {
+        lastError = parseError instanceof Error ? parseError : new Error(String(parseError));
+        console.error(`Attempt ${attempt} failed:`, lastError.message);
+        
+        if (attempt < MAX_RETRIES) {
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
-    );
-
-    if (!summaryResponse.ok) {
-      const errorText = await summaryResponse.text();
-      console.error("Summary generation error:", summaryResponse.status, errorText);
-      throw new Error(`Summary generation failed: ${summaryResponse.status}`);
     }
 
-    const summaryData = await summaryResponse.json();
-    const summaryText = summaryData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!summaryText) {
-      throw new Error("No summary generated from AI");
-    }
-
-    console.log("Parsing flash summary JSON...");
-    let flashSummary: FlashSummaryData;
-    try {
-      flashSummary = JSON.parse(summaryText);
-    } catch (parseError) {
-      console.error("Failed to parse summary JSON:", summaryText);
-      throw new Error("Invalid JSON response from summary generation");
+    if (!flashSummary) {
+      // If all retries failed, use fallback summary
+      console.warn("All attempts failed, using fallback summary");
+      flashSummary = {
+        visual_type: "diagram",
+        visual_content: `📚 ${topicTitle}`,
+        bullet_points: [
+          `Key concept 1 from ${topicTitle}`,
+          `Key concept 2 from ${topicTitle}`,
+          `Key concept 3 from ${topicTitle}`
+        ],
+        difficulty: "medium"
+      };
     }
 
     // Ensure we have exactly 3 bullet points
@@ -258,7 +305,7 @@ Output valid JSON only.`
       }
     }
 
-    console.log("Flash summary parsed:", flashSummary);
+    console.log("Flash summary ready:", flashSummary);
 
     // Step 3: Save to database
     console.log("Step 3: Saving to database...");
