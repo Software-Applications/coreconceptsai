@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bookmark, Trash2, Clock } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -15,13 +15,13 @@ interface ReviewBoardProps {
   onClearAll: () => void;
 }
 
-export const ReviewBoard = ({
+export const ReviewBoard = forwardRef<HTMLDivElement, ReviewBoardProps>(({
   isOpen,
   onClose,
   pinnedCards,
   onUnpinCard,
   onClearAll
-}: ReviewBoardProps) => {
+}, ref) => {
   const { lightTap, errorNotification } = useHaptics();
   const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
   const contentScrollRef = useDragScroll<HTMLDivElement>();
@@ -194,4 +194,6 @@ export const ReviewBoard = ({
       )}
     </AnimatePresence>
   );
-};
+});
+
+ReviewBoard.displayName = 'ReviewBoard';
