@@ -4,11 +4,13 @@ import {
   X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useGoogleTTS } from '@/hooks/useGoogleTTS';
+import { useVoicePreference } from '@/hooks/useVoicePreference';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useGenerateContent } from '@/hooks/useAIGeneration';
 import { useToast } from '@/hooks/use-toast';
 import { FlashSummaryCard } from './FlashSummaryCard';
+import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
@@ -79,6 +81,9 @@ export const DailyDownloadPlayer = ({
   const [showAIMenu, setShowAIMenu] = useState(false);
   const { saveProgress, getProgress, clearProgress } = useAudioProgress();
   
+  // Voice preference hook
+  const { voiceId, setVoiceId } = useVoicePreference();
+  
   // AI generation hook
   const generateContent = useGenerateContent();
   const isGenerating = generateContent.isPending;
@@ -101,16 +106,19 @@ export const DailyDownloadPlayer = ({
     isPlaying,
     isPaused,
     isSpeaking,
+    isLoading: isTTSLoading,
     currentCharIndex,
     progress,
     playbackRate,
+    duration,
+    useFallback,
     speak,
     pause,
     resume,
     stop,
     cyclePlaybackRate,
     seekToChar
-  } = useSpeechSynthesis({
+  } = useGoogleTTS({
     onEnd: handleSpeechEnd
   });
 
@@ -127,9 +135,14 @@ export const DailyDownloadPlayer = ({
 
   // Estimate total duration based on text length and speaking rate (~150 words/min)
   const estimatedDuration = useMemo(() => {
+    // If we have real duration from TTS, use it (convert from ms to seconds)
+    if (duration > 0) {
+      return duration / 1000;
+    }
+    // Otherwise estimate based on word count
     const wordCount = fullTranscriptText.split(/\s+/).length;
     return Math.max((wordCount / 150) * 60, 60); // At least 60 seconds
-  }, [fullTranscriptText]);
+  }, [fullTranscriptText, duration]);
 
   // Calculate current time in seconds based on character progress
   const currentSeconds = useMemo(() => {
@@ -282,17 +295,17 @@ export const DailyDownloadPlayer = ({
   const handlePlayPause = () => {
     mediumTap();
     if (!hasStarted) {
-      // First time playing - start speech
+      // First time playing - start speech with selected voice
       setHasStarted(true);
       setShowResumePrompt(false);
-      speak(fullTranscriptText);
+      speak(fullTranscriptText, voiceId);
     } else if (isPlaying) {
       pause();
     } else if (isPaused) {
       resume();
     } else {
-      // Restart from beginning
-      speak(fullTranscriptText);
+      // Restart from beginning with selected voice
+      speak(fullTranscriptText, voiceId);
     }
   };
 
@@ -303,7 +316,7 @@ export const DailyDownloadPlayer = ({
     
     if (topic) {
       const savedCharIndex = getProgress(topic.id);
-      speak(fullTranscriptText);
+      speak(fullTranscriptText, voiceId);
       if (savedCharIndex !== null && savedCharIndex > 0) {
         // Small delay to let speech start before seeking
         setTimeout(() => {
@@ -320,7 +333,7 @@ export const DailyDownloadPlayer = ({
     if (topic) {
       clearProgress(topic.id);
     }
-    speak(fullTranscriptText);
+    speak(fullTranscriptText, voiceId);
   };
 
   const handleDismissFlashCard = () => {
@@ -375,57 +388,66 @@ export const DailyDownloadPlayer = ({
               </p>
               <p className="text-sm text-primary font-medium">{subjectName}</p>
             </div>
-            {/* AI Generation button */}
-            <div className="relative">
-              <button
-                onClick={() => { lightTap(); setShowAIMenu(!showAIMenu); }}
-                disabled={isGenerating}
-                className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
-                title="Generate with AI"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                ) : (
-                  <Sparkles className="w-5 h-5 text-primary" />
-                )}
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Voice selector */}
+              <VoiceSelector
+                selectedVoiceId={voiceId}
+                onVoiceChange={setVoiceId}
+                disabled={isPlaying || isTTSLoading}
+              />
               
-              {/* AI Menu dropdown */}
-              <AnimatePresence>
-                {showAIMenu && !isGenerating && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50"
-                  >
-                    <div className="p-2">
-                      <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Generate with AI
-                      </p>
-                      <button
-                        onClick={() => {
-                          mediumTap();
-                          setShowAIMenu(false);
-                          generateContent.mutate({
-                            topicId: topic.id,
-                            topicTitle: topic.title,
-                            topicDescription: topic.description,
-                            subjectName,
-                          });
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
-                      >
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Generate AI Content</p>
-                          <p className="text-xs text-muted-foreground">Create transcript & flash card</p>
-                        </div>
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* AI Generation button */}
+              <div className="relative">
+                <button
+                  onClick={() => { lightTap(); setShowAIMenu(!showAIMenu); }}
+                  disabled={isGenerating}
+                  className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
+                  title="Generate with AI"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                  ) : (
+                    <Sparkles className="w-5 h-5 text-primary" />
+                  )}
+                </button>
+                
+                {/* AI Menu dropdown */}
+                <AnimatePresence>
+                  {showAIMenu && !isGenerating && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50"
+                    >
+                      <div className="p-2">
+                        <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Generate with AI
+                        </p>
+                        <button
+                          onClick={() => {
+                            mediumTap();
+                            setShowAIMenu(false);
+                            generateContent.mutate({
+                              topicId: topic.id,
+                              topicTitle: topic.title,
+                              topicDescription: topic.description,
+                              subjectName,
+                            });
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
+                        >
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Generate AI Content</p>
+                            <p className="text-xs text-muted-foreground">Create transcript & flash card</p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </header>
           
@@ -436,6 +458,30 @@ export const DailyDownloadPlayer = ({
               onClick={() => setShowAIMenu(false)} 
             />
           )}
+
+          {/* TTS Loading overlay */}
+          <AnimatePresence>
+            {isTTSLoading && (
+              <motion.div
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                </motion.div>
+                <p className="text-lg font-semibold text-foreground mb-2">Generating Audio</p>
+                <p className="text-sm text-muted-foreground text-center px-8">
+                  Creating high-quality narration with Google Cloud TTS...
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Generating overlay */}
           <AnimatePresence>
@@ -486,6 +532,11 @@ export const DailyDownloadPlayer = ({
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {topic.description}
                 </p>
+                {useFallback && (
+                  <p className="text-[10px] text-amber-500 mt-1">
+                    Using browser voice (fallback)
+                  </p>
+                )}
               </div>
             </div>
 
@@ -658,10 +709,13 @@ export const DailyDownloadPlayer = ({
                 {/* Play/Pause */}
                 <motion.button
                   onClick={handlePlayPause}
-                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                  disabled={isTTSLoading}
+                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg disabled:opacity-50"
                   whileTap={{ scale: 0.9 }}
                 >
-                  {isPlaying ? (
+                  {isTTSLoading ? (
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : isPlaying ? (
                     <Pause className="w-8 h-8" />
                   ) : (
                     <Play className="w-8 h-8 ml-1" />
