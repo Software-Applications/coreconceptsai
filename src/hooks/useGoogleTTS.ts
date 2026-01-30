@@ -1,15 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpeechSynthesis } from './useSpeechSynthesis';
+import { useAudioCache, type AudioCacheEntry } from './useAudioCache';
 
 interface UseGoogleTTSOptions {
   onEnd?: () => void;
   onProgress?: (charIndex: number, progress: number) => void;
-}
-
-interface AudioCacheEntry {
-  blobUrl: string;
-  durationMs: number;
 }
 
 export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
@@ -24,7 +20,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const [error, setError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCache = useRef<Map<string, AudioCacheEntry>>(new Map());
   const currentTextRef = useRef<string>('');
   const currentCacheKeyRef = useRef<string>('');
   const optionsRef = useRef(options);
@@ -35,6 +30,11 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const sessionIdRef = useRef<number>(0);
   // Abort controller for cancelling in-flight streaming requests
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Persistent audio cache using IndexedDB
+  const audioCache = useAudioCache();
+  // In-memory cache for current session (faster access during playback)
+  const memoryCache = useRef<Map<string, AudioCacheEntry>>(new Map());
 
   // Keep refs updated
   useEffect(() => {
@@ -69,26 +69,25 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      // Revoke all cached blob URLs
-      audioCache.current.forEach((entry) => {
+      // Revoke in-memory cached blob URLs
+      memoryCache.current.forEach((entry) => {
         URL.revokeObjectURL(entry.blobUrl);
       });
-      audioCache.current.clear();
+      memoryCache.current.clear();
     };
   }, []);
 
   // Store position to resume from after voice change
   const savedPositionRef = useRef<{ charIndex: number; wasPlaying: boolean } | null>(null);
 
-  // Generate cache key from text and voice - use more unique identifier
+  // Generate cache key from text and voice
   const getCacheKey = useCallback((text: string, voiceId: string) => {
-    // Include voiceId, text length, and a checksum of text content
     const textChecksum = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return `${voiceId}:${text.length}:${textChecksum}`;
   }, []);
 
   // Clear cached audio for a specific voice or all, optionally saving position to resume
-  const clearCache = useCallback((voiceId?: string, savePosition: boolean = false) => {
+  const clearCache = useCallback(async (voiceId?: string, savePosition: boolean = false) => {
     console.log(`[TTS] Clearing cache${voiceId ? ` for voice: ${voiceId}` : ' (all voices)'}${savePosition ? ' (saving position)' : ''}`);
     
     // Save current position before clearing if requested
@@ -105,24 +104,27 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     // Stop current audio to prevent it from trying to use revoked blob URLs
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = ''; // Clear source before revoking
+      audioRef.current.src = '';
       audioRef.current = null;
     }
     
+    // Clear in-memory cache
     if (voiceId) {
-      // Clear only entries for specific voice
-      audioCache.current.forEach((entry, key) => {
+      memoryCache.current.forEach((entry, key) => {
         if (key.startsWith(`${voiceId}:`)) {
           URL.revokeObjectURL(entry.blobUrl);
-          audioCache.current.delete(key);
+          memoryCache.current.delete(key);
         }
       });
+      // Clear from IndexedDB
+      await audioCache.deleteByVoiceId(voiceId);
     } else {
-      // Clear all cache
-      audioCache.current.forEach((entry) => {
+      memoryCache.current.forEach((entry) => {
         URL.revokeObjectURL(entry.blobUrl);
       });
-      audioCache.current.clear();
+      memoryCache.current.clear();
+      // Clear all from IndexedDB
+      await audioCache.clearAllCache();
     }
     
     // Reset playback state
@@ -131,8 +133,8 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     setProgress(0);
     setCurrentTime(0);
     
-    console.log(`[TTS] Cache size after clear: ${audioCache.current.size}`);
-  }, []);
+    console.log(`[TTS] Cache cleared`);
+  }, [audioCache]);
 
   // Convert base64 to blob URL
   const base64ToBlobUrl = useCallback((base64: string): string => {
@@ -144,6 +146,38 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     const blob = new Blob([bytes], { type: 'audio/mpeg' });
     return URL.createObjectURL(blob);
   }, []);
+
+  // Get cached audio (checks memory first, then IndexedDB)
+  const getCachedAudio = useCallback(async (cacheKey: string): Promise<AudioCacheEntry | null> => {
+    // Check in-memory cache first
+    const memoryCached = memoryCache.current.get(cacheKey);
+    if (memoryCached) {
+      console.log(`[TTS] Memory cache hit: ${cacheKey}`);
+      return memoryCached;
+    }
+
+    // Check IndexedDB
+    const indexedDBCached = await audioCache.getFromCache(cacheKey);
+    if (indexedDBCached) {
+      // Store in memory for faster access
+      memoryCache.current.set(cacheKey, indexedDBCached);
+      console.log(`[TTS] IndexedDB cache hit: ${cacheKey}`);
+      return indexedDBCached;
+    }
+
+    return null;
+  }, [audioCache]);
+
+  // Save to both memory and IndexedDB cache
+  const saveToCache = useCallback(async (cacheKey: string, blobUrl: string, durationMs: number) => {
+    const entry: AudioCacheEntry = { blobUrl, durationMs };
+    memoryCache.current.set(cacheKey, entry);
+    
+    // Save to IndexedDB in background
+    audioCache.saveToCache(cacheKey, blobUrl, durationMs).catch((err) => {
+      console.warn('[TTS] Failed to save to IndexedDB:', err);
+    });
+  }, [audioCache]);
 
   // Generate audio from text using streaming TTS for faster playback
   const generateAudioStreaming = useCallback(async (
@@ -170,7 +204,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({ text, voiceId, speakingRate, streaming: true }),
-          signal, // Allow aborting the request
+          signal,
         }
       );
 
@@ -189,7 +223,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       let totalDurationMs = 0;
 
       while (true) {
-        // Check if this session is still active
         if (sessionIdRef.current !== sessionId) {
           console.log(`[TTS] Session ${sessionId} cancelled, stopping streaming`);
           reader.cancel();
@@ -201,14 +234,12 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
 
         buffer += decoder.decode(value, { stream: true });
         
-        // Process complete SSE events
         const lines = buffer.split('\n\n');
-        buffer = lines.pop() || ''; // Keep incomplete event in buffer
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           
-          // Check session again before processing each chunk
           if (sessionIdRef.current !== sessionId) {
             console.log(`[TTS] Session ${sessionId} cancelled during chunk processing`);
             reader.cancel();
@@ -227,7 +258,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
               
               if (isFirstAudioChunk) {
                 isFirstAudioChunk = false;
-                setIsLoading(false); // Stop loading indicator once first chunk arrives
+                setIsLoading(false);
                 onFirstChunk(blobUrl, totalDurationMs);
               } else {
                 onChunkReady(blobUrl, data.chunkIndex);
@@ -255,61 +286,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     }
   }, [base64ToBlobUrl]);
 
-  // Generate audio from text using non-streaming TTS (for cached playback)
-  const generateAudio = useCallback(async (
-    text: string, 
-    voiceId: string, 
-    speakingRate: number = 1.0
-  ): Promise<AudioCacheEntry | null> => {
-    const cacheKey = getCacheKey(text, voiceId);
-    
-    // Check cache first
-    const cached = audioCache.current.get(cacheKey);
-    if (cached) {
-      console.log(`[TTS] Using cached audio for voice: ${voiceId}`);
-      return cached;
-    }
-
-    console.log(`[TTS] Generating new audio for voice: ${voiceId}`);
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const { data, error: fnError } = await supabase.functions.invoke('google-tts', {
-        body: { text, voiceId, speakingRate },
-      });
-
-      if (fnError) {
-        throw new Error(fnError.message);
-      }
-
-      if (!data?.audioContent) {
-        throw new Error('No audio content returned');
-      }
-
-      const blobUrl = base64ToBlobUrl(data.audioContent);
-
-      console.log(`[TTS] Audio generated successfully for voice: ${voiceId}, blobUrl: ${blobUrl.slice(-20)}`);
-
-      const entry: AudioCacheEntry = {
-        blobUrl,
-        durationMs: data.durationMs || 0,
-      };
-
-      // Cache the result
-      audioCache.current.set(cacheKey, entry);
-
-      return entry;
-    } catch (err) {
-      console.error('Google TTS error:', err);
-      setError(err instanceof Error ? err.message : 'TTS generation failed');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getCacheKey, base64ToBlobUrl]);
-
   // Audio queue for streaming playback
   const audioQueueRef = useRef<string[]>([]);
   const currentChunkIndexRef = useRef<number>(0);
@@ -334,7 +310,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         if (currentChunkIndexRef.current < queue.length - 1) {
           playNextChunk();
         } else {
-          // All chunks finished
           setIsPlaying(false);
           setIsPaused(false);
           setProgress(100);
@@ -343,7 +318,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       });
       
       audio.addEventListener('timeupdate', () => {
-        // Calculate overall progress across all chunks
         const completedChunksDuration = chunkDurationsRef.current
           .slice(0, currentChunkIndexRef.current)
           .reduce((sum, d) => sum + d, 0);
@@ -372,10 +346,8 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       abortControllerRef.current.abort();
     }
     
-    // Create new abort controller for this session
     abortControllerRef.current = new AbortController();
     
-    // Increment session ID to invalidate any stale callbacks
     sessionIdRef.current += 1;
     const currentSessionId = sessionIdRef.current;
     console.log(`[TTS] Starting new session ${currentSessionId}`);
@@ -383,7 +355,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     // Stop any current playback
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = ''; // Clear source to prevent errors
+      audioRef.current.src = '';
       audioRef.current = null;
     }
     speechSynthesisRef.current.stop();
@@ -397,23 +369,21 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     currentCacheKeyRef.current = getCacheKey(text, voiceId);
     setUseFallback(false);
     
-    // Check if we have a saved position to resume from
     const resumePosition = savedPositionRef.current;
-    savedPositionRef.current = null; // Clear after reading
+    savedPositionRef.current = null;
     
     if (!resumePosition) {
       setProgress(0);
       setCurrentTime(0);
     }
 
-    // Check cache first - if cached, use non-streaming playback
+    // Check cache first (memory + IndexedDB)
     const cacheKey = getCacheKey(text, voiceId);
-    const cached = audioCache.current.get(cacheKey);
+    const cached = await getCachedAudio(cacheKey);
     
     if (cached) {
       console.log(`[TTS] Using cached audio for voice: ${voiceId} (session ${currentSessionId})`);
       
-      // Check if session is still valid
       if (sessionIdRef.current !== currentSessionId) {
         console.log(`[TTS] Session ${currentSessionId} cancelled before playback`);
         return;
@@ -458,7 +428,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
 
       audio.addEventListener('error', (e) => {
         if (sessionIdRef.current !== currentSessionId) return;
-        // Ignore errors from empty/cleared sources
         const audioEl = e.target as HTMLAudioElement;
         if (!audioEl.src || audioEl.src === '' || audioEl.src === window.location.href) {
           return;
@@ -498,9 +467,8 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         playbackRateRef.current,
         currentSessionId,
         abortControllerRef.current.signal,
-        // onFirstChunk - start playing immediately
+        // onFirstChunk
         (blobUrl, totalDurationMs) => {
-          // Check if this session is still active
           if (sessionIdRef.current !== currentSessionId) {
             console.log(`[TTS] Session ${currentSessionId} cancelled, ignoring first chunk`);
             URL.revokeObjectURL(blobUrl);
@@ -519,7 +487,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
             if (sessionIdRef.current !== currentSessionId) return;
             chunkDurationsRef.current[0] = audio.duration * 1000;
             
-            // Resume from saved position if available
             if (resumePosition && audio.duration > 0) {
               const overallProgress = resumePosition.charIndex / text.length;
               const targetTime = overallProgress * audio.duration;
@@ -542,7 +509,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           
           audio.addEventListener('ended', () => {
             if (sessionIdRef.current !== currentSessionId) return;
-            // Check if there are more chunks to play
             if (audioQueueRef.current.length > 1) {
               playNextChunk();
             } else {
@@ -555,7 +521,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           
           audio.addEventListener('error', (e) => {
             if (sessionIdRef.current !== currentSessionId) return;
-            // Ignore errors from empty/cleared sources
             const audioEl = e.target as HTMLAudioElement;
             if (!audioEl.src || audioEl.src === '' || audioEl.src === window.location.href) {
               return;
@@ -583,7 +548,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
               speechSynthesisRef.current.speak(text);
             });
         },
-        // onChunkReady - add to queue
+        // onChunkReady
         (blobUrl, chunkIndex) => {
           if (sessionIdRef.current !== currentSessionId) {
             URL.revokeObjectURL(blobUrl);
@@ -594,10 +559,9 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         }
       );
       
-      // After streaming completes, cache the combined audio for future use
+      // After streaming completes, cache the combined audio
       if (sessionIdRef.current === currentSessionId && audioQueueRef.current.length > 0) {
         const allBlobUrls = audioQueueRef.current;
-        // Fetch all blobs and combine them
         const blobs = await Promise.all(
           allBlobUrls.map(async (url) => {
             const response = await fetch(url);
@@ -607,10 +571,8 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         const combinedBlob = new Blob(blobs, { type: 'audio/mpeg' });
         const combinedBlobUrl = URL.createObjectURL(combinedBlob);
         
-        audioCache.current.set(cacheKey, {
-          blobUrl: combinedBlobUrl,
-          durationMs: totalEstimatedDurationRef.current,
-        });
+        // Save to both memory and IndexedDB
+        await saveToCache(cacheKey, combinedBlobUrl, totalEstimatedDurationRef.current);
         console.log(`[TTS] Cached combined audio for voice: ${voiceId}`);
       }
     } catch (err) {
@@ -621,11 +583,10 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       if (sessionIdRef.current !== currentSessionId) return;
       console.error('Streaming TTS error:', err);
       setError(err instanceof Error ? err.message : 'TTS streaming failed');
-      // Fall back to browser speech synthesis
       setUseFallback(true);
       speechSynthesisRef.current.speak(text);
     }
-  }, [generateAudioStreaming, getCacheKey, playNextChunk]);
+  }, [generateAudioStreaming, getCacheKey, getCachedAudio, saveToCache, playNextChunk]);
 
   // Pause playback
   const pause = useCallback(() => {
@@ -679,7 +640,6 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   // Seek to a specific position (in milliseconds)
   const seekToTime = useCallback((timeMs: number) => {
     if (useFallbackRef.current) {
-      // For browser speech, estimate character index
       const charIndex = Math.floor((timeMs / duration) * currentTextRef.current.length);
       speechSynthesisRef.current.seekToChar(charIndex);
     } else if (audioRef.current) {
