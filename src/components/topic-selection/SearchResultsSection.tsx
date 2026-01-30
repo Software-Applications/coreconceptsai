@@ -52,12 +52,12 @@ export const SearchResultsSection = ({
       {/* Direct Hits Section */}
       {hasDirectHits && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <Target className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">
+          <div className="flex items-center gap-2 px-1 py-1 bg-primary/5 rounded-lg border border-primary/20">
+            <Target className="w-4 h-4 text-primary ml-2" />
+            <h3 className="text-sm font-semibold text-primary">
               Direct Hits
             </h3>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            <span className="text-xs text-primary-foreground bg-primary px-2 py-0.5 rounded-full">
               {directHits.length}
             </span>
           </div>
@@ -77,19 +77,28 @@ export const SearchResultsSection = ({
         </div>
       )}
 
+      {/* Divider between sections */}
+      {hasDirectHits && hasRelated && (
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground">related</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+      )}
+
       {/* Related Topics Section */}
       {hasRelated && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <Lightbulb className="w-4 h-4 text-amber-500" />
-            <h3 className="text-sm font-semibold text-foreground">
+          <div className="flex items-center gap-2 px-1 py-1 bg-amber-500/5 rounded-lg border border-amber-500/20">
+            <Lightbulb className="w-4 h-4 text-amber-500 ml-2" />
+            <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">
               You might also be interested in
             </h3>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            <span className="text-xs text-white bg-amber-500 px-2 py-0.5 rounded-full">
               {relatedTopics.length}
             </span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 opacity-90">
             {relatedTopics.map((scoredTopic, index) => (
               <TopicCard
                 key={scoredTopic.topic.id}
