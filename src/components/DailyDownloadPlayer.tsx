@@ -409,14 +409,8 @@ export const DailyDownloadPlayer = ({
               </p>
               <p className="text-sm text-primary font-medium">{subjectName}</p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Voice selector */}
-              <VoiceSelector
-                selectedVoiceId={voiceId}
-                onVoiceChange={handleVoiceChange}
-                disabled={isPlaying || isTTSLoading}
-              />
-            </div>
+            {/* Empty div to balance header */}
+            <div className="w-10" />
           </header>
 
           {/* TTS Loading overlay */}
@@ -604,18 +598,26 @@ export const DailyDownloadPlayer = ({
               </div>
             </div>
 
-            {/* Time display with speed control */}
+            {/* Time display with speed and voice controls */}
             <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-4">
               <span className="text-sm font-medium text-foreground tabular-nums">
                 {formatTime(currentSeconds)}
               </span>
               
-              <button
-                onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
-              >
-                {playbackRate}x
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { lightTap(); cyclePlaybackRate(); }}
+                  className="px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+                >
+                  {playbackRate}x
+                </button>
+                
+                <VoiceSelector
+                  selectedVoiceId={voiceId}
+                  onVoiceChange={handleVoiceChange}
+                  disabled={isPlaying || isTTSLoading}
+                />
+              </div>
               
               <span className="text-sm text-muted-foreground tabular-nums">
                 {formatTime(estimatedDuration)}
