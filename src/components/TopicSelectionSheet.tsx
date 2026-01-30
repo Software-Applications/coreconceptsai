@@ -9,6 +9,8 @@ import { useChapters } from '@/hooks/useChapters';
 import { AIBadge } from './AIBadge';
 import { HeroIntro, ChapterAccordion } from './topic-selection';
 
+const HERO_SEEN_KEY = 'core-concepts-hero-seen';
+
 interface TopicSelectionSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,6 +30,10 @@ export const TopicSelectionSheet = ({
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [showHero, setShowHero] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !localStorage.getItem(HERO_SEEN_KEY);
+  });
   const { data: allChapters = [] } = useChapters();
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +105,14 @@ export const TopicSelectionSheet = ({
 
   const handleStartExploring = () => {
     lightTap();
+    localStorage.setItem(HERO_SEEN_KEY, 'true');
+    setShowHero(false);
     chaptersStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleDismissHero = () => {
+    localStorage.setItem(HERO_SEEN_KEY, 'true');
+    setShowHero(false);
   };
 
   const groupedTopics = useMemo(() => {
@@ -183,7 +196,11 @@ export const TopicSelectionSheet = ({
           onMouseLeave={endDrag}
           onDragStart={(e) => e.preventDefault()}
         >
-          <HeroIntro onStartExploring={handleStartExploring} />
+          <HeroIntro 
+            isVisible={showHero} 
+            onStartExploring={handleStartExploring} 
+            onDismiss={handleDismissHero} 
+          />
 
           {/* Chapters anchor */}
           <div ref={chaptersStartRef} />
