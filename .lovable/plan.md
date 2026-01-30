@@ -1,74 +1,76 @@
 
-## Add Trust-Building Introduction to Core Concepts AI
+
+## Add Clever Rotating Loading Messages for AI Content Generation
 
 ### Overview
-Add introductory copy to the Core Concepts AI topic selection sheet that builds trust in the AI's accuracy while reinforcing its promise of simplicity. This is the first meaningful interaction point where users decide to engage with the feature.
+Enhance the AI content generation loading overlay with rotating academic-themed messages that cycle through clever phrases while the AI is "thinking." This keeps the academic vibe and makes the wait time feel more engaging.
+
+### Messages to Rotate
+```
+"Synthesizing core principles..."
+"Translating complex theories into simple insights..."
+"Distilling the essentials for you..."
+```
 
 ### Location
-The copy will be added to **TopicSelectionSheet.tsx** as a hero section between the header and the topic list. This placement ensures users see the value proposition before browsing topics.
+The changes will be made to **DailyDownloadPlayer.tsx** in the "Generating overlay" section (lines 447-467).
 
 ### Design
 
-**Visual Layout:**
+**Current UI:**
 ```text
 ┌─────────────────────────────────────┐
-│           (drag handle)             │
-├─────────────────────────────────────┤
-│  Core Concepts [AI]           [X]   │
-├─────────────────────────────────────┤
 │                                     │
-│    Master the Fundamentals          │  ← New hero section
+│          [Sparkles Icon]            │
 │                                     │
-│    Tough topics shouldn't be a      │
-│    barrier to your progress. Our    │
-│    AI breaks down high-level        │
-│    academic concepts into simple,   │
-│    digestible explanations. It's    │
-│    the "Aha!" moment you've been    │
-│    looking for, designed to help    │
-│    you learn—and retain—better.     │
+│      Generating Content             │
 │                                     │
-│    [Start Exploring ↓]              │  ← Scroll indicator
+│   AI is creating a personalized     │
+│   transcript and flash summary...   │
 │                                     │
-├─────────────────────────────────────┤
-│  Chapter 1 - Topic Name             │
-│  Chapter 2 - Topic Name             │
-│  ...                                │
+└─────────────────────────────────────┘
+```
+
+**New UI (with rotating messages):**
+```text
+┌─────────────────────────────────────┐
+│                                     │
+│          [Sparkles Icon]            │
+│                                     │
+│    "Synthesizing core principles..."│  ← Rotates every 3s
+│                                     │
+│   Creating your personalized        │
+│   explanation                       │
+│                                     │
 └─────────────────────────────────────┘
 ```
 
 ### Changes
 
-**src/components/TopicSelectionSheet.tsx**
+**src/components/DailyDownloadPlayer.tsx**
 
-1. **Update header section** - Replace the existing subtitle "Simplest AI explanations of tough topics" with the new value proposition
+1. **Add loading messages array** - Define the three clever loading messages as a constant at the top of the file or inside the component
 
-2. **Add hero introduction block** - Insert a styled section between the header and topic list containing:
-   - "Master the Fundamentals" as a headline
-   - The descriptive paragraph about breaking down complex concepts
-   - A subtle "Start Exploring" button that scrolls to the topic list
+2. **Add rotating message state** - Create a `loadingMessageIndex` state that cycles through the messages
 
-3. **Styling**:
-   - Headline: Large, bold text (text-lg or text-xl)
-   - Body text: Muted foreground color, comfortable line height
-   - Subtle gradient or accent background to distinguish from topic list
-   - Animate entrance for polish
+3. **Add interval effect** - When `isGenerating` is true, start an interval that updates the message index every 3 seconds. Clean up the interval when generation completes
 
-4. **Optional: First-time only display** - Consider showing the full intro only on first visit, then collapsing to a minimal header on subsequent visits (can be added later)
+4. **Update the overlay** - Replace the static "Generating Content" title with the rotating message. Keep a smaller static subtitle for context
 
-### Content
-```
-Master the Fundamentals
+5. **Add smooth transitions** - Use `AnimatePresence` with `motion.p` to fade between messages for polish
 
-Tough topics shouldn't be a barrier to your progress. Our AI breaks down 
-high-level academic concepts into simple, digestible explanations. It's 
-the "Aha!" moment you've been looking for, designed to help you learn—and 
-retain—better.
+### Technical Details
 
-[Start Exploring]
+```text
+// Message rotation logic:
+- Messages array: 3 items
+- Rotation interval: 3000ms (3 seconds)
+- Animation: fade in/out (opacity 0 → 1 → 0)
+- State resets to 0 when overlay closes
 ```
 
-### Technical Notes
-- The "Start Exploring" button will use `scrollIntoView` to smoothly scroll to the first chapter
-- Animation will use framer-motion for consistency with the rest of the app
-- The hero section will be contained within the scrollable area so it scrolls away naturally
+### Visual Polish
+- The rotating message will be styled as the main headline (larger, bold)
+- Smooth crossfade animation between messages using framer-motion
+- A smaller static line beneath provides context: "Creating your personalized explanation"
+
