@@ -44,7 +44,9 @@ export const DailyDownloadCard = forwardRef<HTMLDivElement, DailyDownloadCardPro
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Core Concepts AI</h3>
+              <h3 className="font-semibold text-foreground">
+                Core Concepts <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary border border-primary/20">AI</span>
+              </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Simplest AI explanations of tough topics to help you learn faster.
               </p>
