@@ -13,6 +13,7 @@ import { FlashSummaryCard } from './FlashSummaryCard';
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
+import { GeneratingOverlay } from './GeneratingOverlay';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to generate mock transcript (moved from dailyDownloadData.ts)
@@ -444,28 +445,7 @@ export const DailyDownloadPlayer = ({
           </AnimatePresence>
 
           {/* Generating overlay */}
-          <AnimatePresence>
-            {isGenerating && (
-              <motion.div
-                className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-30"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
-                  <Sparkles className="w-10 h-10 text-primary" />
-                </motion.div>
-                <p className="text-lg font-semibold text-foreground mb-2">Generating Content</p>
-                <p className="text-sm text-muted-foreground text-center px-8">
-                  AI is creating a personalized transcript and flash summary for this topic...
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <GeneratingOverlay isGenerating={isGenerating} />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col px-6 overflow-hidden">
