@@ -1,4 +1,3 @@
-import { forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -26,13 +25,13 @@ const formatDate = (timestamp: string) => {
   return `${diffDays}d ago`;
 };
 
-export const ExpandedCardModal = forwardRef<HTMLDivElement, ExpandedCardModalProps>(({
+export const ExpandedCardModal = ({
   card,
   cards,
   onClose,
   onNavigate,
   onRemove
-}, ref) => {
+}: ExpandedCardModalProps) => {
   const { lightTap } = useHaptics();
   const scrollRef = useDragScroll<HTMLDivElement>();
 
@@ -186,6 +185,4 @@ export const ExpandedCardModal = forwardRef<HTMLDivElement, ExpandedCardModalPro
       </motion.div>
     </AnimatePresence>
   );
-});
-
-ExpandedCardModal.displayName = 'ExpandedCardModal';
+};
