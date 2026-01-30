@@ -12,6 +12,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -141,10 +142,22 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       audioRef.current = audio;
       audio.playbackRate = playbackRateRef.current;
 
+      // Buffering detection for chunk transitions
+      audio.addEventListener('waiting', () => {
+        if (audioRef.current !== audio) return;
+        setIsBuffering(true);
+      });
+      
+      audio.addEventListener('canplaythrough', () => {
+        if (audioRef.current !== audio) return;
+        setIsBuffering(false);
+      });
+
       audio.addEventListener('playing', () => {
         // When playback resumes/starts, keep state in sync
         if (audioRef.current !== audio) return;
         intentionalPauseRef.current = false;
+        setIsBuffering(false);
         setIsPlaying(true);
         setIsPaused(false);
       });
@@ -355,10 +368,22 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       audioRef.current = audio;
       audio.playbackRate = playbackRateRef.current;
 
+      // Buffering detection for cached audio
+      audio.addEventListener('waiting', () => {
+        if (sessionIdRef.current !== currentSessionId) return;
+        setIsBuffering(true);
+      });
+      
+      audio.addEventListener('canplaythrough', () => {
+        if (sessionIdRef.current !== currentSessionId) return;
+        setIsBuffering(false);
+      });
+
       audio.addEventListener('playing', () => {
         if (sessionIdRef.current !== currentSessionId) return;
         if (audioRef.current !== audio) return;
         intentionalPauseRef.current = false;
+        setIsBuffering(false);
         setIsPlaying(true);
         setIsPaused(false);
       });
@@ -471,10 +496,22 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           audioRef.current = audio;
           audio.playbackRate = playbackRateRef.current;
 
+          // Buffering detection for streaming audio
+          audio.addEventListener('waiting', () => {
+            if (sessionIdRef.current !== currentSessionId) return;
+            setIsBuffering(true);
+          });
+          
+          audio.addEventListener('canplaythrough', () => {
+            if (sessionIdRef.current !== currentSessionId) return;
+            setIsBuffering(false);
+          });
+
           audio.addEventListener('playing', () => {
             if (sessionIdRef.current !== currentSessionId) return;
             if (audioRef.current !== audio) return;
             intentionalPauseRef.current = false;
+            setIsBuffering(false);
             setIsPlaying(true);
             setIsPaused(false);
           });
@@ -695,6 +732,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     isLoading,
     isPlaying,
     isPaused,
+    isBuffering,
     isSpeaking: isPlaying || isPaused,
     currentTime,
     duration,
