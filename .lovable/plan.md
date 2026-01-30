@@ -1,162 +1,176 @@
 
 
-## Core Concepts AI - Comprehensive Review
+## Smart Topic Search with Priority-Based Results
 
 ### Overview
-After reviewing the complete Core Concepts AI flow from topic selection to audio playback and flash card review, I've identified several bugs, UX friction points, and opportunities to make this feature best-in-class.
+Transform the current simple text search into an intelligent two-tier search system that shows:
+1. **Direct Hits** - Exact keyword matches (high precision)
+2. **You might also be interested in** - Semantically related topics (high recall via LSI)
+
+### Current State
+The search currently uses simple `includes()` matching on title and description, returning all matches in a flat list within their chapter groups.
+
+### Solution Architecture
+
+```text
++------------------+     +-------------------+     +------------------+
+| User Query       | --> | Search Engine     | --> | Prioritized      |
+| "bacteria"       |     | (Client-side)     |     | Results UI       |
++------------------+     +-------------------+     +------------------+
+                               |
+                    +----------+----------+
+                    |                     |
+            +-------v-------+     +-------v-------+
+            | Priority 1    |     | Priority 2    |
+            | Exact Match   |     | LSI/Semantic  |
+            +---------------+     +---------------+
+            | Title match   |     | Same chapter  |
+            | Keyword in    |     | Related terms |
+            | description   |     | Bullet points |
+            +---------------+     +---------------+
+```
+
+### Implementation Approach
+
+**Option A: Client-Side LSI (Recommended)**
+Build a lightweight keyword-synonym map and use chapter/subject grouping for semantic relationships. Fast, no API calls needed.
+
+**Option B: AI-Powered Semantic Search**
+Call Lovable AI to expand search terms with synonyms and related concepts. More accurate but adds latency.
+
+I recommend **Option A** for instant results with Option B as a future enhancement.
 
 ---
 
-### BUGS TO FIX
+### Phase 1: Create Search Utilities
 
-#### 1. Missing forwardRef on PracticeQuizSheet (Console Error)
-**File:** `src/components/PracticeQuizSheet.tsx`  
-**Issue:** Console error: "Function components cannot be given refs. Attempts to access this ref will fail."  
-**Fix:** Wrap the component with `forwardRef` like other sheet components.
+**New File: `src/lib/topicSearch.ts`**
 
-#### 2. Voice Selector Disabled When Playing (UX Bug)
-**File:** `src/components/DailyDownloadPlayer.tsx` (line 646-647)  
-**Issue:** Voice selector is disabled when `isPlaying || isTTSLoading`, but users should be able to change voice mid-playback. The `handleVoiceChange` function already supports this.  
-**Fix:** Remove `disabled` prop or change logic to only disable during initial loading.
+Create a dedicated search module with:
 
-#### 3. Duplicate useEffect for Chapter Selection
-**File:** `src/pages/Index.tsx` (lines 109-113 and 121-125)  
-**Issue:** Two nearly identical `useEffect` hooks set `selectedChapter` when subject changes, causing potential race conditions.  
-**Fix:** Remove one of the duplicate effects.
-
-#### 4. Duplicate useEffect for Pinned Cards Auto-Expand
-**File:** `src/pages/Index.tsx` (lines 116-118 and 128-130)  
-**Issue:** Same duplicate pattern - two effects doing the same thing.  
-**Fix:** Remove one of the duplicate effects.
-
-#### 5. Mock Transcript Uses Outdated Description
-**File:** `src/components/DailyDownloadPlayer.tsx` (lines 20-60)  
-**Issue:** `generateMockTranscript` uses `topic.description` which may be the old short description, not the AI-generated transcript. After AI generation, the description IS the transcript, so this mock function creates duplicate/redundant content.  
-**Fix:** When AI content is generated, use the transcript directly instead of generating mock segments.
-
-#### 6. GeneratingProgressToast Component Unused
-**File:** `src/components/GeneratingProgressToast.tsx`  
-**Issue:** This component is imported nowhere and duplicates functionality of `GeneratingOverlay`.  
-**Fix:** Delete the unused file.
+1. **Keyword Extraction** - Split query into meaningful terms
+2. **Exact Match Scoring** - Higher score for title matches vs description matches
+3. **Semantic Relationship Detection**:
+   - Topics in the same chapter (related concepts)
+   - Topics sharing keywords in bullet points
+   - Topics with related visual types (formula topics link to other formula topics)
+4. **Domain Synonym Map** - Educational term relationships:
+   - "bacteria" → "microbial", "cell", "gram"
+   - "atom" → "molecule", "ion", "electron"
+   - "cell" → "membrane", "nucleus", "organelle"
 
 ---
 
-### UX IMPROVEMENTS
+### Phase 2: Update TopicSelectionSheet
 
-#### 7. Topic Selection - No Search/Filter
-**Problem:** Users must scroll through all chapters and topics to find what they need.  
-**Solution:** Add a search input at the top of TopicSelectionSheet to filter topics by title.
+**File: `src/components/TopicSelectionSheet.tsx`**
 
-#### 8. Topic Selection - No Progress Summary
-**Problem:** Users can't see overall progress at a glance.  
-**Solution:** Add a progress ring or bar in the header showing "X of Y topics completed."
+Replace the simple `filteredTopics` logic with the new search engine:
 
-#### 9. Topic Selection - Chapters Don't Auto-Expand
-**Problem:** Users must manually tap each chapter to see topics. Friction for first-time users.  
-**Solution:** Auto-expand the first chapter with unlistened topics, or expand all by default.
-
-#### 10. Player - No "Complete" Action Before Finishing Audio
-**Problem:** Users who understand the topic quickly must wait for audio to finish or manually skip forward multiple times.  
-**Solution:** Add a "Mark Complete" or "Skip to Summary" button.
-
-#### 11. Player - Transcript Not Tappable for Navigation
-**Problem:** Users can seek via progress bar but can't tap a paragraph to jump to that section.  
-**Solution:** Make transcript paragraphs tappable to seek to that segment.
-
-#### 12. Flash Card - No Swipe Gestures
-**Problem:** Users must tap small buttons to dismiss or pin.  
-**Solution:** Add swipe-to-dismiss (left) and swipe-to-pin (right) gestures.
-
-#### 13. Flash Card - Missing Animations
-**Problem:** Flash card appears abruptly compared to the polished player animations.  
-**Solution:** Add a celebratory confetti burst or success animation when audio completes.
-
-#### 14. Entry Card - Static Badge Count
-**Problem:** The unlistened count badge doesn't animate when it changes.  
-**Solution:** Add a scale bounce animation when the count decreases.
+1. **Debounce Search** - 150ms delay to avoid excessive re-renders
+2. **Categorize Results**:
+   - `directHits`: Topics with exact keyword matches
+   - `relatedTopics`: Semantically related but no exact match
+3. **Update UI** to show two sections when searching:
+   - "Direct Hits" section header with match count
+   - "You might also be interested in" section header
 
 ---
 
-### UI POLISH
+### Phase 3: Update UI Components
 
-#### 15. Player Header - Cramped Layout
-**Problem:** "Core Concepts AI" badge and subject name look crowded in the header.  
-**Solution:** Increase vertical spacing, use a stacked layout with larger typography.
+**File: `src/components/topic-selection/index.ts`**
 
-#### 16. Player Controls - Skip Buttons Hard to Read
-**Problem:** The "15" text inside skip buttons is tiny (10px) and hard to see.  
-**Solution:** Increase to 11px or 12px, or add labels below buttons.
+Export a new `SearchResultsSection` component.
 
-#### 17. Waveform - No Audio Spectrum
-**Problem:** Waveform is random heights, not responsive to actual audio.  
-**Solution:** If possible with Web Audio API, show real frequency visualization (optional, advanced).
+**New Component: `src/components/topic-selection/SearchResultsSection.tsx`**
 
-#### 18. Voice Selector - No Preview
-**Problem:** Users can't hear a voice sample before selecting.  
-**Solution:** Add a small play icon next to each voice option to preview a sample sentence.
-
-#### 19. Topic Card - Description Truncation
-**Problem:** Topic descriptions show `line-clamp-3` which can cut off important context.  
-**Solution:** Show full description in an expandable tooltip on long press.
+Create a section component that:
+- Shows section headers ("Direct Hits", "Related Topics")
+- Displays topics without chapter grouping (flat list for search results)
+- Maintains highlight functionality for matched keywords
+- Shows relevance indicators (optional: match badges)
 
 ---
 
-### TECHNICAL IMPROVEMENTS
+### Technical Details
 
-#### 20. TTS Uses Hardcoded Supabase URL (Bug Risk)
-**File:** `src/hooks/useGoogleTTS.ts` (lines 236-238)  
-**Issue:** Uses `import.meta.env.VITE_SUPABASE_URL` which is discouraged per project guidelines. Should use hardcoded project URL.  
-**Fix:** Replace with `https://uzlkbqfxlamwetmvpqsi.supabase.co`.
+#### Scoring Algorithm
 
-#### 21. AI Content Detection Logic Too Simple
-**File:** `src/components/DailyDownloadPlayer.tsx` (lines 228-235)  
-**Issue:** `needsAIContent` checks if description length > 500 chars, but some legitimate short descriptions could trigger unnecessary regeneration.  
-**Fix:** Check for `ai_generated` flag on flash_summaries table instead.
+```text
+Score Calculation:
+-----------------
+Title exact match:       +100 points
+Title partial match:      +50 points
+Description keyword:      +25 points
+Bullet point match:       +15 points
+Same chapter as hit:      +10 points (semantic)
+Synonym match:             +8 points (semantic)
+Same subject:              +5 points (semantic)
 
-#### 22. No Retry UI for Failed Generation
-**Problem:** If AI generation fails, user sees a toast but can't retry without closing and reopening.  
-**Solution:** Add a "Retry" button in the error state.
+Direct Hit threshold:    >= 25 points
+Related threshold:       >= 5 points (but < 25)
+```
 
----
+#### Synonym/Related Terms Map
 
-### IMPLEMENTATION PRIORITY
-
-**Phase 1 - Bug Fixes (High Priority)**
-1. Fix PracticeQuizSheet forwardRef error
-2. Remove duplicate useEffects in Index.tsx
-3. Fix voice selector disabled state
-4. Fix TTS hardcoded URL
-5. Delete unused GeneratingProgressToast.tsx
-
-**Phase 2 - UX Quick Wins**
-6. Add "Skip to Summary" button in player
-7. Auto-expand first chapter with unlistened topics
-8. Add progress summary in topic selection header
-9. Make transcript paragraphs tappable
-
-**Phase 3 - UI Polish**
-10. Flash card swipe gestures
-11. Completion celebration animation
-12. Badge count animation
-13. Voice preview samples
-
-**Phase 4 - Advanced Features**
-14. Topic search/filter
-15. Real audio spectrum visualization
-16. Retry button for failed generation
+```typescript
+const semanticRelations: Record<string, string[]> = {
+  // Microbiology
+  "bacteria": ["bacterial", "microbial", "microbe", "cell", "gram", "pathogen"],
+  "virus": ["viral", "pathogen", "infection", "prion"],
+  "cell": ["cellular", "membrane", "nucleus", "structure", "organelle"],
+  "growth": ["growth phases", "reproduction", "division", "metabolism"],
+  
+  // Chemistry  
+  "atom": ["atomic", "electron", "proton", "neutron", "nucleus", "ion"],
+  "molecule": ["molecular", "compound", "bond", "covalent", "ionic"],
+  "reaction": ["reactions", "aqueous", "acid", "base", "oxidation"],
+  
+  // Biology
+  "protein": ["amino acid", "macromolecule", "enzyme", "structure"],
+  "respiration": ["cellular", "ATP", "metabolism", "energy", "glucose"],
+  "membrane": ["transport", "osmosis", "diffusion", "cell"],
+};
+```
 
 ---
 
-### TECHNICAL SUMMARY
+### Files to Create/Modify
 
-Files to modify:
-- `src/components/PracticeQuizSheet.tsx` - Add forwardRef
-- `src/pages/Index.tsx` - Remove duplicate useEffects
-- `src/components/DailyDownloadPlayer.tsx` - Multiple fixes
-- `src/hooks/useGoogleTTS.ts` - Hardcode Supabase URL
-- `src/components/TopicSelectionSheet.tsx` - UX improvements
-- `src/components/FlashSummaryCard.tsx` - Swipe gestures
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/lib/topicSearch.ts` | Create | Search engine with scoring and LSI |
+| `src/components/topic-selection/SearchResultsSection.tsx` | Create | Two-tier results display |
+| `src/components/topic-selection/index.ts` | Modify | Export new component |
+| `src/components/TopicSelectionSheet.tsx` | Modify | Integrate new search engine |
+| `src/hooks/useTopics.ts` | Modify | Include chapter and flash_summary data for semantic matching |
 
-Files to delete:
-- `src/components/GeneratingProgressToast.tsx`
+---
+
+### User Experience Flow
+
+1. User types "cell" in search box
+2. After 150ms debounce:
+   - **Direct Hits** section shows:
+     - "Cell Structure" (title match)
+     - "Bacterial Cell Structure" (title match)
+     - "Cell Membrane Transport" (title match)
+   - **You might also be interested in** section shows:
+     - "Cellular Respiration" (related via "cellular")
+     - "Biological Macromolecules" (same chapter context)
+     - Topics with bullet points mentioning "cell"
+
+3. Empty states:
+   - No direct hits → Show only "You might also be interested in"
+   - No results at all → Show "No topics found" with suggestions
+
+---
+
+### Edge Cases
+
+- **Single character queries**: Require minimum 2 characters
+- **Very common terms**: Limit semantic results to top 5 to avoid overwhelming
+- **No matches**: Suggest browsing by chapter instead
+- **Special characters**: Strip punctuation before matching
 
