@@ -28,12 +28,29 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const currentTextRef = useRef<string>('');
   const currentCacheKeyRef = useRef<string>('');
   const optionsRef = useRef(options);
+  const useFallbackRef = useRef(useFallback);
+  const playbackRateRef = useRef(playbackRate);
+
+  // Keep refs updated
+  useEffect(() => {
+    useFallbackRef.current = useFallback;
+  }, [useFallback]);
+
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+  }, [playbackRate]);
 
   // Fallback to browser speech synthesis
   const speechSynthesis = useSpeechSynthesis({
     onEnd: options.onEnd,
     onProgress: options.onProgress,
   });
+  
+  // Store speech synthesis methods in refs for stable callbacks
+  const speechSynthesisRef = useRef(speechSynthesis);
+  useEffect(() => {
+    speechSynthesisRef.current = speechSynthesis;
+  }, [speechSynthesis]);
 
   // Keep options ref updated
   useEffect(() => {
@@ -125,7 +142,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    speechSynthesis.stop();
+    speechSynthesisRef.current.stop();
 
     currentTextRef.current = text;
     currentCacheKeyRef.current = getCacheKey(text, voiceId);
@@ -134,20 +151,20 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     setCurrentTime(0);
 
     // Try to generate audio with Google TTS
-    const audioEntry = await generateAudio(text, voiceId, playbackRate);
+    const audioEntry = await generateAudio(text, voiceId, playbackRateRef.current);
 
     if (!audioEntry) {
       // Fall back to browser speech synthesis
       console.log('Falling back to browser speech synthesis');
       setUseFallback(true);
-      speechSynthesis.speak(text);
+      speechSynthesisRef.current.speak(text);
       return;
     }
 
     // Create and play audio element
     const audio = new Audio(audioEntry.blobUrl);
     audioRef.current = audio;
-    audio.playbackRate = playbackRate;
+    audio.playbackRate = playbackRateRef.current;
 
     // Set up event listeners
     audio.addEventListener('loadedmetadata', () => {
@@ -183,7 +200,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       setIsPaused(false);
       // Fall back to browser speech
       setUseFallback(true);
-      speechSynthesis.speak(text);
+      speechSynthesisRef.current.speak(text);
     });
 
     // Start playback
@@ -196,25 +213,25 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       setError('Failed to start playback');
       // Fall back to browser speech
       setUseFallback(true);
-      speechSynthesis.speak(text);
+      speechSynthesisRef.current.speak(text);
     }
-  }, [generateAudio, getCacheKey, playbackRate, speechSynthesis]);
+  }, [generateAudio, getCacheKey]);
 
   // Pause playback
   const pause = useCallback(() => {
-    if (useFallback) {
-      speechSynthesis.pause();
+    if (useFallbackRef.current) {
+      speechSynthesisRef.current.pause();
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
     setIsPlaying(false);
     setIsPaused(true);
-  }, [useFallback, speechSynthesis]);
+  }, []);
 
   // Resume playback
   const resume = useCallback(async () => {
-    if (useFallback) {
-      speechSynthesis.resume();
+    if (useFallbackRef.current) {
+      speechSynthesisRef.current.resume();
     } else if (audioRef.current) {
       try {
         await audioRef.current.play();
@@ -224,12 +241,12 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     }
     setIsPlaying(true);
     setIsPaused(false);
-  }, [useFallback, speechSynthesis]);
+  }, []);
 
   // Stop playback
   const stop = useCallback(() => {
-    if (useFallback) {
-      speechSynthesis.stop();
+    if (useFallbackRef.current) {
+      speechSynthesisRef.current.stop();
     } else if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -238,7 +255,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     setIsPaused(false);
     setProgress(0);
     setCurrentTime(0);
-  }, [useFallback, speechSynthesis]);
+  }, []);
 
   // Toggle play/pause
   const toggle = useCallback(() => {
@@ -251,40 +268,41 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
 
   // Seek to a specific position (in milliseconds)
   const seekToTime = useCallback((timeMs: number) => {
-    if (useFallback) {
+    if (useFallbackRef.current) {
       // For browser speech, estimate character index
       const charIndex = Math.floor((timeMs / duration) * currentTextRef.current.length);
-      speechSynthesis.seekToChar(charIndex);
+      speechSynthesisRef.current.seekToChar(charIndex);
     } else if (audioRef.current) {
       audioRef.current.currentTime = timeMs / 1000;
     }
-  }, [useFallback, duration, speechSynthesis]);
+  }, [duration]);
 
   // Seek to a specific character index
   const seekToChar = useCallback((charIndex: number) => {
-    if (useFallback) {
-      speechSynthesis.seekToChar(charIndex);
+    if (useFallbackRef.current) {
+      speechSynthesisRef.current.seekToChar(charIndex);
     } else if (audioRef.current && currentTextRef.current.length > 0) {
       const percentage = charIndex / currentTextRef.current.length;
       audioRef.current.currentTime = (audioRef.current.duration || 0) * percentage;
     }
-  }, [useFallback, speechSynthesis]);
+  }, []);
 
   // Cycle through playback rates
   const cyclePlaybackRate = useCallback(() => {
     const rates = [1, 1.25, 1.5, 1.75, 2];
-    const currentIndex = rates.indexOf(playbackRate);
+    const currentIndex = rates.indexOf(playbackRateRef.current);
     const nextIndex = (currentIndex + 1) % rates.length;
     const newRate = rates[nextIndex];
     
     setPlaybackRate(newRate);
+    playbackRateRef.current = newRate;
     
-    if (useFallback) {
-      speechSynthesis.setRate(newRate);
+    if (useFallbackRef.current) {
+      speechSynthesisRef.current.setRate(newRate);
     } else if (audioRef.current) {
       audioRef.current.playbackRate = newRate;
     }
-  }, [playbackRate, useFallback, speechSynthesis]);
+  }, []);
 
   // Calculate current character index based on progress
   const currentCharIndex = Math.floor((progress / 100) * currentTextRef.current.length);
@@ -312,6 +330,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     cyclePlaybackRate,
     setPlaybackRate: (rate: number) => {
       setPlaybackRate(rate);
+      playbackRateRef.current = rate;
       if (audioRef.current) {
         audioRef.current.playbackRate = rate;
       }

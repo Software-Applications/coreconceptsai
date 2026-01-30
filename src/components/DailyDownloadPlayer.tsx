@@ -235,7 +235,6 @@ export const DailyDownloadPlayer = ({
     setShowFlashCard(false);
     setHasStarted(false);
     setShowResumePrompt(false);
-    generateContent.reset(); // Reset generation state for new topic
     
     // Check if there's saved progress for this topic
     if (topic) {
@@ -244,7 +243,14 @@ export const DailyDownloadPlayer = ({
         setShowResumePrompt(true);
       }
     }
-  }, [topic?.id, stop, getProgress, topic]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic?.id]);
+  
+  // Reset generation state separately to avoid render loop
+  useEffect(() => {
+    generateContent.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic?.id]);
 
   // Auto-save progress every 5 seconds while playing
   useEffect(() => {
