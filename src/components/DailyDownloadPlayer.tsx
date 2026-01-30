@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
+  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2, FastForward
 } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -80,6 +80,7 @@ export const DailyDownloadPlayer = ({
   const [showFlashCard, setShowFlashCard] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const { saveProgress, getProgress, clearProgress } = useAudioProgress();
   
   // Voice preference hook
@@ -92,14 +93,19 @@ export const DailyDownloadPlayer = ({
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
-  const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0 });
+  const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0, didDrag: false });
   const lastSaveTime = useRef<number>(0);
   
   const handleSpeechEnd = useCallback(() => {
     if (topic) {
-      setShowFlashCard(true);
+      setShowCelebration(true);
+      // Show celebration briefly, then flash card
+      setTimeout(() => {
+        setShowCelebration(false);
+        setShowFlashCard(true);
+      }, 1500);
       onTopicListened?.(topic.id);
-      clearProgress(topic.id); // Clear saved progress on completion
+      clearProgress(topic.id);
     }
   }, [topic, onTopicListened, clearProgress]);
 
@@ -318,6 +324,7 @@ export const DailyDownloadPlayer = ({
     dragState.current.isDown = true;
     dragState.current.startY = e.clientY;
     dragState.current.scrollTop = el.scrollTop;
+    dragState.current.didDrag = false;
     el.style.cursor = 'grabbing';
   };
 
@@ -325,6 +332,7 @@ export const DailyDownloadPlayer = ({
     const el = transcriptRef.current;
     if (!el || !dragState.current.isDown) return;
     const dy = e.clientY - dragState.current.startY;
+    if (Math.abs(dy) > 3) dragState.current.didDrag = true;
     el.scrollTop = dragState.current.scrollTop - dy;
     e.preventDefault();
   };
@@ -332,7 +340,15 @@ export const DailyDownloadPlayer = ({
   const handleTranscriptMouseUp = () => {
     const el = transcriptRef.current;
     if (el) el.style.cursor = 'grab';
+    
+    const hadDrag = dragState.current.didDrag;
     dragState.current.isDown = false;
+    
+    if (hadDrag) {
+      window.setTimeout(() => {
+        dragState.current.didDrag = false;
+      }, 0);
+    }
   };
 
   const handlePlayPause = () => {
@@ -739,6 +755,32 @@ export const DailyDownloadPlayer = ({
                 <SkipForward className="w-5 h-5" />
                 <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
+
+              {/* Skip to Summary */}
+              {hasStarted && (
+                <motion.button
+                  onClick={() => {
+                    lightTap();
+                    stop();
+                    if (topic) {
+                      setShowCelebration(true);
+                      setTimeout(() => {
+                        setShowCelebration(false);
+                        setShowFlashCard(true);
+                      }, 1500);
+                      onTopicListened?.(topic.id);
+                      clearProgress(topic.id);
+                    }
+                  }}
+                  className="ml-4 px-3 py-2 rounded-lg bg-muted/60 text-foreground text-xs font-medium flex items-center gap-1.5 hover:bg-muted transition-colors"
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <FastForward className="w-3.5 h-3.5" />
+                  Summary
+                </motion.button>
+              )}
               </div>
             )}
 
@@ -760,11 +802,23 @@ export const DailyDownloadPlayer = ({
                     const isActive = index === activeSegmentIndex;
                     const isPast = index < activeSegmentIndex;
                     
+                    // Calculate char index for this segment
+                    let segmentStartChar = 0;
+                    for (let i = 0; i < index; i++) {
+                      segmentStartChar += transcript[i].text.length + 1;
+                    }
+                    
                     return (
                       <p
                         key={segment.id}
                         ref={isActive ? activeSegmentRef : null}
-                        className={`text-sm leading-relaxed transition-all duration-300 ${
+                        onClick={() => {
+                          if (hasStarted && !dragState.current.didDrag) {
+                            lightTap();
+                            seekToChar(segmentStartChar);
+                          }
+                        }}
+                        className={`text-sm leading-relaxed transition-all duration-300 cursor-pointer hover:bg-primary/5 rounded px-1 -mx-1 ${
                           isActive 
                             ? 'text-foreground' 
                             : isPast 
@@ -805,6 +859,44 @@ export const DailyDownloadPlayer = ({
               </div>
             </div>
           </div>
+
+          {/* Celebration animation */}
+          <AnimatePresence>
+            {showCelebration && (
+              <motion.div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0, rotate: 180 }}
+                  transition={{ type: "spring", damping: 12, stiffness: 200 }}
+                  className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center mb-4 shadow-lg shadow-green-500/30"
+                >
+                  <Sparkles className="w-12 h-12 text-white" />
+                </motion.div>
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-2xl font-bold text-white mb-2"
+                >
+                  Great job!
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-white/80 text-sm"
+                >
+                  Topic completed
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Flash Summary Card overlay */}
           <AnimatePresence>

@@ -38,6 +38,7 @@ export const TopicSelectionSheet = ({
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chaptersStartRef = useRef<HTMLDivElement | null>(null);
+  const hasAutoExpandedRef = useRef(false);
   const dragState = useRef({
     isDown: false,
     startY: 0,
@@ -138,9 +139,32 @@ export const TopicSelectionSheet = ({
     return groups;
   }, [topics, allChapters]);
 
+  // Calculate progress stats
+  const progressStats = useMemo(() => {
+    const total = topics.length;
+    const listened = topics.filter(t => isListened?.(t.id)).length;
+    return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
+  }, [topics, isListened]);
+
+  // Auto-expand first chapter with unlistened topics on open
+  useEffect(() => {
+    if (isOpen && groupedTopics.length > 0 && !hasAutoExpandedRef.current) {
+      // Find first chapter with unlistened topics
+      const firstUnlistenedChapter = groupedTopics.find(({ topics: chapterTopics }) =>
+        chapterTopics.some(t => !isListened?.(t.id))
+      );
+      
+      if (firstUnlistenedChapter) {
+        setExpandedChapters(new Set([firstUnlistenedChapter.chapter.id]));
+        hasAutoExpandedRef.current = true;
+      }
+    }
+  }, [isOpen, groupedTopics, isListened]);
+
   useEffect(() => {
     if (!isOpen) {
       setExpandedChapters(new Set());
+      hasAutoExpandedRef.current = false;
     }
   }, [isOpen]);
 
@@ -176,6 +200,20 @@ export const TopicSelectionSheet = ({
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
               Core Concepts <AIBadge />
             </h2>
+            {/* Progress summary */}
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-[120px]">
+                <motion.div
+                  className="h-full bg-primary rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressStats.percentage}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {progressStats.listened}/{progressStats.total} completed
+              </span>
+            </div>
           </div>
           <button
             onClick={() => { lightTap(); onClose(); }}
