@@ -1,180 +1,84 @@
 
 
-## Plan: Google Cloud TTS with Voice Selection
+## Redesigning the AI Badge for Core Concepts
 
-This plan upgrades the text-to-speech system from browser-based speech synthesis to Google Cloud's Text-to-Speech API, adding a voice selection dropdown so users can choose their preferred narrator voice.
+The current AI badge is a simple bordered box that doesn't communicate the "AI-powered" nature of the feature effectively. Let's create a distinctive, modern AI badge that immediately signals "this is AI-generated content."
 
-### What You'll Get
+---
 
-- Premium quality neural voices from Google Cloud (much better than browser voices)
-- A voice selector dropdown in the player UI
-- 6 voice options: 3 male and 3 female voices with distinct styles
-- Persistent voice preference saved locally
-- Fallback to browser speech if TTS fails
+### Design Approach
 
-### Voice Options
+The new badge will feature:
+- **Gradient background** with purple-to-blue tones (common AI visual language)
+- **Subtle shimmer/shine animation** that suggests intelligence and activity
+- **Sparkles icon** (✨) to reinforce the AI/magic feel
+- **Consistent sizing** across all locations
 
-| Voice ID | Label | Description |
-|----------|-------|-------------|
-| en-US-Neural2-D | Oliver | Clear, professional male voice |
-| en-US-Neural2-A | Marcus | Deep, authoritative male voice |
-| en-US-Neural2-J | James | Warm, friendly male voice |
-| en-US-Neural2-F | Aria | Natural, engaging female voice |
-| en-US-Neural2-C | Emma | Soft, calming female voice |
-| en-US-Neural2-H | Sophia | Bright, energetic female voice |
+---
 
-### Architecture Overview
+### Visual Preview
 
 ```text
-┌─────────────────────┐     ┌─────────────────────────┐     ┌────────────────────┐
-│  DailyDownloadPlayer│────▶│ google-tts Edge Function│────▶│ Google Cloud TTS   │
-│  (React Component)  │     │ (Supabase)              │     │ API                │
-└─────────────────────┘     └─────────────────────────┘     └────────────────────┘
-         │                            │
-         │                            │ Returns MP3 audio
-         ▼                            ▼
-   ┌──────────────┐           ┌───────────────┐
-   │ Audio Player │◀──────────│ Base64 Audio  │
-   │ (HTML5)      │           │ Blob URL      │
-   └──────────────┘           └───────────────┘
+Current:   [AI]  (flat, boring, blends in)
+                 ↓
+New:       ✨ AI  (gradient, shimmer, distinctive)
 ```
 
-### Implementation Steps
+---
 
-#### Step 1: Create `google-tts` Edge Function
+### Implementation
 
-A new Supabase Edge Function that:
+**1. Create reusable AI Badge component**
+- New file: `src/components/AIBadge.tsx`
+- Contains the Sparkles icon, gradient styling, and optional shimmer animation
+- Accepts size prop for different contexts (sm, md)
 
-- Accepts transcript text, voice ID, and speaking rate
-- Calls Google Cloud Text-to-Speech API at `https://texttospeech.googleapis.com/v1/text:synthesize`
-- Uses the existing `GOOGLE_API_KEY` secret (already configured)
-- Returns base64-encoded MP3 audio
-- Handles text chunking for transcripts over 5000 bytes
+**2. Add shimmer keyframe animation**
+- Update `src/index.css` with a subtle shimmer effect
+- CSS animation that creates a moving highlight across the badge
 
-Request format:
-```text
-POST /google-tts
-{
-  text: string,
-  voiceId: string,       // e.g., "en-US-Neural2-D"
-  speakingRate: number   // 0.5 to 2.0
-}
-```
+**3. Update all 4 locations to use the new component**
+- `DailyDownloadCard.tsx` - Home CTA
+- `TopicSelectionSheet.tsx` - Bottom drawer header
+- `DailyDownloadPlayer.tsx` - Audio player header
+- `DailyDownloadFAB.tsx` - FAB tooltip
 
-Response format:
-```text
-{
-  audioContent: string,  // Base64 MP3
-  durationMs: number     // Estimated duration
-}
-```
-
-#### Step 2: Create `useGoogleTTS` Hook
-
-A React hook that manages TTS audio generation and playback:
-
-- Calls the edge function to generate audio from transcript text
-- Creates a Blob URL from the returned base64 audio
-- Uses HTML5 Audio element for accurate playback and timing
-- Provides play/pause, seek, skip forward/back, and playback rate controls
-- Caches generated audio by topic ID + voice ID
-- Shows loading state during audio generation
-- Falls back to browser speech synthesis if TTS fails
-
-#### Step 3: Create `useVoicePreference` Hook
-
-A simple hook to persist voice selection:
-
-- Stores selected voice ID in localStorage
-- Returns current voice preference and setter function
-- Default voice: "en-US-Neural2-D" (Oliver)
-
-#### Step 4: Create VoiceSelector Component
-
-A compact dropdown component positioned in the player header:
-
-- Shows current voice name with an icon (User/Mic icon)
-- Opens a popover/dropdown with all available voices
-- Groups voices by gender (Male/Female)
-- Displays voice name and description
-- Saves preference on selection
-
-UI positioning in header:
-```text
-┌──────────────────────────────────────────┐
-│  [X]     Daily Download   [🎤 Oliver ▼][✨]│
-│          Biology                         │
-└──────────────────────────────────────────┘
-```
-
-Dropdown design:
-```text
-┌──────────────────────────────────────────┐
-│  Choose Voice                            │
-├──────────────────────────────────────────┤
-│  Male Voices                             │
-│  ● Oliver - Clear, professional          │
-│  ○ Marcus - Deep, authoritative          │
-│  ○ James - Warm, friendly                │
-├──────────────────────────────────────────┤
-│  Female Voices                           │
-│  ○ Aria - Natural, engaging              │
-│  ○ Emma - Soft, calming                  │
-│  ○ Sophia - Bright, energetic            │
-└──────────────────────────────────────────┘
-```
-
-#### Step 5: Update DailyDownloadPlayer Component
-
-Integrate the new TTS system:
-
-- Import and use the new `useGoogleTTS` hook instead of `useSpeechSynthesis`
-- Add `VoiceSelector` component in the header between close button and AI menu
-- Pass selected voice to the TTS hook
-- Show loading indicator while audio is being generated
-- Use real audio duration from the generated audio instead of estimates
-- Maintain backward compatibility with browser speech as fallback
-
-### Files to Create
-
-1. `supabase/functions/google-tts/index.ts` - Edge function for Google Cloud TTS API calls
-2. `src/hooks/useGoogleTTS.ts` - React hook for TTS audio generation and playback
-3. `src/hooks/useVoicePreference.ts` - React hook for persisting voice preference
-4. `src/components/VoiceSelector.tsx` - Voice selection dropdown component
-
-### Files to Modify
-
-1. `supabase/config.toml` - Add google-tts function configuration
-2. `src/components/DailyDownloadPlayer.tsx` - Integrate voice selector and new TTS hook
+---
 
 ### Technical Details
 
-**Edge Function - Text Chunking:**
-Google TTS has a 5000 byte limit per request. For longer transcripts:
-- Split text at sentence boundaries (periods, question marks)
-- Make multiple API calls for each chunk
-- Concatenate the base64 audio responses
-- Return combined audio
+**New AIBadge Component:**
+```tsx
+// Gradient: purple → blue (AI visual language)
+// Icon: Sparkles from lucide-react
+// Animation: subtle shimmer effect
+// Sizes: sm (tooltip), md (headers)
+```
 
-**Audio Caching Strategy:**
-- Cache key: `${topicId}-${voiceId}`
-- Store Blob URLs in React state
-- Clear cache when component unmounts
-- Regenerate audio if voice changes
+**CSS Animation:**
+```css
+@keyframes ai-shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+```
 
-**Fallback Behavior:**
-- If edge function fails (network error, API error), show toast notification
-- Automatically fall back to browser speech synthesis (`useSpeechSynthesis`)
-- Voice preference still displayed even in fallback mode
+**Styling:**
+- Gradient: `from-violet-500 via-primary to-cyan-500`
+- Text: White for contrast
+- Rounded pill shape
+- Small Sparkles icon before text
 
-**Playback Rate Handling:**
-- Store user's preferred playback rate
-- Apply rate to HTML5 Audio element
-- Available rates: 1x, 1.25x, 1.5x, 1.75x, 2x
+---
 
-### Considerations
+### Files to Create/Modify
 
-- **Latency**: First playback will have a 1-3 second delay while audio generates
-- **API Costs**: Google Cloud TTS pricing is ~$4 per 1 million characters for Neural2 voices. Typical transcripts are 5,000-10,000 characters each
-- **Text Limits**: Transcripts over 5000 bytes will be chunked and processed in multiple API calls
+| File | Change |
+|------|--------|
+| `src/components/AIBadge.tsx` | New reusable component |
+| `src/index.css` | Add shimmer animation |
+| `src/components/DailyDownloadCard.tsx` | Use AIBadge |
+| `src/components/TopicSelectionSheet.tsx` | Use AIBadge |
+| `src/components/DailyDownloadPlayer.tsx` | Use AIBadge |
+| `src/components/DailyDownloadFAB.tsx` | Use AIBadge |
 
