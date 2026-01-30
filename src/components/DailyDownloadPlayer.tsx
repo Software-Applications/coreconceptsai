@@ -607,12 +607,12 @@ export const DailyDownloadPlayer = ({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { lightTap(); cyclePlaybackRate(); }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 hover:bg-muted transition-colors text-xs font-medium text-foreground"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted transition-colors text-[10px] font-medium text-foreground"
                 >
                   {playbackRate}x
                 </button>
                 
-                <div className="w-px h-4 bg-border/50" />
+                <div className="w-px h-3 bg-border/50" />
                 
                 <VoiceSelector
                   selectedVoiceId={voiceId}
