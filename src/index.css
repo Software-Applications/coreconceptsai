@@ -238,14 +238,14 @@ button:active {
   }
 }
 
-/* Center Sonner toasts within the mobile viewport */
+/* Position Sonner toasts at top of mobile viewport */
 [data-sonner-toaster] {
   position: absolute !important;
-  top: 50% !important;
+  top: 4rem !important;
   left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: calc(100% - 2rem) !important;
-  max-width: 350px !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  max-width: 280px !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {

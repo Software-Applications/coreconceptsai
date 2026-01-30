@@ -37,29 +37,29 @@ export const GeneratingProgressToast = () => {
   }, []);
 
   return (
-    <div className="flex flex-col gap-2.5 w-full min-w-[280px]">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5 min-w-[200px]">
+      <div className="flex items-center gap-1.5">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         >
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
         </motion.div>
         <AnimatePresence mode="wait">
           <motion.span
             key={messageIndex}
-            initial={{ opacity: 0, y: 4 }}
+            initial={{ opacity: 0, y: 2 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="font-medium text-sm text-foreground"
+            exit={{ opacity: 0, y: -2 }}
+            transition={{ duration: 0.15 }}
+            className="font-medium text-xs text-foreground"
           >
             {loadingMessages[messageIndex]}
           </motion.span>
         </AnimatePresence>
       </div>
       
-      <Progress value={progress} className="h-1" />
+      <Progress value={progress} className="h-0.5" />
     </div>
   );
 };
