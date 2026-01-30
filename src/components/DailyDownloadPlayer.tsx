@@ -612,6 +612,8 @@ export const DailyDownloadPlayer = ({
                   {playbackRate}x
                 </button>
                 
+                <div className="w-px h-4 bg-border/50" />
+                
                 <VoiceSelector
                   selectedVoiceId={voiceId}
                   onVoiceChange={handleVoiceChange}
