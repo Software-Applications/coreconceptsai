@@ -1,44 +1,22 @@
 
 
-## Update Generating Overlay Copy
+## Remove AI Badge Animation
+
+### Current State
+The AI badge has an animated shimmer effect that moves the gradient background from right to left. The gradient currently spans from `violet-500` → `primary` (blue) → `cyan-500`.
 
 ### Changes Required
 
-**File: `src/components/GeneratingOverlay.tsx`**
+**File: `src/components/AIBadge.tsx`**
 
-1. **Update the rotating sub-copy messages** (lines 5-9):
-   - Replace current messages with:
-     - "Analyzing transcript for key academic terms..."
-     - "Optimizing narration pace for complex topics..."
-     - "Finalizing high-fidelity audio output..."
+1. **Remove the shimmer animation** (line 25):
+   - Remove `bg-[length:200%_100%]` (oversized background for animation)
+   - Remove `animate-ai-shimmer` (the animation class)
 
-2. **Change rotation interval** (line 11):
-   - Change `ROTATION_INTERVAL` from `3000` (3 seconds) to `2000` (2 seconds)
+2. **Update gradient to static purple/violet** (line 24):
+   - Change from: `from-violet-500 via-primary to-cyan-500`
+   - Change to: `from-violet-500 to-purple-600` (static violet-to-purple gradient)
 
-3. **Update the primary title** (lines 54-63):
-   - Change the rotating message area to be the sub-copy (smaller text)
-   - Add a static primary title: "Finalizing Audio Brief"
-
-4. **Swap the layout structure** (lines 52-69):
-   - The primary title "Finalizing Audio Brief" should be the larger, static heading
-   - The rotating messages become the smaller sub-copy below
-
-### Updated Structure
-```text
-+---------------------------+
-|                           |
-|      [✨ animated icon]   |
-|                           |
-|   Finalizing Audio Brief  |  <-- Primary title (static, larger)
-|                           |
-|   Analyzing transcript... |  <-- Sub-copy (rotating every 2s, smaller)
-|                           |
-+---------------------------+
-```
-
-### Code Changes Summary
-- `LOADING_MESSAGES` array: 3 new messages
-- `ROTATION_INTERVAL`: 3000 → 2000
-- Primary title: New static "Finalizing Audio Brief" heading
-- Sub-copy: Rotating messages moved to smaller text position
+### Result
+The badge will display a clean, static purple/violet gradient without any moving animation, while keeping the sparkles icon and pill shape.
 
