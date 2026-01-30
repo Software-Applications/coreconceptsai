@@ -107,18 +107,6 @@ const Index = () => {
   
   // Set default chapter when subject changes
   useEffect(() => {
-    if (subjectChapters.length > 0 && !selectedChapter) {
-      setSelectedChapter(subjectChapters[0]);
-    }
-  }, [selectedSubject?.id, subjectChapters, selectedChapter]);
-  
-  // Auto-expand pinned cards when cards are added
-  useEffect(() => {
-    setIsPinnedCardsOpen(subjectPinnedCards.length > 0);
-  }, [subjectPinnedCards.length]);
-  
-  // Set default chapter when subject changes
-  useEffect(() => {
     if (subjectChapters.length > 0) {
       setSelectedChapter(subjectChapters[0]);
     }
