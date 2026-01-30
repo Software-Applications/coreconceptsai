@@ -210,9 +210,8 @@ export const TopicSelectionSheet = ({
         onClick={onClose}
       />
 
-      {/* Sheet */}
       <motion.div
-        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90%] overflow-hidden"
+        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90%] overflow-hidden flex flex-col"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -278,7 +277,7 @@ export const TopicSelectionSheet = ({
         {/* Scrollable content */}
         <div
           ref={scrollContainerRef}
-          className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-140px)] scrollbar-none overscroll-contain cursor-grab"
+          className="px-5 pb-safe overflow-y-auto flex-1 min-h-0 scrollbar-none overscroll-contain cursor-grab"
           style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
           onMouseDown={handleScrollMouseDown}
           onMouseMove={handleScrollMouseMove}
