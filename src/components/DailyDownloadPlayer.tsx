@@ -234,16 +234,18 @@ export const DailyDownloadPlayer = ({
     return !hasFlashSummary || !hasTranscript;
   }, [topic]);
 
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
+  const generatingToastId = useRef<string | null>(null);
 
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
     if (isOpen && topic && needsAIContent && !isGenerating && !generateContent.isSuccess) {
       console.log('Auto-generating AI content for topic:', topic.title);
-      toast({
+      const { id } = toast({
         title: "✨ Generating AI Content",
-        description: `Creating personalized transcript and flash summary for "${topic.title}"...`,
+        description: `Creating personalized explanation for "${topic.title}"...`,
       });
+      generatingToastId.current = id;
       generateContent.mutate({
         topicId: topic.id,
         topicTitle: topic.title,
@@ -252,6 +254,29 @@ export const DailyDownloadPlayer = ({
       });
     }
   }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName, toast]);
+
+  // Dismiss toast when generation completes or fails
+  useEffect(() => {
+    if (generatingToastId.current && (generateContent.isSuccess || generateContent.isError)) {
+      dismiss(generatingToastId.current);
+      generatingToastId.current = null;
+      
+      if (generateContent.isSuccess) {
+        toast({
+          title: "✅ Content Ready",
+          description: "Your personalized explanation is ready!",
+          duration: 2000,
+        });
+      } else if (generateContent.isError) {
+        toast({
+          title: "⚠️ Generation Issue",
+          description: "Using fallback content. Try again later.",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
+    }
+  }, [generateContent.isSuccess, generateContent.isError, dismiss, toast]);
 
   // Reset state when topic changes
   useEffect(() => {
