@@ -127,27 +127,27 @@ export const TopicSelectionSheet = ({
     }
   }, [isOpen]);
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="absolute inset-0 bg-black/50 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
+  if (!isOpen) return null;
 
-          {/* Sheet */}
-          <motion.div
-            className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90%] overflow-hidden"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={springTransition}
-          >
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/50 z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[90%] overflow-hidden"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={springTransition}
+      >
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
@@ -290,11 +290,9 @@ export const TopicSelectionSheet = ({
                     </motion.div>
                   );
                 })}
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
+    </>
   );
 };

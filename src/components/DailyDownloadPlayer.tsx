@@ -385,18 +385,16 @@ export const DailyDownloadPlayer = ({
       delay: i * 0.02
     })), []);
 
-  if (!topic) return null;
+  if (!topic || !isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="absolute inset-0 z-50 bg-background flex flex-col"
-          initial={{ opacity: 0, y: '100%' }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: '100%' }}
-          transition={springTransition}
-        >
+    <motion.div
+      className="absolute inset-0 z-50 bg-background flex flex-col"
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={springTransition}
+    >
           {/* Header */}
           <header className="flex items-center justify-between p-4 pt-14 sm:pt-14">
             <button
@@ -861,11 +859,9 @@ export const DailyDownloadPlayer = ({
                     onPin={handlePinFlashCard}
                   />
                 </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
-  );
+  </motion.div>
+);
 };

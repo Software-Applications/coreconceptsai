@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -412,58 +413,82 @@ const Index = () => {
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <VideoPlayerSheet 
-        video={selectedVideo}
-        videos={subjectVideos}
-        chapter={selectedChapter}
-        isOpen={!!selectedVideo}
-        onClose={() => setSelectedVideo(null)}
-        onVideoSelect={setSelectedVideo}
-        onVideoWatched={markAsWatched}
-      />
+      <AnimatePresence mode="wait">
+        {selectedVideo && (
+          <VideoPlayerSheet 
+            video={selectedVideo}
+            videos={subjectVideos}
+            chapter={selectedChapter}
+            isOpen={!!selectedVideo}
+            onClose={() => setSelectedVideo(null)}
+            onVideoSelect={setSelectedVideo}
+            onVideoWatched={markAsWatched}
+          />
+        )}
+      </AnimatePresence>
 
-      <PracticeQuizSheet 
-        quiz={selectedQuiz}
-        chapter={selectedChapter}
-        isOpen={!!selectedQuiz}
-        onClose={() => setSelectedQuiz(null)}
-      />
+      <AnimatePresence mode="wait">
+        {selectedQuiz && (
+          <PracticeQuizSheet 
+            quiz={selectedQuiz}
+            chapter={selectedChapter}
+            isOpen={!!selectedQuiz}
+            onClose={() => setSelectedQuiz(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Daily Download Components */}
-      <TopicSelectionSheet
-        isOpen={showTopicSelection}
-        onClose={() => setShowTopicSelection(false)}
-        topics={subjectTopics}
-        onSelectTopic={handleSelectTopic}
-        isListened={isListened}
-        hasProgress={hasAudioProgress}
-      />
+      <AnimatePresence mode="wait">
+        {showTopicSelection && (
+          <TopicSelectionSheet
+            isOpen={showTopicSelection}
+            onClose={() => setShowTopicSelection(false)}
+            topics={subjectTopics}
+            onSelectTopic={handleSelectTopic}
+            isListened={isListened}
+            hasProgress={hasAudioProgress}
+          />
+        )}
+      </AnimatePresence>
 
-      <DailyDownloadPlayer
-        topic={selectedTopic}
-        subjectName={getTopicSubjectName()}
-        isOpen={!!selectedTopic}
-        onClose={() => setSelectedTopic(null)}
-        onPinCard={handlePinCard}
-        onTopicListened={markAsListened}
-      />
+      <AnimatePresence mode="wait">
+        {selectedTopic && (
+          <DailyDownloadPlayer
+            topic={selectedTopic}
+            subjectName={getTopicSubjectName()}
+            isOpen={!!selectedTopic}
+            onClose={() => setSelectedTopic(null)}
+            onPinCard={handlePinCard}
+            onTopicListened={markAsListened}
+          />
+        )}
+      </AnimatePresence>
 
-      <ReviewBoard
-        isOpen={showReviewBoard}
-        onClose={() => setShowReviewBoard(false)}
-        pinnedCards={pinnedCards}
-        onUnpinCard={unpinCard}
-        onClearAll={clearAllPinned}
-      />
+      <AnimatePresence mode="wait">
+        {showReviewBoard && (
+          <ReviewBoard
+            isOpen={showReviewBoard}
+            onClose={() => setShowReviewBoard(false)}
+            pinnedCards={pinnedCards}
+            onUnpinCard={unpinCard}
+            onClearAll={clearAllPinned}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Expanded Pinned Card Modal */}
-      <ExpandedCardModal
-        card={expandedPinnedCard}
-        cards={pinnedCards}
-        onClose={() => setExpandedPinnedCard(null)}
-        onNavigate={setExpandedPinnedCard}
-        onRemove={unpinCard}
-      />
+      <AnimatePresence mode="wait">
+        {expandedPinnedCard && (
+          <ExpandedCardModal
+            card={expandedPinnedCard}
+            cards={pinnedCards}
+            onClose={() => setExpandedPinnedCard(null)}
+            onNavigate={setExpandedPinnedCard}
+            onRemove={unpinCard}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
