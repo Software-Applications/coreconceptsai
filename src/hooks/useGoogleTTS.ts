@@ -458,6 +458,11 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
 
       audio.addEventListener('error', (e) => {
         if (sessionIdRef.current !== currentSessionId) return;
+        // Ignore errors from empty/cleared sources
+        const audioEl = e.target as HTMLAudioElement;
+        if (!audioEl.src || audioEl.src === '' || audioEl.src === window.location.href) {
+          return;
+        }
         console.error('Audio playback error:', e);
         setError('Audio playback failed');
         setIsPlaying(false);
@@ -550,6 +555,11 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           
           audio.addEventListener('error', (e) => {
             if (sessionIdRef.current !== currentSessionId) return;
+            // Ignore errors from empty/cleared sources
+            const audioEl = e.target as HTMLAudioElement;
+            if (!audioEl.src || audioEl.src === '' || audioEl.src === window.location.href) {
+              return;
+            }
             console.error('Audio playback error:', e);
             setError('Audio playback failed');
             setIsPlaying(false);
