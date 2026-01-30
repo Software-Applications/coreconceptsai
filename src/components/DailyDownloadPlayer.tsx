@@ -244,7 +244,7 @@ export const DailyDownloadPlayer = ({
       
       // Show custom progress toast using sonner
       generatingToastId.current = sonnerToast.custom(
-        () => <GeneratingProgressToast topicTitle={topic.title} />,
+        () => <GeneratingProgressToast />,
         { duration: Infinity }
       );
       
