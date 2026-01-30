@@ -1,13 +1,13 @@
 import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
-import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Search } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 import type { Chapter } from '@/hooks/useChapters';
 import { useChapters } from '@/hooks/useChapters';
 import { AIBadge } from './AIBadge';
-import { HeroIntro, ChapterAccordion } from './topic-selection';
+import { HeroIntro, ChapterAccordion, TopicCard } from './topic-selection';
 
 const HERO_SEEN_KEY = 'core-concepts-hero-seen';
 
@@ -30,6 +30,7 @@ export const TopicSelectionSheet = ({
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged } = useHaptics();
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
   const [showHero, setShowHero] = useState(() => {
     if (typeof window === 'undefined') return true;
     return !localStorage.getItem(HERO_SEEN_KEY);
@@ -38,6 +39,7 @@ export const TopicSelectionSheet = ({
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chaptersStartRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const hasAutoExpandedRef = useRef(false);
   const dragState = useRef({
     isDown: false,
@@ -116,11 +118,21 @@ export const TopicSelectionSheet = ({
     setShowHero(false);
   };
 
+  // Filter topics by search query
+  const filteredTopics = useMemo(() => {
+    if (!searchQuery.trim()) return topics;
+    const query = searchQuery.toLowerCase().trim();
+    return topics.filter(topic => 
+      topic.title.toLowerCase().includes(query) ||
+      topic.description.toLowerCase().includes(query)
+    );
+  }, [topics, searchQuery]);
+
   const groupedTopics = useMemo(() => {
     const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
     const chapterMap = new Map<string, DailyDownloadTopic[]>();
 
-    topics.forEach(topic => {
+    filteredTopics.forEach(topic => {
       if (!chapterMap.has(topic.chapterId)) {
         chapterMap.set(topic.chapterId, []);
       }
@@ -137,14 +149,22 @@ export const TopicSelectionSheet = ({
     groups.sort((a, b) => a.chapter.chapter_number - b.chapter.chapter_number);
 
     return groups;
-  }, [topics, allChapters]);
+  }, [filteredTopics, allChapters]);
 
-  // Calculate progress stats
+  // Calculate progress stats (from all topics, not filtered)
   const progressStats = useMemo(() => {
     const total = topics.length;
     const listened = topics.filter(t => isListened?.(t.id)).length;
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
+
+  // When searching, expand all matching chapters
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const matchingChapterIds = new Set(filteredTopics.map(t => t.chapterId));
+      setExpandedChapters(matchingChapterIds);
+    }
+  }, [searchQuery, filteredTopics]);
 
   // Auto-expand first chapter with unlistened topics on open
   useEffect(() => {
@@ -165,6 +185,7 @@ export const TopicSelectionSheet = ({
     if (!isOpen) {
       setExpandedChapters(new Set());
       hasAutoExpandedRef.current = false;
+      setSearchQuery('');
     }
   }, [isOpen]);
 
@@ -223,10 +244,33 @@ export const TopicSelectionSheet = ({
           </button>
         </div>
 
+        {/* Search input */}
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-muted/50 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted transition-colors"
+              >
+                <X className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Scrollable content */}
         <div
           ref={scrollContainerRef}
-          className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-80px)] scrollbar-none overscroll-contain cursor-grab"
+          className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-140px)] scrollbar-none overscroll-contain cursor-grab"
           style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
           onMouseDown={handleScrollMouseDown}
           onMouseMove={handleScrollMouseMove}
@@ -234,31 +278,61 @@ export const TopicSelectionSheet = ({
           onMouseLeave={endDrag}
           onDragStart={(e) => e.preventDefault()}
         >
-          <HeroIntro 
-            isVisible={showHero} 
-            onStartExploring={handleStartExploring} 
-            onDismiss={handleDismissHero} 
-          />
+          {!searchQuery && (
+            <HeroIntro 
+              isVisible={showHero} 
+              onStartExploring={handleStartExploring} 
+              onDismiss={handleDismissHero} 
+            />
+          )}
 
           {/* Chapters anchor */}
           <div ref={chaptersStartRef} />
 
-          <div className="space-y-3 pb-6">
-            {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => (
-              <ChapterAccordion
-                key={chapter.id}
-                chapter={chapter}
-                topics={chapterTopics}
-                isExpanded={expandedChapters.has(chapter.id)}
-                listenedCount={chapterTopics.filter(t => isListened?.(t.id)).length}
-                groupIndex={groupIndex}
-                onToggle={() => toggleChapter(chapter.id)}
-                onSelectTopic={handleSelectTopic}
-                isListened={isListened}
-                hasProgress={hasProgress}
-              />
-            ))}
-          </div>
+          {/* Search results or grouped chapters */}
+          <AnimatePresence mode="wait">
+            {searchQuery && filteredTopics.length === 0 ? (
+              <motion.div
+                key="no-results"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex flex-col items-center justify-center py-12 text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                  <Search className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No topics found</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Try a different search term
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-3 pb-6"
+              >
+                {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => (
+                  <ChapterAccordion
+                    key={chapter.id}
+                    chapter={chapter}
+                    topics={chapterTopics}
+                    isExpanded={expandedChapters.has(chapter.id)}
+                    listenedCount={chapterTopics.filter(t => isListened?.(t.id)).length}
+                    groupIndex={groupIndex}
+                    onToggle={() => toggleChapter(chapter.id)}
+                    onSelectTopic={handleSelectTopic}
+                    isListened={isListened}
+                    hasProgress={hasProgress}
+                    highlightQuery={searchQuery}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </>

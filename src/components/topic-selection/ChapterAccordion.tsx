@@ -5,7 +5,29 @@ import type { Chapter } from '@/hooks/useChapters';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 import { TopicCard } from './TopicCard';
 
-interface ChapterAccordionProps {
+// Helper to highlight matching text
+const HighlightText = ({ text, query }: { text: string; query: string }) => {
+  if (!query.trim()) return <>{text}</>;
+  
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
+export interface ChapterAccordionProps {
   chapter: Chapter;
   topics: DailyDownloadTopic[];
   isExpanded: boolean;
@@ -15,6 +37,7 @@ interface ChapterAccordionProps {
   onSelectTopic: (topic: DailyDownloadTopic) => void;
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
+  highlightQuery?: string;
 }
 
 export const ChapterAccordion = forwardRef<HTMLDivElement, ChapterAccordionProps>(
@@ -27,7 +50,8 @@ export const ChapterAccordion = forwardRef<HTMLDivElement, ChapterAccordionProps
     onToggle, 
     onSelectTopic,
     isListened,
-    hasProgress 
+    hasProgress,
+    highlightQuery = ''
   }, ref) => {
     return (
       <motion.div
@@ -86,6 +110,7 @@ export const ChapterAccordion = forwardRef<HTMLDivElement, ChapterAccordionProps
                       hasResume={hasResume}
                       index={index}
                       onSelect={() => onSelectTopic(topic)}
+                      highlightQuery={highlightQuery}
                     />
                   );
                 })}

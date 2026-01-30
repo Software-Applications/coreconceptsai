@@ -3,16 +3,39 @@ import { motion } from 'framer-motion';
 import { Clock, Sparkles, CheckCircle, RotateCcw } from 'lucide-react';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
+// Helper to highlight matching text
+const HighlightText = ({ text, query }: { text: string; query: string }) => {
+  if (!query.trim()) return <>{text}</>;
+  
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
 interface TopicCardProps {
   topic: DailyDownloadTopic;
   listened: boolean;
   hasResume: boolean;
   index: number;
   onSelect: () => void;
+  highlightQuery?: string;
 }
 
 export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
-  ({ topic, listened, hasResume, index, onSelect }, ref) => {
+  ({ topic, listened, hasResume, index, onSelect, highlightQuery = '' }, ref) => {
     return (
       <motion.button
         ref={ref}
@@ -43,7 +66,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-foreground text-sm truncate">
-                {topic.title}
+                <HighlightText text={topic.title} query={highlightQuery} />
               </h3>
               {listened && (
                 <span className="text-xs text-primary font-medium">✓</span>
@@ -53,7 +76,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
               )}
             </div>
             <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
-              {topic.description}
+              <HighlightText text={topic.description} query={highlightQuery} />
             </p>
           </div>
           <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
