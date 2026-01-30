@@ -33,6 +33,9 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   // Store position to resume from after voice change
   const savedPositionRef = useRef<{ charIndex: number; wasPlaying: boolean } | null>(null);
 
+  // Track whether a pause was initiated by our UI (vs. buffering/interruption)
+  const intentionalPauseRef = useRef(false);
+
   // Fallback to browser speech synthesis
   const speechSynthesis = useSpeechSynthesis({
     onEnd: options.onEnd,
@@ -137,6 +140,14 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       const audio = new Audio(nextBlobUrl);
       audioRef.current = audio;
       audio.playbackRate = playbackRateRef.current;
+
+      audio.addEventListener('playing', () => {
+        // When playback resumes/starts, keep state in sync
+        if (audioRef.current !== audio) return;
+        intentionalPauseRef.current = false;
+        setIsPlaying(true);
+        setIsPaused(false);
+      });
       
       audio.addEventListener('ended', () => {
         if (currentChunkIndexRef.current < queue.length - 1) {
@@ -151,10 +162,12 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       
       // Add pause listener to detect unexpected stops
       audio.addEventListener('pause', () => {
-        // If audio paused but we didn't intentionally pause, sync state
-        if (!audio.ended && audioRef.current === audio) {
-          // Only reset if we think we're still playing
-          // (intentional pauses are handled via the pause() function)
+        if (audioRef.current !== audio) return;
+        if (intentionalPauseRef.current) return;
+        if (!audio.ended && audio.currentTime < audio.duration - 0.1) {
+          console.log('[TTS] Audio paused unexpectedly at', audio.currentTime);
+          setIsPlaying(false);
+          setIsPaused(false);
         }
       });
       
@@ -179,6 +192,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         .then(() => {
           // Verify audio is actually playing
           if (!audio.paused) {
+            intentionalPauseRef.current = false;
             setIsPlaying(true);
             setIsPaused(false);
           }
@@ -296,6 +310,9 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
     sessionIdRef.current += 1;
     const currentSessionId = sessionIdRef.current;
     console.log(`[TTS] Starting session ${currentSessionId}`);
+
+    // New session => not an intentional pause
+    intentionalPauseRef.current = false;
     
     // Stop current playback
     if (audioRef.current) {
@@ -338,6 +355,14 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       audioRef.current = audio;
       audio.playbackRate = playbackRateRef.current;
 
+      audio.addEventListener('playing', () => {
+        if (sessionIdRef.current !== currentSessionId) return;
+        if (audioRef.current !== audio) return;
+        intentionalPauseRef.current = false;
+        setIsPlaying(true);
+        setIsPaused(false);
+      });
+
       audio.addEventListener('loadedmetadata', () => {
         if (sessionIdRef.current !== currentSessionId) return;
         const actualDuration = audio.duration * 1000;
@@ -374,10 +399,13 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       // Add pause listener to detect unexpected stops (cached audio)
       audio.addEventListener('pause', () => {
         if (sessionIdRef.current !== currentSessionId) return;
+        if (intentionalPauseRef.current) return;
         // If audio stopped but not at the end, it may have been interrupted
         if (!audio.ended && audio.currentTime < audio.duration - 0.1) {
           // Only log, don't force state change - intentional pauses are handled separately
           console.log('[TTS] Audio paused unexpectedly at', audio.currentTime);
+          setIsPlaying(false);
+          setIsPaused(false);
         }
       });
 
@@ -401,6 +429,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         }
         // Verify audio is actually playing before setting state
         if (!audio.paused) {
+          intentionalPauseRef.current = false;
           setIsPlaying(true);
           setIsPaused(false);
         } else {
@@ -441,6 +470,14 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           const audio = new Audio(blobUrl);
           audioRef.current = audio;
           audio.playbackRate = playbackRateRef.current;
+
+          audio.addEventListener('playing', () => {
+            if (sessionIdRef.current !== currentSessionId) return;
+            if (audioRef.current !== audio) return;
+            intentionalPauseRef.current = false;
+            setIsPlaying(true);
+            setIsPaused(false);
+          });
           
           audio.addEventListener('loadedmetadata', () => {
             if (sessionIdRef.current !== currentSessionId) return;
@@ -481,8 +518,11 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
           // Add pause listener for streaming audio
           audio.addEventListener('pause', () => {
             if (sessionIdRef.current !== currentSessionId) return;
+            if (intentionalPauseRef.current) return;
             if (!audio.ended && audio.currentTime < audio.duration - 0.1) {
               console.log('[TTS] Streaming audio paused at', audio.currentTime);
+              setIsPlaying(false);
+              setIsPaused(false);
             }
           });
           
@@ -505,6 +545,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
               }
               // Verify audio is actually playing
               if (!audio.paused) {
+                intentionalPauseRef.current = false;
                 setIsPlaying(true);
                 setIsPaused(false);
               } else {
@@ -557,6 +598,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   }, [generateAudioStreaming, getCacheKey, playNextChunk]);
 
   const pause = useCallback(() => {
+    intentionalPauseRef.current = true;
     if (useFallbackRef.current) {
       speechSynthesisRef.current.pause();
     } else if (audioRef.current) {
@@ -569,6 +611,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   const resume = useCallback(async () => {
     if (useFallbackRef.current) {
       speechSynthesisRef.current.resume();
+      intentionalPauseRef.current = false;
       setIsPlaying(true);
       setIsPaused(false);
     } else if (audioRef.current) {
@@ -576,6 +619,7 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
         await audioRef.current.play();
         // Verify audio is actually playing after resume
         if (!audioRef.current.paused) {
+          intentionalPauseRef.current = false;
           setIsPlaying(true);
           setIsPaused(false);
         } else {

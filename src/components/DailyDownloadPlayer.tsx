@@ -119,32 +119,14 @@ export const DailyDownloadPlayer = ({
     cyclePlaybackRate,
     seekToChar,
     clearCache,
-    getActualPlayingState
   } = useGoogleTTS({
     onEnd: handleSpeechEnd
   });
 
-  // Fallback state sync - verify waveform animation matches actual playback
-  // This catches edge cases where isPlaying state becomes stale
-  const [actuallyPlaying, setActuallyPlaying] = useState(false);
-  
-  useEffect(() => {
-    if (!hasStarted) {
-      setActuallyPlaying(false);
-      return;
-    }
-    
-    // Check every 500ms to sync state
-    const interval = setInterval(() => {
-      const actualState = getActualPlayingState();
-      setActuallyPlaying(actualState);
-    }, 500);
-    
-    return () => clearInterval(interval);
-  }, [hasStarted, getActualPlayingState]);
-  
-  // Use the combined state for waveform animation
-  const waveformShouldAnimate = isPlaying && actuallyPlaying;
+  // Waveform animation should follow the hook's playing state.
+  // The hook now syncs isPlaying via audio 'playing'/'pause' events,
+  // so this stays accurate without extra polling.
+  const waveformShouldAnimate = isPlaying;
 
   // Generate transcript for current topic
   const transcript = useMemo(() => {
