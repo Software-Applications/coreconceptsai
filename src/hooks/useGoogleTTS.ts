@@ -82,6 +82,14 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
   // Clear cached audio for a specific voice or all
   const clearCache = useCallback((voiceId?: string) => {
     console.log(`[TTS] Clearing cache${voiceId ? ` for voice: ${voiceId}` : ' (all voices)'}`);
+    
+    // Stop current audio to prevent it from trying to use revoked blob URLs
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = ''; // Clear source before revoking
+      audioRef.current = null;
+    }
+    
     if (voiceId) {
       // Clear only entries for specific voice
       audioCache.current.forEach((entry, key) => {
@@ -97,6 +105,13 @@ export const useGoogleTTS = (options: UseGoogleTTSOptions = {}) => {
       });
       audioCache.current.clear();
     }
+    
+    // Reset playback state
+    setIsPlaying(false);
+    setIsPaused(false);
+    setProgress(0);
+    setCurrentTime(0);
+    
     console.log(`[TTS] Cache size after clear: ${audioCache.current.size}`);
   }, []);
 
