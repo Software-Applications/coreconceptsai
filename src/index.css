@@ -262,3 +262,14 @@ button:active {
   background: hsl(var(--muted)) !important;
   color: hsl(var(--foreground)) !important;
 }
+
+/* Error/destructive toast close button - red tinted */
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-close-button] {
+  background: hsl(0 84% 60% / 0.15) !important;
+  color: hsl(0 84% 60% / 0.8) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-close-button]:hover {
+  background: hsl(0 84% 60% / 0.25) !important;
+  color: hsl(0 84% 60%) !important;
+}
