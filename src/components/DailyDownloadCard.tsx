@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Headphones } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
+import { AIBadge } from './AIBadge';
 
 interface DailyDownloadCardProps {
   onClick: () => void;
@@ -44,8 +45,8 @@ export const DailyDownloadCard = forwardRef<HTMLDivElement, DailyDownloadCardPro
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">
-                Core Concepts <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary border border-primary/20">AI</span>
+              <h3 className="font-semibold text-foreground flex items-center gap-1.5">
+                Core Concepts <AIBadge size="sm" />
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Simplest AI explanations of tough topics to help you learn faster.

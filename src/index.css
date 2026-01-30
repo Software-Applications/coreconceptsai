@@ -101,6 +101,16 @@ All colors MUST be HSL.
   }
 }
 
+/* AI Badge shimmer animation */
+@keyframes ai-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
