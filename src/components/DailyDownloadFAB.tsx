@@ -78,7 +78,9 @@ export const DailyDownloadFAB = ({ onClick, unlistenedCount = 0 }: DailyDownload
           </motion.button>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-[200px] text-center">
-          <p className="font-medium">Core Concepts AI</p>
+          <p className="font-medium">
+            Core Concepts <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/20 ml-0.5">AI</span>
+          </p>
           <p className="text-xs text-muted-foreground">Simplest AI explanations of tough topics</p>
         </TooltipContent>
       </Tooltip>

@@ -156,7 +156,9 @@ export const TopicSelectionSheet = ({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-4">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Core Concepts AI</h2>
+                <h2 className="text-xl font-bold text-foreground">
+                  Core Concepts <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-primary/15 text-primary border border-primary/20">AI</span>
+                </h2>
                 <p className="text-sm text-muted-foreground">Simplest AI explanations of tough topics</p>
               </div>
               <button
