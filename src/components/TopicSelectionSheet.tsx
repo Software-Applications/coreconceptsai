@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
+import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 import type { Chapter } from '@/hooks/useChapters';
 import { useChapters } from '@/hooks/useChapters';
 import { AIBadge } from './AIBadge';
-import { HeroIntro, ChapterAccordion, TopicCard } from './topic-selection';
+import { HeroIntro, ChapterAccordion, SearchResultsSection } from './topic-selection';
 
 const HERO_SEEN_KEY = 'core-concepts-hero-seen';
 
@@ -118,15 +119,22 @@ export const TopicSelectionSheet = ({
     setShowHero(false);
   };
 
-  // Filter topics by search query
-  const filteredTopics = useMemo(() => {
-    if (!searchQuery.trim()) return topics;
-    const query = searchQuery.toLowerCase().trim();
-    return topics.filter(topic => 
-      topic.title.toLowerCase().includes(query) ||
-      topic.description.toLowerCase().includes(query)
-    );
+  // Use the smart search engine for prioritized results
+  const searchResults: SearchResults = useMemo(() => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      return { directHits: [], relatedTopics: [], query: '' };
+    }
+    return searchTopics(searchQuery, topics);
   }, [topics, searchQuery]);
+
+  const isSearching = searchQuery.trim().length >= 2;
+  const hasSearchResults = hasResults(searchResults);
+
+  // For non-search mode, use all topics
+  const filteredTopics = useMemo(() => {
+    if (isSearching) return topics; // Not used in search mode
+    return topics;
+  }, [topics, isSearching]);
 
   const groupedTopics = useMemo(() => {
     const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
@@ -158,13 +166,13 @@ export const TopicSelectionSheet = ({
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
 
-  // When searching, expand all matching chapters
+  // When searching in non-smart mode, expand all matching chapters
   useEffect(() => {
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() && !isSearching) {
       const matchingChapterIds = new Set(filteredTopics.map(t => t.chapterId));
       setExpandedChapters(matchingChapterIds);
     }
-  }, [searchQuery, filteredTopics]);
+  }, [searchQuery, filteredTopics, isSearching]);
 
   // Auto-expand first chapter with unlistened topics on open
   useEffect(() => {
@@ -278,7 +286,7 @@ export const TopicSelectionSheet = ({
           onMouseLeave={endDrag}
           onDragStart={(e) => e.preventDefault()}
         >
-          {!searchQuery && (
+          {!isSearching && (
             <HeroIntro 
               isVisible={showHero} 
               onStartExploring={handleStartExploring} 
@@ -291,25 +299,18 @@ export const TopicSelectionSheet = ({
 
           {/* Search results or grouped chapters */}
           <AnimatePresence mode="wait">
-            {searchQuery && filteredTopics.length === 0 ? (
-              <motion.div
-                key="no-results"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex flex-col items-center justify-center py-12 text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                  <Search className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">No topics found</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  Try a different search term
-                </p>
-              </motion.div>
+            {isSearching ? (
+              <SearchResultsSection
+                key="search-results"
+                results={searchResults}
+                onSelectTopic={handleSelectTopic}
+                isListened={isListened}
+                hasProgress={hasProgress}
+                highlightQuery={searchQuery}
+              />
             ) : (
               <motion.div
-                key="results"
+                key="chapters"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
