@@ -1,32 +1,44 @@
 
 
-## Remove Duplicate Generating Toast
+## Update Generating Overlay Copy
 
-### Problem
-Currently, when AI content is being generated, **two** indicators appear simultaneously:
-1. **Top notification** (Sonner toast): "Analyzing key concepts..." with progress bar
-2. **Center overlay** (GeneratingOverlay): "Distilling the essentials for you..." with animated sparkle icon
+### Changes Required
 
-You want to keep only the center overlay and remove the top toast.
+**File: `src/components/GeneratingOverlay.tsx`**
 
-### Solution
-Remove the Sonner toast logic entirely from `DailyDownloadPlayer.tsx`, keeping only the `GeneratingOverlay` component which already handles the generating state beautifully.
+1. **Update the rotating sub-copy messages** (lines 5-9):
+   - Replace current messages with:
+     - "Analyzing transcript for key academic terms..."
+     - "Optimizing narration pace for complex topics..."
+     - "Finalizing high-fidelity audio output..."
 
-### Technical Changes
+2. **Change rotation interval** (line 11):
+   - Change `ROTATION_INTERVAL` from `3000` (3 seconds) to `2000` (2 seconds)
 
-**File: `src/components/DailyDownloadPlayer.tsx`**
+3. **Update the primary title** (lines 54-63):
+   - Change the rotating message area to be the sub-copy (smaller text)
+   - Add a static primary title: "Finalizing Audio Brief"
 
-1. Remove the import for `GeneratingProgressToast`
-2. Remove the `generatingToastId` and `generatingForTopicId` refs
-3. Remove all three `useEffect` hooks that manage the toast lifecycle:
-   - Cleanup on unmount effect
-   - Cleanup when player closes effect  
-   - Auto-generate + toast creation effect (keep the generation trigger, remove toast parts)
-   - Toast dismissal effect on completion
-4. Keep the `<GeneratingOverlay isGenerating={isGenerating} />` component (already in place at line 500)
+4. **Swap the layout structure** (lines 52-69):
+   - The primary title "Finalizing Audio Brief" should be the larger, static heading
+   - The rotating messages become the smaller sub-copy below
 
-### Result
-- Only the elegant center overlay appears during generation
-- No more duplicate/overlapping notifications
-- Cleaner code with less state management
+### Updated Structure
+```text
++---------------------------+
+|                           |
+|      [✨ animated icon]   |
+|                           |
+|   Finalizing Audio Brief  |  <-- Primary title (static, larger)
+|                           |
+|   Analyzing transcript... |  <-- Sub-copy (rotating every 2s, smaller)
+|                           |
++---------------------------+
+```
+
+### Code Changes Summary
+- `LOADING_MESSAGES` array: 3 new messages
+- `ROTATION_INTERVAL`: 3000 → 2000
+- Primary title: New static "Finalizing Audio Brief" heading
+- Sub-copy: Rotating messages moved to smaller text position
 
