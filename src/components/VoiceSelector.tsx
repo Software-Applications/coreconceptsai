@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { Mic, Check } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { VOICE_OPTIONS, type VoiceOption } from '@/hooks/useVoicePreference';
@@ -9,36 +9,41 @@ interface VoiceItemProps {
   onSelect: (voiceId: string) => void;
 }
 
-const VoiceItem = ({ voice, isSelected, onSelect }: VoiceItemProps) => (
-  <button
-    type="button"
-    onMouseDown={(e) => {
-      e.preventDefault();
-      onSelect(voice.id);
-    }}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
-      isSelected
-        ? 'bg-primary/10 text-primary'
-        : 'text-foreground hover:bg-muted'
-    }`}
-  >
-    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
-      isSelected ? 'bg-primary text-primary-foreground' : 'border border-muted-foreground/30'
-    }`}>
-      {isSelected && <Check className="w-2.5 h-2.5" />}
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className={`text-sm font-medium ${
-        isSelected ? 'text-primary' : 'text-foreground'
+const VoiceItem = forwardRef<HTMLButtonElement, VoiceItemProps>(
+  ({ voice, isSelected, onSelect }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onSelect(voice.id);
+      }}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+        isSelected
+          ? 'bg-primary/10 text-primary'
+          : 'text-foreground hover:bg-muted'
+      }`}
+    >
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+        isSelected ? 'bg-primary text-primary-foreground' : 'border border-muted-foreground/30'
       }`}>
-        {voice.name}
-      </p>
-      <p className="text-xs text-muted-foreground truncate">
-        {voice.description}
-      </p>
-    </div>
-  </button>
+        {isSelected && <Check className="w-2.5 h-2.5" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium ${
+          isSelected ? 'text-primary' : 'text-foreground'
+        }`}>
+          {voice.name}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">
+          {voice.description}
+        </p>
+      </div>
+    </button>
+  )
 );
+
+VoiceItem.displayName = 'VoiceItem';
 
 interface VoiceSelectorProps {
   selectedVoiceId: string;
