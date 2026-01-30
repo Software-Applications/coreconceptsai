@@ -32,10 +32,19 @@ export const TopicSelectionSheet = ({
   const { lightTap, selectionChanged } = useHaptics();
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showHero, setShowHero] = useState(() => {
     if (typeof window === 'undefined') return true;
     return !localStorage.getItem(HERO_SEEN_KEY);
   });
+
+  // Debounce search query for performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const { data: allChapters = [] } = useChapters();
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -121,13 +130,13 @@ export const TopicSelectionSheet = ({
 
   // Use the smart search engine for prioritized results
   const searchResults: SearchResults = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+    if (!debouncedQuery.trim() || debouncedQuery.trim().length < 2) {
       return { directHits: [], relatedTopics: [], query: '' };
     }
-    return searchTopics(searchQuery, topics);
-  }, [topics, searchQuery]);
+    return searchTopics(debouncedQuery, topics);
+  }, [topics, debouncedQuery]);
 
-  const isSearching = searchQuery.trim().length >= 2;
+  const isSearching = debouncedQuery.trim().length >= 2;
   const hasSearchResults = hasResults(searchResults);
 
   // For non-search mode, use all topics
