@@ -11,13 +11,6 @@ interface ChapterDropdownProps {
   onSelectChapter: (chapter: Chapter) => void;
 }
 
-const DropdownMenu = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
-  ({ children }, ref) => (
-    <div ref={ref}>{children}</div>
-  )
-);
-DropdownMenu.displayName = 'DropdownMenu';
-
 export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
   ({ chapters, selectedChapter, onSelectChapter }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -68,42 +61,40 @@ export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
           
           <AnimatePresence>
             {isOpen && (
-              <DropdownMenu>
-                <motion.div 
-                  className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden"
-                  variants={dropdownVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <ul className="py-1 max-h-64 overflow-y-auto">
-                    {chapters.map((chapter) => (
-                      <motion.li 
-                        key={chapter.id}
-                        variants={dropdownItemVariants}
+              <motion.div 
+                className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <ul className="py-1 max-h-64 overflow-y-auto">
+                  {chapters.map((chapter) => (
+                    <motion.li 
+                      key={chapter.id}
+                      variants={dropdownItemVariants}
+                    >
+                      <button
+                        onClick={() => handleSelect(chapter)}
+                        className={`w-full px-4 py-3 text-left flex items-center justify-between hover:bg-accent transition-colors ${
+                          selectedChapter.id === chapter.id ? 'bg-accent' : ''
+                        }`}
                       >
-                        <button
-                          onClick={() => handleSelect(chapter)}
-                          className={`w-full px-4 py-3 text-left flex items-center justify-between hover:bg-accent transition-colors ${
-                            selectedChapter.id === chapter.id ? 'bg-accent' : ''
-                          }`}
-                        >
-                          <span className="font-medium text-foreground text-sm">{chapter.title}</span>
-                          {selectedChapter.id === chapter.id && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={springTransition}
-                            >
-                              <Check className="w-4 h-4 text-primary" />
-                            </motion.div>
-                          )}
-                        </button>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </motion.div>
-              </DropdownMenu>
+                        <span className="font-medium text-foreground text-sm">{chapter.title}</span>
+                        {selectedChapter.id === chapter.id && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={springTransition}
+                          >
+                            <Check className="w-4 h-4 text-primary" />
+                          </motion.div>
+                        )}
+                      </button>
+                    </motion.li>
+                  ))}
+                </ul>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
