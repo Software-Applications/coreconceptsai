@@ -14,7 +14,6 @@ import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
 import { GeneratingOverlay } from './GeneratingOverlay';
-import { GeneratingProgressToast } from './GeneratingProgressToast';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to generate mock transcript (moved from dailyDownloadData.ts)
@@ -235,28 +234,8 @@ export const DailyDownloadPlayer = ({
     return !hasFlashSummary || !hasTranscript;
   }, [topic]);
 
-  const generatingToastId = useRef<string | number | null>(null);
+  // Track which topic we're generating for to prevent duplicate requests
   const generatingForTopicId = useRef<string | null>(null);
-
-  // Cleanup toast on unmount or when player closes
-  useEffect(() => {
-    return () => {
-      if (generatingToastId.current) {
-        sonnerToast.dismiss(generatingToastId.current);
-        generatingToastId.current = null;
-      }
-      generatingForTopicId.current = null;
-    };
-  }, []);
-
-  // Cleanup when player closes
-  useEffect(() => {
-    if (!isOpen && generatingToastId.current) {
-      sonnerToast.dismiss(generatingToastId.current);
-      generatingToastId.current = null;
-      generatingForTopicId.current = null;
-    }
-  }, [isOpen]);
 
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
@@ -268,20 +247,8 @@ export const DailyDownloadPlayer = ({
       
       console.log('Auto-generating AI content for topic:', topic.title);
       
-      // Dismiss any existing toast before creating new one
-      if (generatingToastId.current) {
-        sonnerToast.dismiss(generatingToastId.current);
-        generatingToastId.current = null;
-      }
-      
       // Track that we're generating for this topic
       generatingForTopicId.current = topic.id;
-      
-      // Show custom progress toast using sonner
-      generatingToastId.current = sonnerToast.custom(
-        () => <GeneratingProgressToast />,
-        { duration: Infinity }
-      );
       
       generateContent.mutate({
         topicId: topic.id,
@@ -292,22 +259,16 @@ export const DailyDownloadPlayer = ({
     }
   }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName]);
 
-  // Dismiss toast when generation completes or fails - use status for robustness
+  // Show error toast when generation fails
   useEffect(() => {
-    const status = generateContent.status;
-    
-    if (generatingToastId.current && (status === 'success' || status === 'error')) {
-      sonnerToast.dismiss(generatingToastId.current);
-      generatingToastId.current = null;
+    if (generateContent.status === 'error') {
+      sonnerToast.error("Generation Issue", {
+        description: "Using fallback content. Try again later.",
+        duration: 3000,
+      });
       generatingForTopicId.current = null;
-      
-      // Only show error toast, success is indicated by content appearing
-      if (status === 'error') {
-        sonnerToast.error("Generation Issue", {
-          description: "Using fallback content. Try again later.",
-          duration: 3000,
-        });
-      }
+    } else if (generateContent.status === 'success') {
+      generatingForTopicId.current = null;
     }
   }, [generateContent.status]);
 
