@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw } from 'lucide-react';
+import { X, Clock, Sparkles, CheckCircle, ChevronDown, RotateCcw, ArrowDown } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -30,6 +30,7 @@ export const TopicSelectionSheet = ({
   const { data: allChapters = [] } = useChapters();
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const chaptersStartRef = useRef<HTMLDivElement | null>(null);
   const dragState = useRef({
     isDown: false,
     startY: 0,
@@ -96,6 +97,11 @@ export const TopicSelectionSheet = ({
     });
   };
 
+  const handleStartExploring = () => {
+    lightTap();
+    chaptersStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   // Group topics by chapter
   const groupedTopics = useMemo(() => {
     const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
@@ -155,12 +161,11 @@ export const TopicSelectionSheet = ({
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-4">
+            <div className="flex items-center justify-between px-5 pb-2">
               <div>
                 <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                   Core Concepts <AIBadge />
                 </h2>
-                <p className="text-sm text-muted-foreground">Simplest AI explanations of tough topics</p>
               </div>
               <button
                 onClick={() => { lightTap(); onClose(); }}
@@ -173,7 +178,7 @@ export const TopicSelectionSheet = ({
             {/* Topics list grouped by chapter */}
             <div
               ref={scrollContainerRef}
-              className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-100px)] scrollbar-none overscroll-contain cursor-grab"
+              className="px-5 pb-safe overflow-y-auto max-h-[calc(90%-80px)] scrollbar-none overscroll-contain cursor-grab"
               style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
               onMouseDown={handleScrollMouseDown}
               onMouseMove={handleScrollMouseMove}
@@ -181,6 +186,36 @@ export const TopicSelectionSheet = ({
               onMouseLeave={endDrag}
               onDragStart={(e) => e.preventDefault()}
             >
+              {/* Hero Introduction */}
+              <motion.div
+                className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  Master the Fundamentals
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  Tough topics shouldn't be a barrier to your progress. Our AI breaks down high-level academic concepts into simple, digestible explanations. It's the "Aha!" moment you've been looking for, designed to help you learn—and retain—better.
+                </p>
+                <button
+                  onClick={handleStartExploring}
+                  className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  Start Exploring
+                  <motion.span
+                    animate={{ y: [0, 3, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </motion.span>
+                </button>
+              </motion.div>
+
+              {/* Chapters anchor */}
+              <div ref={chaptersStartRef} />
+
               <div className="space-y-3 pb-6">
                 {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => {
                   const isExpanded = expandedChapters.has(chapter.id);
