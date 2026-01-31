@@ -235,13 +235,10 @@ const Index = () => {
           animate="animate"
           exit="exit"
         >
-        {/* Your eTextbook */}
-        <div className="py-2 pb-2">
-          <div className="mb-3">
-            <h2 className="text-xl font-bold text-foreground">Textbook</h2>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-4 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
-            <div className="w-20 h-[104px] rounded-lg flex-shrink-0 overflow-hidden shadow-md bg-muted">
+        {/* Compact Textbook Reference */}
+        <div className="py-1">
+          <div className="bg-card border border-border rounded-xl p-2 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
+            <div className="w-10 h-[52px] rounded-md flex-shrink-0 overflow-hidden shadow-sm bg-muted">
               <img 
                 src={selectedSubject.textbook.imageUrl} 
                 alt={selectedSubject.textbook.title}
@@ -251,11 +248,12 @@ const Index = () => {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground leading-snug">{selectedSubject.textbook.title}</p>
+              <p className="text-sm font-medium text-foreground leading-snug truncate">{selectedSubject.textbook.title}</p>
               {selectedSubject.textbook.author && (
-                <p className="text-xs text-muted-foreground mt-0.5">{selectedSubject.textbook.author}</p>
+                <p className="text-xs text-muted-foreground truncate">{selectedSubject.textbook.author}</p>
               )}
             </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           </div>
         </div>
 
