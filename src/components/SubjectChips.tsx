@@ -5,6 +5,7 @@ import { SubjectChipWithProgress } from './SubjectChipWithProgress';
 import { AddSubjectSheet } from './AddSubjectSheet';
 import { useUserSubjects } from '@/hooks/useUserSubjects';
 import { useSubjectProgress } from '@/hooks/useSubjectProgress';
+import { useDragScrollHorizontal } from '@/hooks/useDragScroll';
 import { springTransition, cardTap, subjectChipEntry } from '@/lib/motionVariants';
 import type { SubjectWithTextbook } from '@/hooks/useSubjects';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -18,7 +19,8 @@ interface SubjectChipsProps {
 
 export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
   ({ subjects, allTopics, selectedSubjectId, onSubjectChange }, ref) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useDragScrollHorizontal<HTMLDivElement>();
+    const chipRefs = useRef<Map<string, HTMLElement>>(new Map());
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
 
@@ -63,6 +65,14 @@ export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
       };
     }, [updateScrollState, displayedSubjects.length]);
 
+    // Scroll selected chip into view when selection changes
+    useEffect(() => {
+      const chip = chipRefs.current.get(selectedSubjectId);
+      if (chip) {
+        chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }, [selectedSubjectId]);
+
     const handleAddSubject = (subjectId: string) => {
       addSubject(subjectId);
       // Auto-select the newly added subject
@@ -84,7 +94,8 @@ export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
             {/* Scrollable container */}
             <div 
               ref={scrollRef} 
-              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+              data-drag-scroll="x"
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide cursor-grab"
             >
 
               {/* Subject chips with progress */}
@@ -94,6 +105,10 @@ export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
                   return (
                     <motion.div
                       key={subject.id}
+                      ref={(el) => {
+                        if (el) chipRefs.current.set(subject.id, el);
+                        else chipRefs.current.delete(subject.id);
+                      }}
                       layout
                       initial={subjectChipEntry.initial}
                       animate={subjectChipEntry.animate}
