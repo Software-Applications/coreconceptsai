@@ -246,8 +246,11 @@ const Index = () => {
               alt={selectedSubject.textbook.title}
               className="w-16 h-20 rounded-lg flex-shrink-0 object-cover shadow-sm"
             />
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground leading-snug">{selectedSubject.textbook.title}</p>
+              {selectedSubject.textbook.author && (
+                <p className="text-xs text-muted-foreground mt-0.5">{selectedSubject.textbook.author}</p>
+              )}
             </div>
           </div>
         </div>

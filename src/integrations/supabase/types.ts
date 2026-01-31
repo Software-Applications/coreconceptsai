@@ -161,6 +161,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          textbook_author: string | null
           textbook_image_url: string | null
           textbook_title: string | null
         }
@@ -170,6 +171,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          textbook_author?: string | null
           textbook_image_url?: string | null
           textbook_title?: string | null
         }
@@ -179,6 +181,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          textbook_author?: string | null
           textbook_image_url?: string | null
           textbook_title?: string | null
         }
