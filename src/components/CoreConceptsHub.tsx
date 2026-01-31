@@ -48,23 +48,26 @@ export const CoreConceptsHub = ({
 
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
-      {/* Unified container with soft lavender background */}
-      <div className="rounded-xl bg-violet-100/80 dark:bg-violet-900/40">
-        {/* Core Concepts AI Bar - Outlined Button Style */}
-        <div className="p-2">
+      {/* Outer container - no background, just structure */}
+      <div className="rounded-xl overflow-hidden">
+        {/* Core Concepts AI Card - Elevated with gradient accent */}
+        <div className="relative bg-card rounded-xl shadow-md border border-border/50 overflow-hidden">
+          {/* Purple gradient left accent stripe */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-purple-600" />
+          
           <motion.button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left bg-transparent text-navy-800 dark:text-navy-100 rounded-lg hover:bg-white/40 dark:hover:bg-white/10 active:bg-white/60 dark:active:bg-white/20 transition-all duration-200"
+            className="w-full pl-5 pr-3 py-3.5 text-left hover:bg-muted/50 active:bg-muted/70 transition-colors duration-200"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={springTransition}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+            whileHover={{ scale: 1.005 }}
+            whileTap={{ scale: 0.995 }}
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
-                <div className="w-9 h-9 rounded-full bg-white/60 dark:bg-white/10 flex items-center justify-center flex-shrink-0 relative">
-                  <Headphones className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
+                <Headphones className="w-5 h-5 text-primary" />
                 <AnimatePresence>
                   {unlistenedCount > 0 && (
                     <motion.div
@@ -81,33 +84,33 @@ export const CoreConceptsHub = ({
 
               {/* Title */}
               <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50 flex items-center gap-1.5">
-                    Core Concepts <AIBadge size="sm" />
-                  </h3>
-                  <p className="text-[11px] text-navy-600 dark:text-navy-400 truncate">
-                    AI explanations of tough topics
-                  </p>
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  Core Concepts <AIBadge size="sm" />
+                </h3>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  AI explanations of tough topics
+                </p>
               </div>
 
-              {/* Explore CTA */}
-              <div className="flex-shrink-0 px-2.5 py-1 rounded-full border border-primary/70 text-primary text-[11px] font-medium">
-                Explore
+              {/* Arrow CTA */}
+              <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <ChevronRight className="w-4 h-4 text-primary" />
               </div>
             </div>
           </motion.button>
         </div>
 
-        {/* Saved Cards Section - Accordion */}
-        <div className="px-3 pb-2">
+        {/* Saved Cards Section - Demoted, cleaner */}
+        <div className="px-3 py-2 mt-2 border-t border-border/40">
           {/* Section Header - Clickable */}
           <button
             onClick={handleToggleAccordion}
             className="w-full flex items-center justify-between py-1.5 hover:bg-muted/30 rounded-lg transition-colors -mx-1 px-1"
           >
             <div className="flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-medium text-foreground">My Saved Cards</h3>
-              <span className="text-xs text-muted-foreground">({pinnedCards.length})</span>
+              <Bookmark className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-xs font-medium text-muted-foreground">My Saved Cards</h3>
+              <span className="text-xs text-muted-foreground/70">({pinnedCards.length})</span>
             </div>
             <div className="flex items-center gap-2">
               {hasPinnedCards && isExpanded && (
