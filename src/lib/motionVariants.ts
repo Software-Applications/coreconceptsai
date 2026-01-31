@@ -64,3 +64,23 @@ export const dropdownItemVariants: Variants = {
     },
   },
 };
+
+// Cross-fade animation for subject switching
+export const subjectCrossFade: Variants = {
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { duration: 0.2, ease: "easeOut" }
+  },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.15, ease: "easeIn" }
+  }
+};
+
+// Entry animation for new subject chips
+export const subjectChipEntry = {
+  initial: { opacity: 0, scale: 0.8, x: -10 },
+  animate: { opacity: 1, scale: 1, x: 0 },
+  exit: { opacity: 0, scale: 0.8, x: -10 },
+};
