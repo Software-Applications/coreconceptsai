@@ -40,7 +40,7 @@ export const CoreConceptsHub = ({
         <div className="p-2">
           <motion.button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left border-2 border-primary/40 rounded-lg bg-background hover:bg-primary/5 hover:border-primary/60 active:bg-primary/10 transition-all duration-200"
+            className="w-full px-3 py-2.5 text-left bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-all duration-200 shadow-sm"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={springTransition}
@@ -49,12 +49,12 @@ export const CoreConceptsHub = ({
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
-              <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
-                <Headphones className="w-5 h-5 text-primary" />
+                <div className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center flex-shrink-0 relative">
+                  <Headphones className="w-5 h-5 text-primary-foreground" />
                 <AnimatePresence>
                   {unlistenedCount > 0 && (
                     <motion.div
-                      className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center"
+                      className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary-foreground text-primary text-[10px] font-bold flex items-center justify-center"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
@@ -67,27 +67,27 @@ export const CoreConceptsHub = ({
 
               {/* Title */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  Core Concepts <AIBadge size="sm" />
-                </h3>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  AI explanations of tough topics
-                </p>
+                  <h3 className="text-sm font-semibold text-primary-foreground flex items-center gap-1.5">
+                    Core Concepts <AIBadge size="sm" />
+                  </h3>
+                  <p className="text-[11px] text-primary-foreground/80 truncate">
+                    AI explanations of tough topics
+                  </p>
               </div>
 
               {/* Animated chevron indicator */}
-              <motion.div
-                className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 flex-shrink-0"
-                animate={{ x: [0, 3, 0] }}
-                transition={{ 
-                  duration: 1.5, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                  repeatDelay: 1
-                }}
-              >
-                <ChevronRight className="w-4 h-4 text-primary" />
-              </motion.div>
+                  <motion.div
+                    className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground/20 flex-shrink-0"
+                    animate={{ x: [0, 3, 0] }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: Infinity, 
+                      ease: "easeInOut",
+                      repeatDelay: 1
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4 text-primary-foreground" />
+                  </motion.div>
             </div>
           </motion.button>
         </div>
