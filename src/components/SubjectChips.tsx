@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, forwardRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+
 import { SubjectChipWithProgress } from './SubjectChipWithProgress';
 import { AddSubjectSheet } from './AddSubjectSheet';
 import { useUserSubjects } from '@/hooks/useUserSubjects';
@@ -86,15 +86,6 @@ export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
               ref={scrollRef} 
               className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
             >
-              {/* Add button */}
-              <motion.button 
-                onClick={() => setShowAddSheet(true)}
-                whileTap={cardTap}
-                transition={springTransition}
-                className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 hover:bg-primary/5 transition-colors"
-              >
-                <Plus className="w-6 h-6 text-muted-foreground" />
-              </motion.button>
 
               {/* Subject chips with progress */}
               <AnimatePresence mode="popLayout">
