@@ -1,72 +1,47 @@
 
 
-## Add iOS-Style Status Bar
+## Align Status Bar with Dynamic Island (iOS-Accurate)
 
-### Overview
-Add a realistic iOS-style status bar showing time, network signal, wifi, and battery indicators. This will enhance the native mobile app feel and complete the phone frame simulation.
+### Current Issue
+The status bar is currently positioned **below** the Dynamic Island (`top: 52px`), but on real iOS devices, the status bar elements appear **alongside** the Dynamic Island at the same vertical level:
+- Time on the **left** side of the Dynamic Island
+- Signal, WiFi, Battery on the **right** side of the Dynamic Island
 
-### Current State
-- The app has a `MobileFrame` component with a Dynamic Island bezel (visible on screens ≥500px)
-- The header in `Index.tsx` uses `pt-4` and `mt-4` to clear the notch area
-- On actual mobile devices, the bezel is hidden and native status bar is used
+### Proposed Fix
 
-### Design Decision
-The status bar should:
-- Show on **desktop preview only** (≥500px) where the phone frame is visible
-- Be hidden on actual mobile devices where the real OS status bar exists
-- Display simulated but realistic-looking indicators
-- Update time in real-time
-
-### Implementation
-
-**New Component: `src/components/StatusBar.tsx`**
-
-Create a reusable status bar component with:
-
-```
-+------------------------------------------+
-| 9:41          [Signal] [WiFi] [Battery]  |
-+------------------------------------------+
+**Visual Layout:**
+```text
++--------------------------------------------------+
+|   9:41     [===Dynamic Island===]   📶 📡 🔋    |
++--------------------------------------------------+
+|                                                  |
+|                  App Content                     |
+|                                                  |
++--------------------------------------------------+
 ```
 
-- **Left**: Current time (updates every minute)
-- **Right**: Signal bars, WiFi icon, battery percentage + icon
-- Uses Lucide icons: `Signal`, `Wifi`, `Battery`/`BatteryMedium`/`BatteryFull`
-- Fixed position at top of mobile frame content
-- Only renders on larger screens via CSS media query
+### Changes Required
 
-**Modify: `src/components/MobileFrame.tsx`**
+**File: `src/index.css`**
 
-- Import and render `StatusBar` at the top of the content area
-- Position it below the Dynamic Island but above app content
+Update the `.status-bar` positioning to align with the Dynamic Island:
 
-**Modify: `src/index.css`**
+| Property | Current | New |
+|----------|---------|-----|
+| `top` | `52px` (below island) | `12px` (same level as island) |
+| `height` | `24px` | `36px` (match island height) |
+| `padding` | `0 28px` | `0 28px` (outer edges) |
 
-- Add `.status-bar` styles for proper positioning
-- Hide on mobile devices (≤499px) using media query
+The status bar will continue to use `justify-content: space-between`, which naturally pushes the time to the left and icons to the right, creating the gap where the Dynamic Island sits in the center.
 
-### Technical Details
+Since the Dynamic Island has `z-index: 9999` and the status bar has `z-index: 9998`, the Dynamic Island will correctly overlay and "cut through" the status bar, creating the authentic iOS appearance.
 
-| Element | Implementation |
-|---------|----------------|
-| Time | `useState` + `useEffect` with 1-minute interval, formatted as "9:41" |
-| Signal | Static 4-bar icon (simulated full signal) |
-| WiFi | Static wifi icon (simulated connected) |
-| Battery | Static "100%" with full battery icon |
+Also need to adjust:
+- `.mobile-frame-content` padding-top from `40px` to a smaller value since the status bar now sits at the same level as the Dynamic Island
 
-### Files to Create/Modify
+### Files to Modify
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/components/StatusBar.tsx` | Create | iOS-style status bar component |
-| `src/components/MobileFrame.tsx` | Modify | Include StatusBar in frame |
-| `src/index.css` | Modify | Add status bar positioning styles |
-
-### Visual Spacing
-
-The status bar will be positioned:
-- Below the Dynamic Island (which is at `top: 12px`, height `36px`)
-- Status bar starts at approximately `top: 52px`
-- Height: ~20px for the status bar itself
-- This leaves the existing `pt-14` header padding working correctly
+| File | Changes |
+|------|---------|
+| `src/index.css` | Adjust `.status-bar` top position and height to align with Dynamic Island |
 
