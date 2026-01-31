@@ -26,11 +26,11 @@ export const FlashSummaryCard = ({
   const getDifficultyColor = (difficulty: FlashSummary['difficulty']) => {
     switch (difficulty) {
       case 'easy':
-        return 'bg-green-500/20 text-green-600 dark:text-green-400';
+        return 'bg-success/20 text-success';
       case 'medium':
-        return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
+        return 'bg-warning/20 text-warning';
       case 'hard':
-        return 'bg-red-500/20 text-red-600 dark:text-red-400';
+        return 'bg-destructive/20 text-destructive';
     }
   };
 

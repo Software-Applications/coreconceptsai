@@ -89,12 +89,12 @@ export const SearchResultsSection = ({
       {/* Related Topics Section */}
       {hasRelated && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 px-1 py-1 bg-amber-500/5 rounded-lg border border-amber-500/20">
-            <Lightbulb className="w-4 h-4 text-amber-500 ml-2" />
-            <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+          <div className="flex items-center gap-2 px-1 py-1 bg-warning/5 rounded-lg border border-warning/20">
+            <Lightbulb className="w-4 h-4 text-warning ml-2" />
+            <h3 className="text-sm font-semibold text-warning">
               You might also be interested in
             </h3>
-            <span className="text-xs text-white bg-amber-500 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-warning-foreground bg-warning px-2 py-0.5 rounded-full">
               {relatedTopics.length}
             </span>
           </div>

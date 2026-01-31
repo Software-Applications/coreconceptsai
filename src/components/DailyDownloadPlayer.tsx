@@ -495,13 +495,13 @@ export const DailyDownloadPlayer = ({
               <motion.div
                 className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center ${
                   showResumePrompt 
-                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/5' 
+                    ? 'bg-gradient-to-br from-warning/20 to-warning/5' 
                     : 'bg-gradient-to-br from-primary/20 to-primary/5'
                 }`}
                 animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Headphones className={`w-8 h-8 ${showResumePrompt ? 'text-amber-500' : 'text-primary'}`} />
+                <Headphones className={`w-8 h-8 ${showResumePrompt ? 'text-warning' : 'text-primary'}`} />
               </motion.div>
 
               {/* Title and description */}
@@ -513,7 +513,7 @@ export const DailyDownloadPlayer = ({
                   {topic.description}
                 </p>
                 {useFallback && (
-                  <p className="text-[10px] text-amber-500 mt-1">
+                  <p className="text-[10px] text-warning mt-1">
                     Using browser voice (fallback)
                   </p>
                 )}
@@ -695,7 +695,7 @@ export const DailyDownloadPlayer = ({
                   </motion.button>
                   <motion.button
                     onClick={handleResume}
-                    className="flex-1 py-3 rounded-xl bg-amber-500 text-white font-medium"
+                    className="flex-1 py-3 rounded-xl bg-warning text-warning-foreground font-medium"
                     whileTap={{ scale: 0.95 }}
                   >
                     Resume
