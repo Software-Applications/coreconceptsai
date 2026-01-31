@@ -5,7 +5,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
 import { PinnedCardPreview } from './PinnedCardPreview';
-import { useDragScrollHorizontal } from '@/hooks/useDragScroll';
+import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
 interface CoreConceptsHubProps {
@@ -24,7 +24,7 @@ export const CoreConceptsHub = ({
   unlistenedCount
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
-  const scrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem('saved-cards-expanded');
     return stored !== null ? stored === 'true' : true;
@@ -153,7 +153,7 @@ export const CoreConceptsHub = ({
                         <PinnedCardPreview
                           key={card.id}
                           card={card}
-                          onClick={() => onCardClick(card)}
+                          onClick={handleClick(() => onCardClick(card))}
                         />
                       ))}
                     </div>

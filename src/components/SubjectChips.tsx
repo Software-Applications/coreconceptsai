@@ -5,7 +5,7 @@ import { SubjectChipWithProgress } from './SubjectChipWithProgress';
 import { AddSubjectSheet } from './AddSubjectSheet';
 import { useUserSubjects } from '@/hooks/useUserSubjects';
 import { useSubjectProgress } from '@/hooks/useSubjectProgress';
-import { useDragScrollHorizontal } from '@/hooks/useDragScroll';
+import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { springTransition, cardTap, subjectChipEntry } from '@/lib/motionVariants';
 import type { SubjectWithTextbook } from '@/hooks/useSubjects';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -19,7 +19,7 @@ interface SubjectChipsProps {
 
 export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
   ({ subjects, allTopics, selectedSubjectId, onSubjectChange }, ref) => {
-    const scrollRef = useDragScrollHorizontal<HTMLDivElement>();
+    const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
     const chipRefs = useRef<Map<string, HTMLElement>>(new Map());
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
@@ -119,7 +119,7 @@ export const SubjectChips = forwardRef<HTMLDivElement, SubjectChipsProps>(
                         subject={subject}
                         isSelected={selectedSubjectId === subject.id}
                         progress={progress}
-                        onClick={() => onSubjectChange(subject)}
+                        onClick={handleClick(() => onSubjectChange(subject))}
                       />
                     </motion.div>
                   );
