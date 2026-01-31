@@ -85,6 +85,14 @@ const Index = () => {
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
   const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
   
+  // Map subject names to hardcoded IDs in courseData.ts
+  // This bridges the gap between Supabase UUIDs and static video/practice data
+  const subjectNameToId: Record<string, number> = {
+    'Microbiology': 1,
+    'Chemistry': 2,
+    'Biology': 3,
+  };
+  
   // Memoize filtered content to prevent recalculation on every render
   const subjectChapters = useMemo(() => 
     selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [],
@@ -93,15 +101,15 @@ const Index = () => {
   
   const subjectVideos = useMemo(() => {
     if (!selectedSubject) return [];
-    const subjectIndex = subjects.findIndex(s => s.id === selectedSubject.id) + 1;
-    return videoTiles.filter(v => v.subjectId === subjectIndex);
-  }, [selectedSubject?.id, subjects]);
+    const numericId = subjectNameToId[selectedSubject.name] || 0;
+    return videoTiles.filter(v => v.subjectId === numericId);
+  }, [selectedSubject?.id, selectedSubject?.name]);
   
   const subjectPractice = useMemo(() => {
     if (!selectedSubject) return [];
-    const subjectIndex = subjects.findIndex(s => s.id === selectedSubject.id) + 1;
-    return practiceTiles.filter(p => p.subjectId === subjectIndex);
-  }, [selectedSubject?.id, subjects]);
+    const numericId = subjectNameToId[selectedSubject.name] || 0;
+    return practiceTiles.filter(p => p.subjectId === numericId);
+  }, [selectedSubject?.id, selectedSubject?.name]);
   
   const subjectTopics = useMemo(() => 
     selectedSubject ? allTopics.filter(t => t.subjectId === selectedSubject.id) : [],
@@ -240,7 +248,7 @@ const Index = () => {
       {/* Main Scrollable Content with Cross-Fade */}
       <AnimatePresence mode="wait">
         <motion.section 
-          key={selectedSubject.id}
+          key={`subject-content-${selectedSubjectId}`}
           ref={mainScrollRef} 
           className="px-4 flex-1 overflow-y-auto scrollbar-hide relative"
           variants={subjectCrossFade}
