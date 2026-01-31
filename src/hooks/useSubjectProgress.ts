@@ -24,15 +24,22 @@ export const useSubjectProgress = (
   const { getCompletedCount } = useCompletedPractice();
   const { getListenedCount } = useListenedTopics();
 
+  // Map subject names to hardcoded IDs in courseData.ts
+  const subjectNameToId: Record<string, number> = {
+    'Microbiology': 1,
+    'Chemistry': 2,
+    'Biology': 3,
+  };
+  
   const progressBySubject = useMemo(() => {
     const progressMap = new Map<string, SubjectProgressData>();
 
-    subjects.forEach((subject, index) => {
-      const subjectIndex = index + 1;
+    subjects.forEach((subject) => {
+      const numericId = subjectNameToId[subject.name] || 0;
       
       // Get subject-specific content
-      const subjectVideos = videoTiles.filter(v => v.subjectId === subjectIndex);
-      const subjectPractice = practiceTiles.filter(p => p.subjectId === subjectIndex);
+      const subjectVideos = videoTiles.filter(v => v.subjectId === numericId);
+      const subjectPractice = practiceTiles.filter(p => p.subjectId === numericId);
       const subjectTopics = allTopics.filter(t => t.subjectId === subject.id);
 
       // Calculate watched/completed/listened counts
