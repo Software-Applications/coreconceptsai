@@ -11,7 +11,7 @@ import { ChapterDropdown } from "@/components/ChapterDropdown";
 import { VideoCard } from "@/components/VideoCard";
 import { PracticeCard } from "@/components/PracticeCard";
 import { BottomNav } from "@/components/BottomNav";
-import { DailyDownloadCard } from "@/components/DailyDownloadCard";
+import { CoreConceptsStickyBar } from "@/components/CoreConceptsStickyBar";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
@@ -257,6 +257,12 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Core Concepts AI Sticky Bar */}
+        <CoreConceptsStickyBar 
+          onClick={() => setShowTopicSelection(true)}
+          unlistenedCount={unlistenedCount}
+        />
+
         {/* My Pinned Cards Section */}
         <div className="py-1 pb-2">
           <Collapsible open={isPinnedCardsOpen} onOpenChange={setIsPinnedCardsOpen}>
@@ -320,16 +326,6 @@ const Index = () => {
           </Collapsible>
         </div>
 
-        {/* Daily Download Inline Card */}
-        <div className="py-2">
-          <DailyDownloadCard 
-            onClick={() => setShowTopicSelection(true)}
-            unlistenedCount={unlistenedCount}
-          />
-        </div>
-
-        {/* Section Divider */}
-        <div className="border-t border-border/50 my-2" />
 
         {/* Related Videos and Practice */}
         <div className="py-3">
