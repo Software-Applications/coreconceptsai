@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
+import { Video, HelpCircle, ChevronRight, Sun, Moon, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
@@ -11,14 +10,12 @@ import { ChapterDropdown } from "@/components/ChapterDropdown";
 import { VideoCard } from "@/components/VideoCard";
 import { PracticeCard } from "@/components/PracticeCard";
 import { BottomNav } from "@/components/BottomNav";
-import { CoreConceptsStickyBar } from "@/components/CoreConceptsStickyBar";
+import { CoreConceptsHub } from "@/components/CoreConceptsHub";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
 import { ExpandedCardModal } from "@/components/ExpandedCardModal";
 import { SubjectChips } from "@/components/SubjectChips";
-
-import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
 import { useWatchedVideos } from "@/hooks/useWatchedVideos";
@@ -46,7 +43,7 @@ const Index = () => {
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<{ id: string; subject_id: string; chapter_number: number; title: string; created_at: string | null } | null>(null);
-  const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(false);
+  
   
   // Fetch data from Supabase
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
@@ -70,7 +67,6 @@ const Index = () => {
   // Scroll refs
   const mainScrollRef = useDragScroll<HTMLElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   
   // Set default subject when data loads
@@ -113,10 +109,6 @@ const Index = () => {
     }
   }, [selectedSubject?.id, subjectChapters.length]);
   
-  // Auto-expand when cards are added, auto-collapse when empty
-  useEffect(() => {
-    setIsPinnedCardsOpen(subjectPinnedCards.length > 0);
-  }, [subjectPinnedCards.length]);
   useEffect(() => {
     // Videos completion check
     if (!selectedSubject) return;
@@ -257,74 +249,14 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Core Concepts AI Sticky Bar */}
-        <CoreConceptsStickyBar 
-          onClick={() => setShowTopicSelection(true)}
+        {/* Core Concepts AI Hub (with integrated pinned cards) */}
+        <CoreConceptsHub
+          onOpenTopics={() => setShowTopicSelection(true)}
+          onOpenReviewBoard={() => setShowReviewBoard(true)}
+          onCardClick={setExpandedPinnedCard}
+          pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
         />
-
-        {/* My Pinned Cards Section */}
-        <div className="py-1 pb-2">
-          <Collapsible open={isPinnedCardsOpen} onOpenChange={setIsPinnedCardsOpen}>
-            <div className="flex items-center justify-between py-1.5 mb-1.5">
-              <CollapsibleTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                  <Bookmark className="w-4 h-4 text-primary" />
-                  <h3 className="text-sm font-medium text-foreground">My Pinned Cards</h3>
-                  {subjectPinnedCards.length > 0 && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                      {subjectPinnedCards.length}
-                    </span>
-                  )}
-                  <ChevronDown 
-                    className="w-4 h-4 text-muted-foreground transition-transform duration-200" 
-                    style={{ transform: isPinnedCardsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                  />
-                </button>
-              </CollapsibleTrigger>
-              {subjectPinnedCards.length > 0 && (
-                <button 
-                  onClick={() => setShowReviewBoard(true)}
-                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                >
-                  See All
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-            
-            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden data-[state=open]:overflow-visible">
-              {subjectPinnedCards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                    <Bookmark className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">No pinned cards yet</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Listen to Core Concepts AI and pin cards to review later
-                  </p>
-                </div>
-              ) : (
-              <div className="-mx-4 px-4 py-2">
-                  <div
-                    ref={pinnedCardsScrollRef}
-                    data-drag-scroll="x"
-                    className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-stretch pr-4 snap-x snap-mandatory overscroll-x-contain select-none"
-                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-                  >
-                    {subjectPinnedCards.slice(0, 5).map((card) => (
-                      <PinnedCardPreview
-                        key={card.id}
-                        card={card}
-                        onClick={() => setExpandedPinnedCard(card)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
 
 
         {/* Related Videos and Practice */}
