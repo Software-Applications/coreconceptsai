@@ -5,6 +5,7 @@ import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useHaptics } from "@/hooks/useHaptics";
 import { springTransition } from "@/lib/motionVariants";
+import { SwipeHintHandle } from "./SwipeHintHandle";
 import type { VideoTile } from "@/data/courseData";
 import type { Chapter } from "@/hooks/useChapters";
 
@@ -44,10 +45,8 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
       transition={springTransition}
       {...dragProps}
     >
-      {/* Drag Handle */}
-      <div className="flex justify-center pt-2 pb-1">
-        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-      </div>
+      {/* Drag Handle with swipe hint */}
+      <SwipeHintHandle direction="down" />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 pt-8 border-b border-border">
