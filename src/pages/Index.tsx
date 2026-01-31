@@ -192,10 +192,10 @@ const Index = () => {
   return (
     <div className="h-full bg-background flex flex-col w-full safe-area-inset overflow-hidden relative">
       {/* Header */}
-      <header className="px-4 pt-4 pb-2 flex items-center justify-between">
+      <header className="px-4 pt-14 pb-1 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mt-4">Home</h1>
-          <div className="w-12 h-1 bg-primary mt-2 rounded-full" />
+          <h1 className="text-2xl font-bold text-foreground mt-2">Home</h1>
+          <div className="w-12 h-1 bg-primary mt-1.5 rounded-full" />
         </div>
         {mounted && (
           <button
@@ -216,7 +216,7 @@ const Index = () => {
       </header>
 
       {/* Subject Chips */}
-      <section className="px-4 py-4">
+      <section className="px-4 py-2">
         <div ref={subjectsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
             <Plus className="w-6 h-6 text-muted-foreground" />
@@ -247,7 +247,7 @@ const Index = () => {
       {/* Main Scrollable Content */}
       <section ref={mainScrollRef} className="px-4 flex-1 overflow-y-auto scrollbar-hide relative">
         {/* Your eTextbook */}
-        <div className="py-2 pb-4">
+        <div className="py-2 pb-2">
           <div className="mb-3">
             <h2 className="text-xl font-bold text-foreground">Textbook</h2>
           </div>
@@ -264,7 +264,7 @@ const Index = () => {
         </div>
 
         {/* My Pinned Cards Section */}
-        <div className="py-2 pb-4">
+        <div className="py-1 pb-2">
           <Collapsible open={isPinnedCardsOpen} onOpenChange={setIsPinnedCardsOpen}>
             <div className="flex items-center justify-between mb-3">
               <CollapsibleTrigger asChild>
@@ -327,7 +327,7 @@ const Index = () => {
         </div>
 
         {/* Daily Download Inline Card */}
-        <div className="py-3">
+        <div className="py-2">
           <DailyDownloadCard 
             onClick={() => setShowTopicSelection(true)}
             unlistenedCount={unlistenedCount}
@@ -338,9 +338,9 @@ const Index = () => {
         <div className="border-t border-border/50 my-2" />
 
         {/* Related Videos and Practice */}
-        <div className="py-4">
+        <div className="py-3">
           {/* Sticky Section Header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-4 px-4 pt-1">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1">
             <h2 className="text-base font-semibold text-foreground">Related Videos and Practice</h2>
             {/* Progress Indicators */}
             <div className="flex gap-3 mt-2">
@@ -361,7 +361,7 @@ const Index = () => {
 
         {/* Videos Section */}
         <div className="mb-5">
-          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 flex items-center gap-2">
+          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-1.5 -mx-4 px-4 flex items-center gap-2">
             <Video className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
@@ -382,7 +382,7 @@ const Index = () => {
 
         {/* Practice Questions Section */}
         <div className="mb-4">
-          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 flex items-center gap-2">
+          <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-1.5 -mx-4 px-4 flex items-center gap-2">
             <HelpCircle className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>

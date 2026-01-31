@@ -37,13 +37,13 @@ export const BottomNav = forwardRef<HTMLElement, BottomNavProps>(
     };
 
     return (
-      <nav ref={ref} className="bg-card border-t border-border px-2 pt-2 pb-safe sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+      <nav ref={ref} className="bg-card border-t border-border px-2 pt-1.5 pb-safe sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
         <div className="flex justify-around items-center">
           {navItems.map((item) => (
             <motion.button
               key={item.id}
               onClick={() => handleTabChange(item.id)}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg ${
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
                 activeTab === item.id
                   ? "text-primary"
                   : "text-muted-foreground"
