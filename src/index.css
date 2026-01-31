@@ -232,14 +232,15 @@ button:active {
     top: 52px;
     left: 0;
     right: 0;
-    height: 20px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
+    padding: 0 28px;
     z-index: 9998;
+    background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.3px;
   }
@@ -257,6 +258,11 @@ button:active {
   .status-bar-battery {
     display: flex;
     align-items: center;
+  }
+  
+  /* Add top padding to clear Dynamic Island + Status Bar on desktop frame */
+  .mobile-frame-content {
+    padding-top: 40px;
   }
 }
 
