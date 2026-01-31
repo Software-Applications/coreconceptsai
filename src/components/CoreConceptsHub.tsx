@@ -40,7 +40,7 @@ export const CoreConceptsHub = ({
         <div className="p-2">
           <motion.button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left bg-navy-100 dark:bg-navy-800 text-navy-800 dark:text-navy-100 rounded-lg hover:bg-navy-200 dark:hover:bg-navy-700 active:bg-navy-300 dark:active:bg-navy-600 transition-all duration-200 shadow-sm"
+            className="w-full px-3 py-2.5 text-left bg-navy-100 dark:bg-navy-800 text-navy-800 dark:text-navy-100 border border-navy-200 dark:border-navy-700 rounded-lg hover:bg-navy-200 dark:hover:bg-navy-700 active:bg-navy-300 dark:active:bg-navy-600 transition-all duration-200 shadow-sm"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={springTransition}
@@ -75,19 +75,6 @@ export const CoreConceptsHub = ({
                   </p>
               </div>
 
-              {/* Animated chevron indicator */}
-                  <motion.div
-                    className="flex items-center justify-center w-6 h-6 rounded-full bg-navy-200 dark:bg-navy-700 flex-shrink-0"
-                    animate={{ x: [0, 3, 0] }}
-                    transition={{ 
-                      duration: 1.5, 
-                      repeat: Infinity, 
-                      ease: "easeInOut",
-                      repeatDelay: 1
-                    }}
-                  >
-                    <ChevronRight className="w-4 h-4 text-navy-600 dark:text-navy-300" />
-                  </motion.div>
             </div>
           </motion.button>
         </div>
