@@ -68,7 +68,7 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
         }`}
       >
         <img 
-          src={subject.image_url || ''} 
+          src={subject.textbook_image_url || subject.image_url || ''} 
           alt={subject.name}
           className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
         />
