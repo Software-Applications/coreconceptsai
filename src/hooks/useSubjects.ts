@@ -29,11 +29,11 @@ export const useSubjects = () => {
         textbook: {
           title: subject.textbook_title || subject.name,
           imageUrl: subject.textbook_image_url || subject.image_url || '',
-          author: (subject as any).textbook_author || undefined
+          author: subject.textbook_author || undefined
         }
       }));
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds
   });
 };
 
