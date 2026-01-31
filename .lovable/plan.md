@@ -1,94 +1,53 @@
-# Standardize Primary and Secondary Colors Across the App
 
-## ✅ COMPLETED
+# Practice Card Cleanup
 
-This plan has been fully implemented. All color standardization tasks are complete.
+## Summary
+Reorganize the practice quiz card layout so the quiz name appears below the cover image instead of on it, and remove the time estimate.
 
----
+## Changes
 
-## Summary of Changes
+### `src/components/PracticeCard.tsx`
 
-### 1. Added Semantic Color Variables
+**1. Remove title from the cover overlay**
+- Delete lines 47-50 (the title section inside the image overlay)
+- Keep the bottom section with question count and difficulty badge
 
-**File: `src/index.css`**
+**2. Show quiz name below the cover**
+- Replace "Start quiz" / "Retake quiz" text with the actual quiz name (`practice.title`)
 
-Added the following semantic color tokens to `:root`:
+**3. Remove time estimate**
+- Delete line 61 showing `~{estimatedTime} min`
+- Also remove the unused `estimatedTime` variable calculation (line 18)
 
-```css
---success: 142 76% 36%;         /* Green for completed states */
---success-foreground: 0 0% 100%;
---warning: 38 92% 50%;          /* Amber for resume/in-progress */
---warning-foreground: 0 0% 100%;
---info: 217 91% 60%;            /* Blue for informational states */
---info-foreground: 0 0% 100%;
---neutral: 215 16% 47%;         /* Gray for neutral UI states */
---neutral-foreground: 0 0% 100%;
+### Visual Result
+
+**Before:**
+```
+┌─────────────────────┐
+│  Quiz Title         │  ← on cover
+│                     │
+│  5 questions  Easy  │
+└─────────────────────┘
+  Start quiz
+  ~8 min
+  pp. 12-15
 ```
 
-### 2. Updated Tailwind Config
-
-**File: `tailwind.config.ts`**
-
-Added semantic color definitions:
-
-```ts
-success: {
-  DEFAULT: "hsl(var(--success))",
-  foreground: "hsl(var(--success-foreground))",
-},
-warning: {
-  DEFAULT: "hsl(var(--warning))",
-  foreground: "hsl(var(--warning-foreground))",
-},
-info: {
-  DEFAULT: "hsl(var(--info))",
-  foreground: "hsl(var(--info-foreground))",
-},
-neutral: {
-  DEFAULT: "hsl(var(--neutral))",
-  foreground: "hsl(var(--neutral-foreground))",
-},
+**After:**
+```
+┌─────────────────────┐
+│                     │  ← no title on cover
+│                     │
+│  5 questions  Easy  │
+└─────────────────────┘
+  Quiz Title          ← name below cover
+  pp. 12-15
 ```
 
-### 3. Updated Components
+## Technical Details
 
-| Component | Before | After |
-|-----------|--------|-------|
-| `FlashSummaryCard.tsx` | `text-green-600`, `text-amber-600`, `text-red-600` | `text-success`, `text-warning`, `text-destructive` |
-| `PracticeQuizSheet.tsx` | `bg-green-100 text-green-600` | `bg-success/10 text-success` |
-| `TopicCard.tsx` | `text-amber-500`, `bg-amber-500/20` | `text-warning`, `bg-warning/20` |
-| `DailyDownloadPlayer.tsx` | `text-amber-500`, `bg-amber-500` | `text-warning`, `bg-warning` |
-| `SearchResultsSection.tsx` | `text-amber-500`, `bg-amber-500` | `text-warning`, `bg-warning` |
-
-### 4. Removed Dark Mode
-
-- Removed `next-themes` dependency
-- Removed `.dark` CSS section from `index.css`
-- Removed theme toggle button from header
-- Simplified `sonner.tsx` to always use light theme
-
----
-
-## Available Semantic Tokens
-
-| Token | Purpose | Usage Examples |
-|-------|---------|----------------|
-| `primary` | Main interactive elements, CTAs | `text-primary`, `bg-primary` |
-| `secondary` | Secondary elements | `text-secondary`, `bg-secondary` |
-| `accent` | Special highlights, badges | `text-accent`, `bg-accent` |
-| `muted` | Disabled states, backgrounds | `text-muted-foreground`, `bg-muted` |
-| `destructive` | Errors, dangerous actions | `text-destructive`, `bg-destructive` |
-| `success` | Completed/success states | `text-success`, `bg-success/10` |
-| `warning` | In-progress/resume states | `text-warning`, `bg-warning/20` |
-| `info` | Informational states | `text-info`, `bg-info/10` |
-| `neutral` | Purely neutral UI states | `text-neutral`, `bg-neutral/10` |
-
----
-
-## Benefits Achieved
-
-1. ✅ **Centralized theming** - All colors defined in one place
-2. ✅ **Consistent design language** - Semantic meaning attached to colors
-3. ✅ **Easy maintenance** - Change colors app-wide by updating CSS variables
-4. ✅ **No hardcoded colors** - All components use semantic tokens
-5. ✅ **Design system alignment** - Follows shadcn/Tailwind patterns
+The changes involve:
+- Removing the title `<div>` from the overlay (lines 47-50)
+- Changing line 60 from conditional "Start/Retake quiz" text to `{practice.title}`
+- Removing line 61 (time estimate)
+- Removing line 18 (`estimatedTime` variable) as it's no longer needed
