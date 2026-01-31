@@ -9,13 +9,22 @@ interface ChapterDropdownProps {
   chapters: Chapter[];
   selectedChapter: Chapter | null;
   onSelectChapter: (chapter: Chapter) => void;
+  watchedCount?: number;
+  totalVideos?: number;
+  completedPracticeCount?: number;
+  totalPractice?: number;
 }
 
 export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
-  ({ chapters, selectedChapter, onSelectChapter }, ref) => {
+  ({ chapters, selectedChapter, onSelectChapter, watchedCount = 0, totalVideos = 0, completedPracticeCount = 0, totalPractice = 0 }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const { lightTap, selectionChanged } = useHaptics();
+    
+    // Calculate combined progress
+    const totalItems = totalVideos + totalPractice;
+    const completedItems = watchedCount + completedPracticeCount;
+    const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -45,18 +54,36 @@ export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
         <div ref={dropdownRef}>
           <motion.button 
             onClick={handleToggle}
-            className="w-full bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md hover:border-primary/30"
+            className="w-full bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-md hover:border-primary/30"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={springTransition}
           >
-            <span className="text-sm font-medium text-foreground">{selectedChapter.title}</span>
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={springTransition}
-            >
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            </motion.div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">{selectedChapter.title}</span>
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={springTransition}
+              >
+                <ChevronDown className="w-5 h-5 text-muted-foreground" />
+              </motion.div>
+            </div>
+            {/* Progress Bar */}
+            {totalItems > 0 && (
+              <div className="mt-2">
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {completedItems} of {totalItems} completed
+                </p>
+              </div>
+            )}
           </motion.button>
           
           <AnimatePresence>

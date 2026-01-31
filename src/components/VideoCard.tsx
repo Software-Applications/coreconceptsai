@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { Play, CheckCircle, BookOpen } from "lucide-react";
+import { Play, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import type { VideoTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
@@ -63,13 +63,6 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
             />
             <div className="min-w-0">
               <p className="font-medium text-foreground text-xs leading-tight">{video.title}</p>
-              <p className="text-muted-foreground text-xs">By {video.author}</p>
-              {video.textbookPages && (
-                <p className="text-muted-foreground/70 text-xs flex items-center gap-1 mt-0.5">
-                  <BookOpen className="w-3 h-3" />
-                  {video.textbookPages}
-                </p>
-              )}
             </div>
           </div>
         </motion.button>
