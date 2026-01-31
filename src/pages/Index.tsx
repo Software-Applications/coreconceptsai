@@ -3,7 +3,8 @@ import { Video, HelpCircle, ChevronRight, Sun, Moon, Loader2 } from "lucide-reac
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import { useTapVsDrag } from "@/hooks/useTapVsDrag";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
 import { ChapterDropdown } from "@/components/ChapterDropdown";
@@ -74,8 +75,8 @@ const Index = () => {
   
   // Scroll refs
   const mainScrollRef = useDragScroll<HTMLElement>();
-  const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const { scrollRef: videosScrollRef, handleClick: handleVideoClick } = useTapVsDrag<HTMLDivElement>();
+  const { scrollRef: practiceScrollRef, handleClick: handlePracticeClick } = useTapVsDrag<HTMLDivElement>();
   
   // Set default subject when data loads
   useEffect(() => {
@@ -323,7 +324,7 @@ const Index = () => {
                 <VideoCard 
                   key={video.id} 
                   video={video} 
-                  onClick={() => setSelectedVideo(video)}
+                  onClick={handleVideoClick(() => setSelectedVideo(video))}
                   isWatched={isWatched(video.id)}
                 />
               ))}
@@ -344,7 +345,7 @@ const Index = () => {
                 <PracticeCard 
                   key={practice.id} 
                   practice={practice} 
-                  onClick={() => setSelectedQuiz(practice)}
+                  onClick={handlePracticeClick(() => setSelectedQuiz(practice))}
                   isCompleted={isPracticeCompleted(practice.id)}
                   bestScore={getBestScore(practice.id)}
                 />
