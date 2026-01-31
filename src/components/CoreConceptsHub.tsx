@@ -25,13 +25,20 @@ export const CoreConceptsHub = ({
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
   const scrollRef = useDragScrollHorizontal<HTMLDivElement>();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const stored = localStorage.getItem('saved-cards-expanded');
+    return stored !== null ? stored === 'true' : true;
+  });
   
   const hasPinnedCards = pinnedCards.length > 0;
 
   const handleToggleAccordion = () => {
     lightTap();
-    setIsExpanded(prev => !prev);
+    setIsExpanded(prev => {
+      const newState = !prev;
+      localStorage.setItem('saved-cards-expanded', String(newState));
+      return newState;
+    });
   };
 
   const handleMainClick = () => {
