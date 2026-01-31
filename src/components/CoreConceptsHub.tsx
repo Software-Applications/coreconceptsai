@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Headphones, ChevronRight, ChevronDown, Bookmark } from 'lucide-react';
+import { Headphones, ChevronDown, Bookmark, ChevronRight } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
@@ -48,8 +48,8 @@ export const CoreConceptsHub = ({
 
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
-      {/* Unified container with subtle border */}
-      <div className="rounded-xl bg-muted/40 border border-border">
+      {/* Unified container with soft lavender background */}
+      <div className="rounded-xl bg-violet-50/50 dark:bg-violet-950/20">
         {/* Core Concepts AI Bar - Outlined Button Style */}
         <div className="p-2">
           <motion.button
@@ -90,8 +90,8 @@ export const CoreConceptsHub = ({
               </div>
 
               {/* Explore CTA */}
-              <div className="flex-shrink-0 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1">
-                Explore <ChevronRight className="w-3 h-3" />
+              <div className="flex-shrink-0 px-2 py-1 rounded-full bg-primary text-primary-foreground text-[11px] font-medium">
+                Explore
               </div>
             </div>
           </motion.button>

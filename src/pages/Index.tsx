@@ -294,21 +294,16 @@ const Index = () => {
           {/* Sticky Section Header */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-1.5 -mx-4 px-4 pt-0.5">
             <h2 className="text-base font-semibold text-foreground">Related Videos and Practice</h2>
-            {/* Progress Indicators */}
-            <div className="flex gap-3 mt-1.5">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {watchedCount} of {subjectVideos.length} videos watched
-              </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground font-medium">
-                {completedPracticeCount} of {subjectPractice.length} practice sets done
-              </span>
-            </div>
           </div>
         
         <ChapterDropdown 
           chapters={subjectChapters}
           selectedChapter={selectedChapter}
           onSelectChapter={setSelectedChapter}
+          watchedCount={watchedCount}
+          totalVideos={subjectVideos.length}
+          completedPracticeCount={completedPracticeCount}
+          totalPractice={subjectPractice.length}
         />
 
         {/* Videos Section */}
