@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Bookmark, Trash2, Clock } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
+import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { springTransition } from '@/lib/motionVariants';
 import { ExpandedCardModal } from '@/components/ExpandedCardModal';
 import type { PinnedCard } from '@/data/dailyDownloadData';
@@ -25,6 +26,12 @@ export const ReviewBoard = ({
   const { lightTap, errorNotification } = useHaptics();
   const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
   const contentScrollRef = useDragScroll<HTMLDivElement>();
+
+  const { dragProps, backdropOpacity } = useSwipeToDismiss({
+    onDismiss: onClose,
+    threshold: 120,
+    direction: 'right',
+  });
 
   const handleUnpin = (cardId: string) => {
     lightTap();
@@ -60,9 +67,10 @@ export const ReviewBoard = ({
     <motion.div
       className="absolute inset-0 z-50 bg-background flex flex-col"
       initial={{ opacity: 0, x: '100%' }}
-      animate={{ opacity: 1, x: 0 }}
+      animate={{ opacity: backdropOpacity, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={springTransition}
+      {...dragProps}
     >
       {/* Header */}
       <header className="flex items-center justify-between p-4 pt-12 sm:pt-12 border-b border-border">

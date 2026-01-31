@@ -1,6 +1,10 @@
 import { X, Play, Pause, Expand } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
+import { useHaptics } from "@/hooks/useHaptics";
+import { springTransition } from "@/lib/motionVariants";
 import type { VideoTile } from "@/data/courseData";
 import type { Chapter } from "@/hooks/useChapters";
 
@@ -20,16 +24,34 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
   const [isKeyPointsExpanded, setIsKeyPointsExpanded] = useState(false);
   const contentRef = useDragScroll<HTMLDivElement>();
   const upNextRef = useDragScrollHorizontal<HTMLDivElement>();
+  const { lightTap } = useHaptics();
+  
+  const { dragProps, backdropOpacity } = useSwipeToDismiss({
+    onDismiss: onClose,
+    threshold: 120,
+  });
 
   if (!isOpen || !video) return null;
 
   const upNextVideos = videos.filter(v => v.id !== video.id);
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+    <motion.div 
+      className="absolute inset-0 z-50 flex flex-col bg-background"
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: backdropOpacity, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={springTransition}
+      {...dragProps}
+    >
+      {/* Drag Handle */}
+      <div className="flex justify-center pt-2 pb-1">
+        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 pt-12 border-b border-border">
-        <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
+      <div className="flex items-center justify-between px-4 py-3 pt-8 border-b border-border">
+        <button onClick={() => { lightTap(); onClose(); }} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
         <div className="flex-1 mx-4 text-center">
@@ -177,6 +199,6 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
