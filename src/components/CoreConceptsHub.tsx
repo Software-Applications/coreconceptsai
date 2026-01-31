@@ -35,7 +35,7 @@ export const CoreConceptsHub = ({
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
       {/* Unified container with subtle border */}
-      <div className="rounded-xl bg-card/50 border border-border/50 overflow-hidden">
+      <div className="rounded-xl bg-muted/40 border border-border overflow-hidden">
         {/* Core Concepts AI Bar */}
         <motion.div
           className="bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5"
