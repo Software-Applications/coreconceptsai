@@ -54,7 +54,7 @@ export const CoreConceptsHub = ({
         <div className="p-2">
           <motion.button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left bg-navy-100 dark:bg-navy-800 text-navy-800 dark:text-navy-100 border border-navy-200 dark:border-navy-700 rounded-lg hover:bg-navy-200 dark:hover:bg-navy-700 active:bg-navy-300 dark:active:bg-navy-600 transition-all duration-200 shadow-sm"
+            className="w-full px-3 py-2.5 text-left bg-transparent text-navy-800 dark:text-navy-100 rounded-lg hover:bg-white/40 dark:hover:bg-white/10 active:bg-white/60 dark:active:bg-white/20 transition-all duration-200"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={springTransition}
@@ -63,7 +63,7 @@ export const CoreConceptsHub = ({
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
-                <div className="w-9 h-9 rounded-full bg-navy-200 dark:bg-navy-700 flex items-center justify-center flex-shrink-0 relative">
+                <div className="w-9 h-9 rounded-full bg-white/60 dark:bg-white/10 flex items-center justify-center flex-shrink-0 relative">
                   <Headphones className="w-5 h-5 text-navy-600 dark:text-navy-300" />
                 <AnimatePresence>
                   {unlistenedCount > 0 && (
@@ -90,7 +90,7 @@ export const CoreConceptsHub = ({
               </div>
 
               {/* Explore CTA */}
-              <div className="flex-shrink-0 px-2 py-1 rounded-full bg-primary text-primary-foreground text-[11px] font-medium">
+              <div className="flex-shrink-0 px-2.5 py-1 rounded-full border border-primary/70 text-primary text-[11px] font-medium">
                 Explore
               </div>
             </div>
