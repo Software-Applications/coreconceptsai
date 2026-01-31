@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { motion } from "framer-motion";
-import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
+import { X, Clock, BarChart3, ChevronRight, CheckCircle2, BookOpen } from "lucide-react";
 import { useQuizProgress } from "@/hooks/useQuizProgress";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -153,6 +153,20 @@ export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetPro
             Review the related video before attempting this practice set for better understanding.
           </p>
         </div>
+
+        {/* Textbook Reference */}
+        {quiz.textbookPages && (
+          <div className="bg-accent/50 border border-border rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Review in Textbook</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {quiz.textbookChapter && <span>{quiz.textbookChapter} • </span>}
+              {quiz.textbookPages}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Start Button */}

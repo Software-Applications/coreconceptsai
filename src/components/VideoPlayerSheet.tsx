@@ -1,4 +1,4 @@
-import { X, Play, Pause, Expand } from "lucide-react";
+import { X, Play, Pause, Expand, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
@@ -156,6 +156,20 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
             )}
           </ul>
         </div>
+
+        {/* Textbook Reference */}
+        {video.textbookPages && (
+          <div className="bg-accent/50 border border-border rounded-xl p-4 mx-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Textbook Reference</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {video.textbookChapter && <span>{video.textbookChapter} • </span>}
+              {video.textbookPages}
+            </p>
+          </div>
+        )}
 
         {/* Up Next */}
         {upNextVideos.length > 0 && (
