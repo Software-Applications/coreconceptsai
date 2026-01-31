@@ -1,156 +1,170 @@
 
 
-# Core Concepts Section - Complete Redesign
+# Standardize Primary and Secondary Colors Across the App
 
-## Current Issues
+## Current State Analysis
 
-The current design has several problems:
-1. **Flat appearance** - The transparent button with violet background lacks depth and premium feel
-2. **Mixed visual language** - The saved cards section feels disconnected from the AI section above
-3. **Unclear hierarchy** - AI section and saved cards compete for attention
-4. **Washed out colors** - `bg-violet-100/80` doesn't create enough distinction in light mode
+After analyzing the codebase, I found the following color patterns in use:
 
----
+### Design System Colors (Correctly Used)
+These follow the Tailwind/shadcn design system and should be kept:
+- `text-primary`, `bg-primary`, `border-primary` - Blue (HSL 221 83% 53%)
+- `text-secondary`, `bg-secondary` - Gray tones
+- `text-muted-foreground`, `bg-muted` - Muted grays
+- `text-foreground`, `bg-background`, `bg-card` - Base colors
+- `text-accent`, `bg-accent` - Amber/gold (HSL 38 92% 50%)
+- `text-destructive`, `bg-destructive` - Red for errors
 
-## Recommended Approach: Elevated Card with Gradient Accent
+### Semantic Colors (Keep As-Is)
+These have specific meanings and should remain:
+- **Amber (`text-amber-500`, `bg-amber-500`)** - Resume/in-progress states
+- **Green (`text-green-600`, `bg-green-500`)** - Success/completion states
+- **Red (`text-red-600`, `bg-red-500`)** - Hard difficulty/errors
 
-Create a distinct, elevated card for the Core Concepts AI section that feels premium and clearly AI-branded, while keeping the saved cards section secondary.
+### AI Branding Colors (Keep As-Is)
+The violet/purple gradient is intentionally used for AI features:
+- `from-violet-500 to-purple-600` - AI badge and accents
 
-### Design Philosophy
+### Colors to Standardize
 
-```text
-Current (Flat):                    Proposed (Elevated):
-╭───────────────────────╮          ┌─────────────────────────┐
-│ 🎧 Core Concepts [AI] │          │ ░░░░ subtle glow ░░░░░░ │
-│     transparent btn   │    →     │ ┌───────────────────────┤
-│ ─────────────────────│          │ │ 🎧 Core Concepts [AI] │ ← elevated card
-│ 🔖 Saved Cards       │          │ │     Explore →         │
-╰───────────────────────╯          │ └───────────────────────┤
-                                   │ 🔖 Saved Cards (muted)  │
-                                   └─────────────────────────┘
-```
-
----
-
-## Proposed Design
-
-### Option A: Glass Card with Gradient Border (Recommended)
-
-**Core Concepts AI section becomes a distinct elevated card:**
-- White/dark card background with subtle shadow
-- Gradient border accent on the left edge (violet-to-purple)
-- The "Explore" becomes a subtle arrow indicator
-- Removes the nested box-in-box feeling
-
-**Saved Cards stays muted and secondary:**
-- No background, just a separator line above
-- Smaller text, less visual weight
-
-```text
-┌─────────────────────────────────────────┐
-│ ▌  🎧 Core Concepts          [AI]   →  │  ← white card, purple left accent
-│ ▌     AI explanations of tough topics  │
-├─────────────────────────────────────────┤  ← thin separator
-│ 🔖 My Saved Cards (3)        See All   │  ← muted, no background
-│   [card] [card] [card]                 │
-└─────────────────────────────────────────┘
-```
-
-### Option B: Subtle Gradient Fill
-
-**Single unified container with softer gradient:**
-- `bg-gradient-to-r from-violet-100/60 via-violet-50/40 to-transparent` for light mode
-- Creates a soft wash instead of solid block
-- Keeps the card feel but less dense
-
-### Option C: Elevated Shadow Card (Clean & Minimal)
-
-**White card with prominent shadow and subtle violet tint:**
-- `bg-card shadow-md border-0`
-- Thin gradient bar at top or bottom as AI indicator
-- Maximum breathing room, very clean
+| Current Usage | Location | Recommended Change |
+|---------------|----------|-------------------|
+| `bg-navy-800`, `bg-navy-700`, `bg-navy-900` | `courseData.ts` (subject colors) | Keep for now (data file, not UI) |
 
 ---
 
-## My Recommendation: Option A (Glass Card with Gradient Border)
+## Summary of Findings
 
-This provides:
-- Clear visual distinction for the AI feature
-- Premium, elevated feel with shadow
-- The purple accent ties to AI branding without overwhelming
-- Saved cards become clearly secondary
+The app is **already well-standardized**. The design system uses:
 
-### Technical Implementation
+1. **Primary (Blue)** - Main interactive elements, active states, CTAs
+2. **Accent (Amber/Gold)** - Badges showing unlistened count, special highlights
+3. **Muted** - Secondary text, disabled states, backgrounds
+4. **Foreground/Background/Card** - Base layer colors
 
-**Outer container (currently `bg-violet-100/80`):**
-```tsx
-// FROM:
-<div className="rounded-xl bg-violet-100/80 dark:bg-violet-900/40">
+### Semantic Exceptions (Appropriate to Keep)
+- **Amber** for "resume" states (in-progress indicator)
+- **Green** for completed/success states
+- **Red** for hard difficulty or destructive actions
+- **Violet gradient** for AI branding
 
-// TO:
-<div className="rounded-xl overflow-hidden">
+---
+
+## Recommended Standardization
+
+While the app is largely consistent, there are a few minor improvements:
+
+### 1. Consider Defining Semantic Colors in CSS Variables
+
+Add these to `index.css` for consistency:
+
+```css
+:root {
+  --success: 142 76% 36%;  /* Green for completed states */
+  --warning: 38 92% 50%;   /* Amber for resume/in-progress */
+  --info: 217 91% 60%;     /* Primary blue for information */
+}
 ```
 
-**Core Concepts AI Card (new elevated card):**
-```tsx
-<div className="relative bg-card dark:bg-card rounded-xl shadow-md border border-border/50 overflow-hidden">
-  {/* Purple gradient left accent */}
-  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-purple-600" />
+Then use `text-[hsl(var(--success))]` instead of `text-green-600` to ensure consistent colors across the app and allow easy theme customization.
+
+### 2. Files That Could Be Standardized
+
+| File | Current | Proposed |
+|------|---------|----------|
+| `FlashSummaryCard.tsx` | `text-green-600`, `text-amber-600`, `text-red-600` | Consider using CSS variables |
+| `PracticeQuizSheet.tsx` | `bg-green-100 text-green-600` | Consider `bg-success/20 text-success` |
+| `TopicCard.tsx` | `text-amber-500`, `bg-amber-500/20` | Consider `text-warning bg-warning/20` |
+| `DailyDownloadPlayer.tsx` | `text-amber-500`, `bg-amber-500` | Consider `text-warning bg-warning` |
+| `SearchResultsSection.tsx` | `text-amber-500/600` | Consider `text-warning` |
+
+### 3. No Changes Needed For
+
+- `courseData.ts` - Data layer colors for subject identification
+- UI components using `primary`, `secondary`, `muted`, `accent`, `destructive`
+- AI branding gradient (`from-violet-500 to-purple-600`)
+
+---
+
+## Implementation Plan
+
+### Phase 1: Add CSS Variables for Semantic Colors
+
+**File: `src/index.css`**
+
+Add semantic color variables under `:root` and `.dark`:
+
+```css
+:root {
+  /* Existing colors... */
   
-  {/* Content with left padding for accent */}
-  <motion.button className="w-full pl-4 pr-3 py-3 ...">
-    {/* existing content */}
-  </motion.button>
-</div>
+  /* Semantic colors */
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+}
+
+.dark {
+  /* Existing dark mode colors... */
+  
+  /* Semantic colors */
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+}
 ```
 
-**Explore CTA (simpler arrow):**
-```tsx
-// FROM: outline pill
-<div className="px-2.5 py-1 rounded-full border border-primary/70 text-primary">Explore</div>
+### Phase 2: Update Tailwind Config
 
-// TO: just an arrow with subtle background
-<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-  <ChevronRight className="w-4 h-4 text-primary" />
-</div>
+**File: `tailwind.config.ts`**
+
+Add the semantic colors:
+
+```ts
+colors: {
+  // existing colors...
+  success: {
+    DEFAULT: "hsl(var(--success))",
+    foreground: "hsl(var(--success-foreground))",
+  },
+  warning: {
+    DEFAULT: "hsl(var(--warning))",
+    foreground: "hsl(var(--warning-foreground))",
+  },
+}
 ```
 
-**Saved Cards section (demoted, cleaner):**
-```tsx
-// Add top border as separator, remove any background
-<div className="px-3 py-2 border-t border-border/40">
-  {/* existing saved cards content */}
-</div>
-```
+### Phase 3: Update Components
+
+Replace hardcoded colors with semantic variables:
+
+| Component | Change |
+|-----------|--------|
+| `FlashSummaryCard.tsx` | `text-green-600` -> `text-success` |
+| `PracticeQuizSheet.tsx` | `bg-green-100 text-green-600` -> `bg-success/10 text-success` |
+| `TopicCard.tsx` | `text-amber-500` -> `text-warning`, `bg-amber-500/20` -> `bg-warning/20` |
+| `DailyDownloadPlayer.tsx` | `text-amber-500` -> `text-warning`, `bg-amber-500` -> `bg-warning` |
+| `SearchResultsSection.tsx` | `text-amber-500` -> `text-warning` |
 
 ---
 
-## Color Palette Summary
+## Benefits of Standardization
 
-| Element | Light Mode | Dark Mode |
-|---------|------------|-----------|
-| AI Card background | `bg-card` (white) | `bg-card` (dark card) |
-| AI Card shadow | `shadow-md` | `shadow-md` |
-| Left accent | `from-violet-500 to-purple-600` | same |
-| Explore icon bg | `bg-primary/10` | `bg-primary/20` |
-| Saved Cards separator | `border-border/40` | `border-border/30` |
+1. **Centralized theming** - Change colors in one place
+2. **Dark mode consistency** - Semantic colors adapt automatically
+3. **Design system alignment** - Follows shadcn/Tailwind patterns
+4. **Future flexibility** - Easy to update brand colors later
 
 ---
 
-## Files to Modify
+## Technical Summary
 
-| File | Changes |
-|------|---------|
-| `src/components/CoreConceptsHub.tsx` | Complete restyling of the component structure |
-
----
-
-## Visual Summary
-
-The key improvements:
-1. **Elevation** - Shadow adds depth and premium feel
-2. **Accent stripe** - Purple gradient bar provides AI branding without color blocks
-3. **Cleaner hierarchy** - AI card is clearly primary, saved cards clearly secondary
-4. **Less dense** - White/card background with shadow vs solid color blocks
-5. **Simpler CTA** - Arrow icon instead of text pill reduces visual noise
+**Files to modify:**
+1. `src/index.css` - Add CSS variables
+2. `tailwind.config.ts` - Add Tailwind color definitions
+3. `src/components/FlashSummaryCard.tsx` - Use semantic colors
+4. `src/components/PracticeQuizSheet.tsx` - Use semantic colors
+5. `src/components/topic-selection/TopicCard.tsx` - Use semantic colors
+6. `src/components/DailyDownloadPlayer.tsx` - Use semantic colors
+7. `src/components/topic-selection/SearchResultsSection.tsx` - Use semantic colors
 
