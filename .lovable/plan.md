@@ -1,81 +1,64 @@
 
-## Goal
-Make horizontal scrolling for **Pinned Cards** feel smooth and reliable on **desktop mouse click-and-drag**, without breaking:
-- normal click-to-open on a pinned card
-- native momentum scrolling on touch devices
 
-## What’s happening now (root cause)
-In `useDragScrollHorizontal` (`src/hooks/useDragScroll.ts`) the logic is currently based on **mouse events** (`mousedown/mousemove/...`) and it calls `preventDefault()` on `mousedown`.
+# Plan: Add Consistent Padding on Hover for Cards
 
-Because your cards are `motion.button`s (Framer Motion) and you also added `onPointerDown/onPointerMove` inside `PinnedCardPreview`, browsers often prefer **Pointer Events**; depending on the browser + Framer Motion internals, that can suppress/alter the legacy mouse events chain. Result: the container doesn’t reliably receive the `mousemove` updates needed to scroll, so mouse drag can feel broken.
+## Problem
+The three card types (Pinned Cards, Video Cards, Practice Cards) have inconsistent hover behavior:
+- **PinnedCardPreview**: Uses inline `whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}`
+- **VideoCard**: Uses shared `cardHover` variant (`scale: 1.02, y: -2`)
+- **PracticeCard**: Uses shared `cardHover` variant (`scale: 1.02, y: -2`)
 
-Also, `snap-x snap-mandatory` can fight with JS-driven scroll updates, causing “sticky/janky” movement unless snap is temporarily disabled during drag.
+None of them currently have padding adjustments on hover.
 
-## Implementation approach (targeted to Pinned Cards first)
-### 1) Fix the horizontal drag hook to use Pointer Events (mouse only)
-Update `useDragScrollHorizontal` to:
-- listen to `pointerdown / pointermove / pointerup / pointercancel`
-- **only activate for `pointerType === "mouse"`**
-- use `element.setPointerCapture(e.pointerId)` so dragging continues even if the cursor leaves the row
-- compute velocity during drag and apply momentum after release (keep what you already built, just move it to pointer events)
+## Solution
+Add a consistent hover effect that includes a subtle padding/visual breathing room to all three card types. Since Framer Motion's `whileHover` doesn't directly animate CSS padding without layout shifts, we'll achieve the "padding feel" by:
 
-Key detail: do **not** call `preventDefault()` immediately on pointerdown. Only do it once the user actually drags past a small threshold.
+1. Adding a subtle `y: -2` lift to all cards (already on Video/Practice, missing on Pinned)
+2. Adding a subtle box-shadow glow effect for depth
+3. Ensuring consistent `scale: 1.02` across all cards
 
-### 2) Add a small drag threshold so clicks still work
-Inside the hook:
-- on pointerdown: store start X/time, `isDown=true`, `hasDragged=false`
-- on pointermove: if `abs(dx) > 4–6px`, set `hasDragged=true` and begin scrolling
-- only when `hasDragged === true`:
-  - call `e.preventDefault()` to avoid text selection / drag ghosting
-  - update `scrollLeft`
+## Technical Changes
 
-This reduces “click feels blocked” and also prevents accidental tiny movements from engaging drag.
+### File: `src/lib/motionVariants.ts`
+Update the shared `cardHover` variant to include a consistent shadow for visual padding:
 
-### 3) Temporarily disable CSS scroll snapping while dragging + during momentum
-For the pinned cards row you have `snap-x snap-mandatory`.
+```typescript
+export const cardHover = {
+  scale: 1.02,
+  y: -2,
+  boxShadow: "0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -4px rgba(0, 0, 0, 0.06)",
+};
+```
 
-During active drag (and while momentum is running), temporarily set:
-- `element.style.scrollSnapType = "none"`
+### File: `src/components/PinnedCardPreview.tsx`
+Update to use the shared `cardHover` variant instead of inline styles for consistency:
 
-When momentum ends (or on release if no momentum), restore it back to its original value (or empty string). This prevents the browser snapping engine from fighting your JS scroll updates.
+```tsx
+import { cardHover, cardTap, springTransition } from '@/lib/motionVariants';
 
-### 4) Scope change to pinned cards first (lowest risk)
-Right now `useDragScrollHorizontal` is used by:
-- pinnedCardsScrollRef
-- videosScrollRef
-- practiceScrollRef
+// Change whileHover from inline to:
+whileHover={cardHover}
+whileTap={isDragging ? {} : cardTap}
+```
 
-To minimize regression risk, we’ll do one of these (I’ll choose the safest after a quick code check when implementing):
-- **Option A (recommended):** create a dedicated hook `useDragScrollHorizontalMouse()` and apply it only to pinned cards for now
-- **Option B:** update existing `useDragScrollHorizontal` but keep behavior mouse-only and tested; this will fix all three rows at once
+Add a base shadow to the card so the hover shadow transition looks smooth:
+```tsx
+className="w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between select-none shadow-sm"
+```
 
-Given you specifically asked “for pinned cards”, Option A is safer; we can roll the same fix to Videos/Practice after you confirm it feels right.
+### File: `src/components/VideoCard.tsx`
+Already uses `cardHover` - will automatically get the new shadow effect.
 
-### 5) Keep `PinnedCardPreview` click/drag guard (with a small tweak if needed)
-Your current `PinnedCardPreview` guard is fine, but if it still blocks scrolling we’ll:
-- ensure it does **not** call `stopPropagation()` on pointer events
-- optionally increase threshold slightly (5px → 8px) if users commonly “micro-drag” while clicking
+### File: `src/components/PracticeCard.tsx`  
+Already uses `cardHover` - will automatically get the new shadow effect.
 
-(We won’t change this unless needed; most of the fix should be in the scroll hook.)
+## Files to Modify
+1. `src/lib/motionVariants.ts` - Add shadow to cardHover
+2. `src/components/PinnedCardPreview.tsx` - Use shared cardHover variant + add base shadow
 
-## Files that will be changed
-- `src/hooks/useDragScroll.ts`
-  - implement pointer-event-based mouse dragging + pointer capture
-  - add drag threshold
-  - disable/restore snap during drag/momentum
-  - (optionally) export a pinned-only hook variant
-- `src/pages/Index.tsx`
-  - only if needed: switch pinned cards row to the new pinned-only hook
-- `src/components/PinnedCardPreview.tsx`
-  - only if needed: adjust threshold or remove any propagation blockers (currently none)
-
-## Testing checklist (what you’ll verify in preview)
-1. Desktop: click-and-drag on **Pinned Cards** row scrolls smoothly.
-2. Desktop: quick flick drag releases with momentum (not abrupt stop).
-3. Desktop: clicking a pinned card still opens the expanded view (no “dead clicks”).
-4. Desktop: dragging no longer accidentally opens a card.
-5. Touch devices: pinned cards still use native swipe momentum (no custom drag takeover).
-
-## Success criteria
-Pinned cards horizontal scrolling feels smooth and reliable on desktop mouse drag, while tap/click behavior remains consistent.
+## Expected Result
+All three card types will have identical, smooth hover behavior:
+- Slight scale up (1.02)
+- Lift effect (-2px on Y axis)
+- Subtle shadow glow for visual "breathing room"
 
