@@ -49,7 +49,7 @@ export const CoreConceptsHub = ({
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
       {/* Unified container with soft lavender background */}
-      <div className="rounded-xl bg-violet-50/50 dark:bg-violet-950/20">
+      <div className="rounded-xl bg-violet-100/80 dark:bg-violet-900/40">
         {/* Core Concepts AI Bar - Outlined Button Style */}
         <div className="p-2">
           <motion.button

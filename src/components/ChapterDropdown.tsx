@@ -68,22 +68,6 @@ export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
                 <ChevronDown className="w-5 h-5 text-muted-foreground" />
               </motion.div>
             </div>
-            {/* Progress Bar */}
-            {totalItems > 0 && (
-              <div className="mt-2">
-                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-primary rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPercent}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {completedItems} of {totalItems} completed
-                </p>
-              </div>
-            )}
           </motion.button>
           
           <AnimatePresence>
