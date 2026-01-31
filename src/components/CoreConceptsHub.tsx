@@ -84,7 +84,7 @@ export const CoreConceptsHub = ({
         </div>
 
         {/* Saved Cards Section */}
-        <div className="px-3 pt-1.5 pb-2">
+        <div className="px-3 pb-2">
           {/* Section Header */}
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-2">
