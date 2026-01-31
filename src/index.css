@@ -238,7 +238,9 @@ button:active {
     justify-content: space-between;
     padding: 0 28px;
     z-index: 9998;
-    background: hsl(var(--background));
+    background: hsl(var(--background) / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: hsl(var(--foreground));
     font-size: 15px;
     font-weight: 600;
