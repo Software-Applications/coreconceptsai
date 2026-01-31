@@ -35,17 +35,18 @@ export const CoreConceptsHub = ({
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
       {/* Unified container with subtle border */}
-      <div className="rounded-xl bg-muted/40 border border-border overflow-hidden">
+      <div className="rounded-xl bg-muted/40 border border-border">
         {/* Core Concepts AI Bar - Outlined Button Style */}
-        <motion.button
-          onClick={handleMainClick}
-          className="w-full px-3 py-2.5 text-left border-2 border-primary/40 rounded-lg m-2 mr-2 bg-background hover:bg-primary/5 hover:border-primary/60 active:bg-primary/10 transition-all duration-200"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={springTransition}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-        >
+        <div className="p-2">
+          <motion.button
+            onClick={handleMainClick}
+            className="w-full px-3 py-2.5 text-left border-2 border-primary/40 rounded-lg bg-background hover:bg-primary/5 hover:border-primary/60 active:bg-primary/10 transition-all duration-200"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransition}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
               <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
@@ -87,8 +88,9 @@ export const CoreConceptsHub = ({
               >
                 <ChevronRight className="w-4 h-4 text-primary" />
               </motion.div>
-          </div>
-        </motion.button>
+            </div>
+          </motion.button>
+        </div>
 
         {/* Separator */}
         <div className="border-t border-border/50" />
