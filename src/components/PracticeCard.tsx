@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from "framer-motion";
-import { Trophy } from "lucide-react";
+import { Trophy, BookOpen } from "lucide-react";
 import type { PracticeTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -59,6 +59,12 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
           <div className="mt-2">
             <p className="font-medium text-foreground text-xs">{isCompleted ? 'Retake quiz' : 'Start quiz'}</p>
             <p className="text-muted-foreground text-xs">~{estimatedTime} min</p>
+            {practice.textbookPages && (
+              <p className="text-muted-foreground/70 text-xs flex items-center gap-1 mt-0.5">
+                <BookOpen className="w-3 h-3" />
+                {practice.textbookPages}
+              </p>
+            )}
           </div>
         </motion.button>
       </div>
