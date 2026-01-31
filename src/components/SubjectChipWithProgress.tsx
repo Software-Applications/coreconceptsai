@@ -55,10 +55,6 @@ interface SubjectChipWithProgressProps {
 
 export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChipWithProgressProps>(
   ({ subject, isSelected, progress, onClick }, ref) => {
-    const imageSize = 32;
-    const ringSize = 40;
-    const strokeWidth = 2.5;
-
     return (
       <motion.button
         ref={ref}
@@ -71,31 +67,11 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
             : 'border border-border bg-card hover:bg-accent'
         }`}
       >
-        {/* Image with progress ring */}
-        <div className="relative" style={{ width: ringSize, height: ringSize }}>
-          {progress > 0 && (
-            <ProgressRing 
-              progress={progress} 
-              size={ringSize} 
-              strokeWidth={strokeWidth} 
-            />
-          )}
-          <div 
-            className="absolute rounded-lg overflow-hidden"
-            style={{ 
-              width: imageSize, 
-              height: imageSize,
-              top: (ringSize - imageSize) / 2,
-              left: (ringSize - imageSize) / 2,
-            }}
-          >
-            <img 
-              src={subject.image_url || ''} 
-              alt={subject.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
+        <img 
+          src={subject.image_url || ''} 
+          alt={subject.name}
+          className="w-8 h-8 rounded-lg object-cover"
+        />
         
         <span className={`text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
           {subject.name}
