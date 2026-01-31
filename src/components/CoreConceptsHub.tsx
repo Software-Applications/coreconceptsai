@@ -79,8 +79,8 @@ export const CoreConceptsHub = ({
         </button>
       </motion.div>
 
-      {/* Saved Cards Section - styled like Videos/Practice with connector line */}
-      <div className="mt-2 ml-4 pl-3 border-l-2 border-primary/20">
+      {/* Saved Cards Section - styled like Videos/Practice */}
+      <div className="mt-3">
         {/* Section Header */}
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2">
