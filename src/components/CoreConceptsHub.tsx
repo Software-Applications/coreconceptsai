@@ -33,11 +33,10 @@ export const CoreConceptsHub = ({
   };
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
-      {/* Unified container with subtle border */}
-      <div className="rounded-xl bg-muted/40 border border-border">
-        {/* Core Concepts AI Bar - Outlined Button Style */}
-        <div className="p-2">
+    <>
+      {/* Sticky Core Concepts AI Bar */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
+        <div className="rounded-xl bg-muted/40 border border-border p-2">
           <motion.button
             onClick={handleMainClick}
             className="w-full px-3 py-2.5 text-left bg-navy-100 dark:bg-navy-800 text-navy-800 dark:text-navy-100 border border-navy-200 dark:border-navy-700 rounded-lg hover:bg-navy-200 dark:hover:bg-navy-700 active:bg-navy-300 dark:active:bg-navy-600 transition-all duration-200 shadow-sm"
@@ -49,8 +48,8 @@ export const CoreConceptsHub = ({
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
-                <div className="w-9 h-9 rounded-full bg-navy-200 dark:bg-navy-700 flex items-center justify-center flex-shrink-0 relative">
-                  <Headphones className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+              <div className="w-9 h-9 rounded-full bg-navy-200 dark:bg-navy-700 flex items-center justify-center flex-shrink-0 relative">
+                <Headphones className="w-5 h-5 text-navy-600 dark:text-navy-300" />
                 <AnimatePresence>
                   {unlistenedCount > 0 && (
                     <motion.div
@@ -67,12 +66,12 @@ export const CoreConceptsHub = ({
 
               {/* Title */}
               <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50 flex items-center gap-1.5">
-                    Core Concepts <AIBadge size="sm" />
-                  </h3>
-                  <p className="text-[11px] text-navy-600 dark:text-navy-400 truncate">
-                    AI explanations of tough topics
-                  </p>
+                <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50 flex items-center gap-1.5">
+                  Core Concepts <AIBadge size="sm" />
+                </h3>
+                <p className="text-[11px] text-navy-600 dark:text-navy-400 truncate">
+                  AI explanations of tough topics
+                </p>
               </div>
 
               {/* Explore CTA */}
@@ -82,9 +81,11 @@ export const CoreConceptsHub = ({
             </div>
           </motion.button>
         </div>
+      </div>
 
-        {/* Saved Cards Section */}
-        <div className="px-3 pb-2">
+      {/* Non-sticky Saved Cards Section */}
+      <div className="-mx-4 px-4">
+        <div className="rounded-xl bg-muted/40 border border-border mt-3 px-3 py-2">
           {/* Section Header */}
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-2">
@@ -133,6 +134,6 @@ export const CoreConceptsHub = ({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
