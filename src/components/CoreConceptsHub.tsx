@@ -38,14 +38,14 @@ export const CoreConceptsHub = ({
       <div className="rounded-xl bg-muted/40 border border-border overflow-hidden">
         {/* Core Concepts AI Bar */}
         <motion.div
-          className="bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5"
+          className="bg-gradient-to-r from-primary/25 via-primary/15 to-primary/10"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={springTransition}
         >
           <button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left active:bg-primary/10 transition-colors"
+            className="w-full px-3 py-2.5 text-left hover:bg-primary/10 active:bg-primary/15 transition-colors"
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
@@ -75,8 +75,19 @@ export const CoreConceptsHub = ({
                 </p>
               </div>
 
-              {/* Right chevron */}
-              <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              {/* Animated chevron indicator */}
+              <motion.div
+                className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 flex-shrink-0"
+                animate={{ x: [0, 3, 0] }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity, 
+                  ease: "easeInOut",
+                  repeatDelay: 1
+                }}
+              >
+                <ChevronRight className="w-4 h-4 text-primary" />
+              </motion.div>
             </div>
           </button>
         </motion.div>
