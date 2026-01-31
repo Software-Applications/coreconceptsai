@@ -70,7 +70,7 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
         <img 
           src={subject.textbook_image_url || subject.image_url || ''} 
           alt={subject.name}
-          className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+          className="w-7 h-9 rounded-md object-cover flex-shrink-0"
         />
         
         <span className={`text-sm font-medium whitespace-nowrap ${isSelected ? 'text-primary' : 'text-foreground'}`}>
