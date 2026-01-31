@@ -225,6 +225,39 @@ button:active {
     border-radius: 20px;
     z-index: 9999;
   }
+  
+  /* iOS Status Bar styling */
+  .status-bar {
+    position: absolute;
+    top: 52px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 9998;
+    color: hsl(var(--foreground));
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  
+  .status-bar-time {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .status-bar-icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .status-bar-battery {
+    display: flex;
+    align-items: center;
+  }
 }
 
 /* On actual mobile devices, no frame needed */
@@ -233,7 +266,8 @@ button:active {
     background: hsl(var(--background));
   }
   
-  .mobile-frame-bezel {
+  .mobile-frame-bezel,
+  .status-bar {
     display: none;
   }
 }
