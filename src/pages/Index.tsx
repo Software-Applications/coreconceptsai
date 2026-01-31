@@ -240,11 +240,11 @@ const Index = () => {
           <div className="mb-3">
             <h2 className="text-xl font-bold text-foreground">Textbook</h2>
           </div>
-          <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
+          <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-4 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
             <img 
               src={selectedSubject.textbook.imageUrl} 
               alt={selectedSubject.textbook.title}
-              className="w-16 h-20 rounded-lg flex-shrink-0 object-cover shadow-sm"
+              className="w-20 h-[104px] rounded-lg flex-shrink-0 object-cover shadow-md"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground leading-snug">{selectedSubject.textbook.title}</p>
