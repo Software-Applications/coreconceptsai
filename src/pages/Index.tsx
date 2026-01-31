@@ -85,12 +85,33 @@ const Index = () => {
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
   const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
   
-  // Filter content by selected subject (safe even when selectedSubject is undefined)
-  const subjectChapters = selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [];
-  const subjectVideos = selectedSubject ? videoTiles.filter(v => v.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
-  const subjectPractice = selectedSubject ? practiceTiles.filter(p => p.subjectId === subjects.findIndex(s => s.id === selectedSubject.id) + 1) : [];
-  const subjectTopics = selectedSubject ? allTopics.filter(t => t.subjectId === selectedSubject.id) : [];
-  const subjectPinnedCards = selectedSubject ? pinnedCards.filter(c => c.subjectName === selectedSubject.name) : [];
+  // Memoize filtered content to prevent recalculation on every render
+  const subjectChapters = useMemo(() => 
+    selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [],
+    [selectedSubject?.id, allChapters]
+  );
+  
+  const subjectVideos = useMemo(() => {
+    if (!selectedSubject) return [];
+    const subjectIndex = subjects.findIndex(s => s.id === selectedSubject.id) + 1;
+    return videoTiles.filter(v => v.subjectId === subjectIndex);
+  }, [selectedSubject?.id, subjects]);
+  
+  const subjectPractice = useMemo(() => {
+    if (!selectedSubject) return [];
+    const subjectIndex = subjects.findIndex(s => s.id === selectedSubject.id) + 1;
+    return practiceTiles.filter(p => p.subjectId === subjectIndex);
+  }, [selectedSubject?.id, subjects]);
+  
+  const subjectTopics = useMemo(() => 
+    selectedSubject ? allTopics.filter(t => t.subjectId === selectedSubject.id) : [],
+    [selectedSubject?.id, allTopics]
+  );
+  
+  const subjectPinnedCards = useMemo(() => 
+    selectedSubject ? pinnedCards.filter(c => c.subjectName === selectedSubject.name) : [],
+    [selectedSubject?.name, pinnedCards]
+  );
   
   // Derive selectedTopic from query data so it updates when AI content is generated
   const selectedTopic = useMemo(() => {
@@ -107,7 +128,7 @@ const Index = () => {
     if (subjectChapters.length > 0) {
       setSelectedChapter(subjectChapters[0]);
     }
-  }, [selectedSubject?.id, subjectChapters.length]);
+  }, [selectedSubject?.id, subjectChapters]);
   
   useEffect(() => {
     // Videos completion check

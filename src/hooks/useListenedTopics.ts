@@ -82,10 +82,8 @@ export const useListenedTopics = () => {
       } catch (err) {
         console.error('Error saving progress:', err);
       }
-    } else {
-      // Save to localStorage for guests
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...listenedTopicIds, topicId]));
     }
+    // localStorage is synced in the useEffect above
   }, [isAuthenticated, user, listenedTopicIds]);
 
   const isListened = useCallback((topicId: string) => {

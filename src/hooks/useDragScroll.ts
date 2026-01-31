@@ -92,10 +92,19 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     };
 
     const restoreSnap = () => {
-      element.style.scrollSnapType = originalSnapType;
+      // Guard against unmounted element
+      if (element && element.style) {
+        element.style.scrollSnapType = originalSnapType;
+      }
     };
 
     const applyMomentum = () => {
+      // Guard against unmounted element
+      if (!element || !element.style) {
+        animationFrameId = null;
+        return;
+      }
+      
       // Stop if velocity is negligible
       if (Math.abs(velocity) < 0.1) {
         velocity = 0;

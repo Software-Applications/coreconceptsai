@@ -3,6 +3,7 @@ import { X, Clock, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { springTransition } from '@/lib/motionVariants';
+import { formatRelativeDate } from '@/lib/formatDate';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
 interface ExpandedCardModalProps {
@@ -13,17 +14,6 @@ interface ExpandedCardModalProps {
   onRemove: (cardId: string) => void;
 }
 
-const formatDate = (timestamp: string) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-};
 
 export const ExpandedCardModal = ({
   card,
@@ -135,7 +125,7 @@ export const ExpandedCardModal = ({
 
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-4">
             <Clock className="w-3 h-3" />
-            <span>Pinned {formatDate(card.pinnedAt)}</span>
+            <span>Pinned {formatRelativeDate(card.pinnedAt)}</span>
           </div>
         </div>
 

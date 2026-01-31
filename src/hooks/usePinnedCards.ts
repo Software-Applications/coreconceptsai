@@ -61,18 +61,40 @@ export const usePinnedCards = () => {
         }
 
         if (data) {
-          const cards: PinnedCard[] = data.map((item: any) => ({
+          // Define the shape of the joined query result
+          type PinnedCardRow = {
+            id: string;
+            pinned_at: string | null;
+            flash_summary_id: string;
+            flash_summaries: {
+              id: string;
+              topic_id?: string;
+              visual_type: string | null;
+              visual_content: string | null;
+              bullet_points: string[] | null;
+              difficulty: string | null;
+              topics?: {
+                id: string;
+                title: string;
+                chapters?: {
+                  subjects?: { name: string } | null;
+                } | null;
+              } | null;
+            } | null;
+          };
+          
+          const cards: PinnedCard[] = (data as PinnedCardRow[]).map((item) => ({
             id: item.id,
-            pinnedAt: item.pinned_at,
+            pinnedAt: item.pinned_at || new Date().toISOString(),
             topicTitle: item.flash_summaries?.topics?.title || '',
             subjectName: item.flash_summaries?.topics?.chapters?.subjects?.name || '',
             flashSummary: {
               id: item.flash_summaries?.id || '',
               topicId: item.flash_summaries?.topic_id || '',
-              visualType: item.flash_summaries?.visual_type || 'diagram',
+              visualType: (item.flash_summaries?.visual_type as 'diagram' | 'formula' | 'analogy') || 'diagram',
               visualContent: item.flash_summaries?.visual_content || '',
-              bulletPoints: item.flash_summaries?.bullet_points || ['', '', ''],
-              difficulty: item.flash_summaries?.difficulty || 'medium'
+              bulletPoints: (item.flash_summaries?.bullet_points?.slice(0, 3) || ['', '', '']) as [string, string, string],
+              difficulty: (item.flash_summaries?.difficulty as 'easy' | 'medium' | 'hard') || 'medium'
             }
           }));
           setPinnedCards(cards);
