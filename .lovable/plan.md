@@ -1,127 +1,81 @@
 
+## Goal
+Make horizontal scrolling for **Pinned Cards** feel smooth and reliable on **desktop mouse click-and-drag**, without breaking:
+- normal click-to-open on a pinned card
+- native momentum scrolling on touch devices
 
-# Plan: Fix Unsmooth Horizontal Scroll on Desktop Mouse Drag
+## What’s happening now (root cause)
+In `useDragScrollHorizontal` (`src/hooks/useDragScroll.ts`) the logic is currently based on **mouse events** (`mousedown/mousemove/...`) and it calls `preventDefault()` on `mousedown`.
 
-## Problem Summary
-When using mouse click-and-drag on desktop in the pinned cards, videos, and practice sets rows, the scrolling feels choppy and not smooth. The user wants native momentum scrolling on touch devices while improving the custom drag behavior on desktop.
+Because your cards are `motion.button`s (Framer Motion) and you also added `onPointerDown/onPointerMove` inside `PinnedCardPreview`, browsers often prefer **Pointer Events**; depending on the browser + Framer Motion internals, that can suppress/alter the legacy mouse events chain. Result: the container doesn’t reliably receive the `mousemove` updates needed to scroll, so mouse drag can feel broken.
 
-## Root Cause Analysis
-The `useDragScrollHorizontal` hook directly manipulates `element.scrollLeft` during pointer move events without any smoothing, easing, or momentum. This causes:
-1. **Abrupt, frame-by-frame position changes** - no interpolation between drag positions
-2. **No momentum after release** - scrolling stops immediately when the user releases
-3. **Blocking touch on touch devices** - the hook captures all pointer events including touch, preventing native momentum scrolling
+Also, `snap-x snap-mandatory` can fight with JS-driven scroll updates, causing “sticky/janky” movement unless snap is temporarily disabled during drag.
 
-## Solution Overview
-1. **Disable custom drag for touch devices** - allow native browser momentum scrolling on touch
-2. **Add smooth momentum/inertia for mouse drag** - track velocity during drag and apply deceleration after release
-3. **Use CSS `scroll-behavior: smooth`** - already applied but needs the momentum animation to work with it
+## Implementation approach (targeted to Pinned Cards first)
+### 1) Fix the horizontal drag hook to use Pointer Events (mouse only)
+Update `useDragScrollHorizontal` to:
+- listen to `pointerdown / pointermove / pointerup / pointercancel`
+- **only activate for `pointerType === "mouse"`**
+- use `element.setPointerCapture(e.pointerId)` so dragging continues even if the cursor leaves the row
+- compute velocity during drag and apply momentum after release (keep what you already built, just move it to pointer events)
 
-## Technical Changes
+Key detail: do **not** call `preventDefault()` immediately on pointerdown. Only do it once the user actually drags past a small threshold.
 
-### File: `src/hooks/useDragScroll.ts`
+### 2) Add a small drag threshold so clicks still work
+Inside the hook:
+- on pointerdown: store start X/time, `isDown=true`, `hasDragged=false`
+- on pointermove: if `abs(dx) > 4–6px`, set `hasDragged=true` and begin scrolling
+- only when `hasDragged === true`:
+  - call `e.preventDefault()` to avoid text selection / drag ghosting
+  - update `scrollLeft`
 
-#### 1. Skip custom drag handling for touch/pen inputs
-Modify `useDragScrollHorizontal` to only handle mouse events, allowing native touch scrolling:
+This reduces “click feels blocked” and also prevents accidental tiny movements from engaging drag.
 
-```typescript
-const handlePointerDown = (e: PointerEvent) => {
-  // Only handle mouse events - let touch use native scrolling
-  if (e.pointerType !== 'mouse') return;
-  if (e.button !== 0) return;
-  // ... rest of handler
-};
-```
+### 3) Temporarily disable CSS scroll snapping while dragging + during momentum
+For the pinned cards row you have `snap-x snap-mandatory`.
 
-#### 2. Track velocity during drag
-Add velocity tracking to calculate momentum:
+During active drag (and while momentum is running), temporarily set:
+- `element.style.scrollSnapType = "none"`
 
-```typescript
-let lastX = 0;
-let lastTime = 0;
-let velocity = 0;
+When momentum ends (or on release if no momentum), restore it back to its original value (or empty string). This prevents the browser snapping engine from fighting your JS scroll updates.
 
-const handlePointerMove = (e: PointerEvent) => {
-  if (!isDown || e.pointerType !== 'mouse') return;
-  
-  const now = performance.now();
-  const deltaTime = now - lastTime;
-  
-  if (deltaTime > 0) {
-    velocity = (e.clientX - lastX) / deltaTime;
-  }
-  
-  lastX = e.clientX;
-  lastTime = now;
-  // ... scroll position update
-};
-```
+### 4) Scope change to pinned cards first (lowest risk)
+Right now `useDragScrollHorizontal` is used by:
+- pinnedCardsScrollRef
+- videosScrollRef
+- practiceScrollRef
 
-#### 3. Apply momentum animation on release
-Add smooth deceleration using `requestAnimationFrame`:
+To minimize regression risk, we’ll do one of these (I’ll choose the safest after a quick code check when implementing):
+- **Option A (recommended):** create a dedicated hook `useDragScrollHorizontalMouse()` and apply it only to pinned cards for now
+- **Option B:** update existing `useDragScrollHorizontal` but keep behavior mouse-only and tested; this will fix all three rows at once
 
-```typescript
-const applyMomentum = () => {
-  if (Math.abs(velocity) < 0.01) {
-    velocity = 0;
-    return;
-  }
-  
-  element.scrollLeft -= velocity * 16; // ~16ms per frame
-  velocity *= 0.95; // friction/deceleration
-  
-  animationFrameId = requestAnimationFrame(applyMomentum);
-};
+Given you specifically asked “for pinned cards”, Option A is safer; we can roll the same fix to Videos/Practice after you confirm it feels right.
 
-const endPointerDrag = () => {
-  if (!isDown) return;
-  isDown = false;
-  
-  // Start momentum animation
-  applyMomentum();
-};
-```
+### 5) Keep `PinnedCardPreview` click/drag guard (with a small tweak if needed)
+Your current `PinnedCardPreview` guard is fine, but if it still blocks scrolling we’ll:
+- ensure it does **not** call `stopPropagation()` on pointer events
+- optionally increase threshold slightly (5px → 8px) if users commonly “micro-drag” while clicking
 
-#### 4. Cancel momentum on new interaction
-Stop any running momentum animation when user starts a new drag:
+(We won’t change this unless needed; most of the fix should be in the scroll hook.)
 
-```typescript
-let animationFrameId: number | null = null;
+## Files that will be changed
+- `src/hooks/useDragScroll.ts`
+  - implement pointer-event-based mouse dragging + pointer capture
+  - add drag threshold
+  - disable/restore snap during drag/momentum
+  - (optionally) export a pinned-only hook variant
+- `src/pages/Index.tsx`
+  - only if needed: switch pinned cards row to the new pinned-only hook
+- `src/components/PinnedCardPreview.tsx`
+  - only if needed: adjust threshold or remove any propagation blockers (currently none)
 
-const handlePointerDown = (e: PointerEvent) => {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
-  // ... rest of handler
-};
-```
+## Testing checklist (what you’ll verify in preview)
+1. Desktop: click-and-drag on **Pinned Cards** row scrolls smoothly.
+2. Desktop: quick flick drag releases with momentum (not abrupt stop).
+3. Desktop: clicking a pinned card still opens the expanded view (no “dead clicks”).
+4. Desktop: dragging no longer accidentally opens a card.
+5. Touch devices: pinned cards still use native swipe momentum (no custom drag takeover).
 
-#### 5. Cleanup animation frame on unmount
-Ensure proper cleanup:
-
-```typescript
-return () => {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-  // ... remove event listeners
-};
-```
-
-### File: `src/pages/Index.tsx`
-Remove unnecessary scroll-related CSS classes that may interfere:
-- Remove `scroll-smooth` from the horizontal scroll containers (interferes with JS-controlled scrolling)
-- Keep `overscroll-x-contain`, `snap-x snap-mandatory` for snap behavior
-
-## Expected Behavior After Fix
-| Input Method | Behavior |
-|--------------|----------|
-| Desktop mouse drag | Smooth momentum scrolling with deceleration after release |
-| Desktop trackpad | Native browser momentum scrolling |
-| Touch (mobile/tablet) | Native browser momentum scrolling |
-| Capacitor app | Native iOS/Android momentum scrolling |
-
-## Files to Modify
-1. `src/hooks/useDragScroll.ts` - Update `useDragScrollHorizontal` hook
-2. `src/pages/Index.tsx` - Remove conflicting `scroll-smooth` classes from horizontal containers
+## Success criteria
+Pinned cards horizontal scrolling feels smooth and reliable on desktop mouse drag, while tap/click behavior remains consistent.
 
