@@ -55,7 +55,7 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
               {video.duration}
             </div>
           </div>
-          <div className="flex items-start gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2">
             <img 
               src={video.avatarUrl} 
               alt={video.author}
