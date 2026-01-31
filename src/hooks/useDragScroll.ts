@@ -72,14 +72,28 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     if (!element) return;
 
     let isDown = false;
+    let hasDragged = false;
     let startX = 0;
     let scrollLeft = 0;
+    let pointerId: number | null = null;
     
     // Velocity tracking for momentum
     let lastX = 0;
     let lastTime = 0;
     let velocity = 0;
     let animationFrameId: number | null = null;
+    
+    // Store original snap style to restore later
+    let originalSnapType = '';
+
+    const disableSnap = () => {
+      originalSnapType = element.style.scrollSnapType || '';
+      element.style.scrollSnapType = 'none';
+    };
+
+    const restoreSnap = () => {
+      element.style.scrollSnapType = originalSnapType;
+    };
 
     const applyMomentum = () => {
       // Stop if velocity is negligible
@@ -87,6 +101,7 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
         velocity = 0;
         animationFrameId = null;
         element.style.cursor = 'grab';
+        restoreSnap();
         return;
       }
       
@@ -99,20 +114,22 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       animationFrameId = requestAnimationFrame(applyMomentum);
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      // Only respond to primary mouse button
+    const handlePointerDown = (e: PointerEvent) => {
+      // Only respond to mouse, not touch
+      if (e.pointerType !== 'mouse') return;
+      // Only primary button
       if (e.button !== 0) return;
 
       // Cancel any ongoing momentum animation
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
+        restoreSnap();
       }
 
-      e.stopPropagation();
-      e.preventDefault();
-
       isDown = true;
+      hasDragged = false;
+      pointerId = e.pointerId;
       startX = e.clientX;
       scrollLeft = element.scrollLeft;
       
@@ -121,13 +138,28 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       lastTime = performance.now();
       velocity = 0;
 
-      element.style.cursor = 'grabbing';
+      // Capture pointer so dragging continues even if cursor leaves element
+      element.setPointerCapture(e.pointerId);
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!isDown) return;
+      if (e.pointerId !== pointerId) return;
 
-      e.stopPropagation();
+      const dx = e.clientX - startX;
+      
+      // Drag threshold: only start scrolling after 5px movement
+      if (!hasDragged) {
+        if (Math.abs(dx) > 5) {
+          hasDragged = true;
+          element.style.cursor = 'grabbing';
+          disableSnap();
+        } else {
+          return; // Not dragging yet
+        }
+      }
+
+      // Prevent text selection / default behaviors
       e.preventDefault();
 
       const now = performance.now();
@@ -142,57 +174,67 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       lastTime = now;
 
       // Update scroll position
-      const walkX = (e.clientX - startX) * 1.25;
+      const walkX = dx * 1.25;
       element.scrollLeft = scrollLeft - walkX;
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = (e: PointerEvent) => {
       if (!isDown) return;
+      if (e.pointerId !== pointerId) return;
 
       isDown = false;
-      
-      // Start momentum animation if there's velocity
-      if (Math.abs(velocity) > 0.1) {
+      pointerId = null;
+
+      // Release pointer capture
+      try {
+        element.releasePointerCapture(e.pointerId);
+      } catch {}
+
+      // Only apply momentum if we actually dragged
+      if (hasDragged && Math.abs(velocity) > 0.1) {
         applyMomentum();
       } else {
         element.style.cursor = 'grab';
+        if (hasDragged) restoreSnap();
       }
+      
+      hasDragged = false;
     };
 
-    const handleMouseLeave = () => {
-      if (!isDown) return;
-
-      isDown = false;
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
       
-      // Start momentum animation if there's velocity
-      if (Math.abs(velocity) > 0.1) {
-        applyMomentum();
-      } else {
-        element.style.cursor = 'grab';
-      }
+      isDown = false;
+      hasDragged = false;
+      pointerId = null;
+      element.style.cursor = 'grab';
+      restoreSnap();
     };
 
     const handleDragStart = (e: DragEvent) => {
       // Prevent image/button drag ghosting while we "grab-scroll"
-      e.preventDefault();
+      if (hasDragged) {
+        e.preventDefault();
+      }
     };
 
-    // Touch events - let native scrolling handle it (do nothing)
-    const handleTouchStart = (e: TouchEvent) => {
+    // Touch events - let native scrolling handle it
+    const handleTouchStart = () => {
       // Cancel any ongoing momentum animation so touch scrolling feels native
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
+        restoreSnap();
       }
     };
 
     element.style.cursor = 'grab';
 
-    // Mouse events for custom drag with momentum
-    element.addEventListener('mousedown', handleMouseDown);
-    element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('mouseup', handleMouseUp);
-    element.addEventListener('mouseleave', handleMouseLeave);
+    // Pointer events for custom drag with momentum (mouse only)
+    element.addEventListener('pointerdown', handlePointerDown);
+    element.addEventListener('pointermove', handlePointerMove);
+    element.addEventListener('pointerup', handlePointerUp);
+    element.addEventListener('pointercancel', handlePointerCancel);
 
     // Touch - just cancel momentum, let native scrolling work
     element.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -205,10 +247,10 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
         cancelAnimationFrame(animationFrameId);
       }
       
-      element.removeEventListener('mousedown', handleMouseDown);
-      element.removeEventListener('mousemove', handleMouseMove);
-      element.removeEventListener('mouseup', handleMouseUp);
-      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('pointerdown', handlePointerDown);
+      element.removeEventListener('pointermove', handlePointerMove);
+      element.removeEventListener('pointerup', handlePointerUp);
+      element.removeEventListener('pointercancel', handlePointerCancel);
       element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('dragstart', handleDragStart);
     };
