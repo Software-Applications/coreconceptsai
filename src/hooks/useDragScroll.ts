@@ -99,9 +99,8 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       animationFrameId = requestAnimationFrame(applyMomentum);
     };
 
-    const handlePointerDown = (e: PointerEvent) => {
-      // Only handle mouse events - let touch/pen use native momentum scrolling
-      if (e.pointerType !== 'mouse') return;
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only respond to primary mouse button
       if (e.button !== 0) return;
 
       // Cancel any ongoing momentum animation
@@ -125,9 +124,8 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       element.style.cursor = 'grabbing';
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       if (!isDown) return;
-      if (e.pointerType !== 'mouse') return;
 
       e.stopPropagation();
       e.preventDefault();
@@ -148,9 +146,21 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       element.scrollLeft = scrollLeft - walkX;
     };
 
-    const endPointerDrag = (e?: PointerEvent) => {
+    const handleMouseUp = () => {
       if (!isDown) return;
-      if (e && e.pointerType !== 'mouse') return;
+
+      isDown = false;
+      
+      // Start momentum animation if there's velocity
+      if (Math.abs(velocity) > 0.1) {
+        applyMomentum();
+      } else {
+        element.style.cursor = 'grab';
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (!isDown) return;
 
       isDown = false;
       
@@ -167,14 +177,25 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       e.preventDefault();
     };
 
+    // Touch events - let native scrolling handle it (do nothing)
+    const handleTouchStart = (e: TouchEvent) => {
+      // Cancel any ongoing momentum animation so touch scrolling feels native
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    };
+
     element.style.cursor = 'grab';
 
-    // Only use mouse events for custom drag - let touch use native scrolling
-    element.addEventListener('pointerdown', handlePointerDown, { passive: false });
-    element.addEventListener('pointermove', handlePointerMove, { passive: false });
-    element.addEventListener('pointerup', endPointerDrag);
-    element.addEventListener('pointercancel', endPointerDrag);
-    element.addEventListener('pointerleave', endPointerDrag);
+    // Mouse events for custom drag with momentum
+    element.addEventListener('mousedown', handleMouseDown);
+    element.addEventListener('mousemove', handleMouseMove);
+    element.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('mouseleave', handleMouseLeave);
+
+    // Touch - just cancel momentum, let native scrolling work
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
 
     element.addEventListener('dragstart', handleDragStart);
 
@@ -184,11 +205,11 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
         cancelAnimationFrame(animationFrameId);
       }
       
-      element.removeEventListener('pointerdown', handlePointerDown as any);
-      element.removeEventListener('pointermove', handlePointerMove as any);
-      element.removeEventListener('pointerup', endPointerDrag as any);
-      element.removeEventListener('pointercancel', endPointerDrag as any);
-      element.removeEventListener('pointerleave', endPointerDrag as any);
+      element.removeEventListener('mousedown', handleMouseDown);
+      element.removeEventListener('mousemove', handleMouseMove);
+      element.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('dragstart', handleDragStart);
     };
   }, []);
