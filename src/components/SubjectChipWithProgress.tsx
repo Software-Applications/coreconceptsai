@@ -61,7 +61,7 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
         onClick={onClick}
         whileTap={cardTap}
         transition={springTransition}
-        className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-colors ${
+        className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-colors min-w-fit ${
           isSelected
             ? 'border-2 border-primary bg-card shadow-sm'
             : 'border border-border bg-card hover:bg-accent'
@@ -70,10 +70,10 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
         <img 
           src={subject.image_url || ''} 
           alt={subject.name}
-          className="w-8 h-8 rounded-lg object-cover"
+          className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
         />
         
-        <span className={`text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+        <span className={`text-sm font-medium whitespace-nowrap ${isSelected ? 'text-primary' : 'text-foreground'}`}>
           {subject.name}
         </span>
       </motion.button>
