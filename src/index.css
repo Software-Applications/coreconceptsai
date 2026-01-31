@@ -72,54 +72,6 @@ All colors MUST be HSL.
     --sidebar-ring: 221 83% 53%;
   }
 
-  .dark {
-    --background: 226 57% 11%;
-    --foreground: 210 40% 98%;
-
-    --card: 226 55% 15%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 226 55% 15%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 226 57% 11%;
-
-    --secondary: 224 64% 23%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 224 64% 23%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 38 92% 50%;
-    --accent-foreground: 226 57% 11%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 224 50% 20%;
-    --input: 224 50% 20%;
-    --ring: 217 91% 60%;
-
-    /* Semantic colors */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 217 91% 65%;
-    --info-foreground: 0 0% 100%;
-    --neutral: 215 20% 55%;
-    --neutral-foreground: 0 0% 100%;
-
-    --sidebar-background: 226 57% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 224 64% 23%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 224 50% 20%;
-    --sidebar-ring: 217 91% 60%;
-  }
 }
 
 /* AI Badge shimmer animation */

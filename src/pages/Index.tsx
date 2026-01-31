@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Video, HelpCircle, ChevronRight, Sun, Moon, Loader2 } from "lucide-react";
+import { Video, HelpCircle, ChevronRight, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useTapVsDrag } from "@/hooks/useTapVsDrag";
@@ -45,8 +44,6 @@ const Index = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [showTopicSelection, setShowTopicSelection] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
@@ -84,11 +81,6 @@ const Index = () => {
       setSelectedSubjectId(subjects[0].id);
     }
   }, [subjects, selectedSubjectId]);
-  
-  // Ensure theme toggle doesn't cause hydration issues
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   
   // Derived state
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
@@ -220,22 +212,6 @@ const Index = () => {
           <h1 className="text-2xl font-bold text-foreground mt-2">Home</h1>
           <div className="w-12 h-1 bg-primary mt-1.5 rounded-full" />
         </div>
-        {mounted && (
-          <button
-            onClick={() => {
-              lightTap();
-              setTheme(theme === 'dark' ? 'light' : 'dark');
-            }}
-            className="mt-4 p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-foreground" />
-            ) : (
-              <Moon className="w-5 h-5 text-foreground" />
-            )}
-          </button>
-        )}
       </header>
 
       {/* Subject Chips */}
