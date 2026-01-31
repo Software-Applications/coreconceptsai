@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Headphones, ChevronRight, Bookmark } from 'lucide-react';
+import { Headphones, ChevronRight, ChevronDown, Bookmark } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
@@ -22,10 +23,16 @@ export const CoreConceptsHub = ({
   pinnedCards,
   unlistenedCount
 }: CoreConceptsHubProps) => {
-  const { mediumTap } = useHaptics();
+  const { mediumTap, lightTap } = useHaptics();
   const scrollRef = useDragScrollHorizontal<HTMLDivElement>();
+  const [isExpanded, setIsExpanded] = useState(true);
   
   const hasPinnedCards = pinnedCards.length > 0;
+
+  const handleToggleAccordion = () => {
+    lightTap();
+    setIsExpanded(prev => !prev);
+  };
 
   const handleMainClick = () => {
     mediumTap();
@@ -83,54 +90,81 @@ export const CoreConceptsHub = ({
           </motion.button>
         </div>
 
-        {/* Saved Cards Section */}
+        {/* Saved Cards Section - Accordion */}
         <div className="px-3 pb-2">
-          {/* Section Header */}
-          <div className="flex items-center justify-between py-1.5">
+          {/* Section Header - Clickable */}
+          <button
+            onClick={handleToggleAccordion}
+            className="w-full flex items-center justify-between py-1.5 hover:bg-muted/30 rounded-lg transition-colors -mx-1 px-1"
+          >
             <div className="flex items-center gap-2">
               <Bookmark className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-medium text-foreground">My Saved Cards</h3>
               <span className="text-xs text-muted-foreground">({pinnedCards.length})</span>
             </div>
-            {hasPinnedCards && (
-              <button 
-                onClick={onOpenReviewBoard} 
-                className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+            <div className="flex items-center gap-2">
+              {hasPinnedCards && isExpanded && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenReviewBoard();
+                  }} 
+                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                >
+                  See All <ChevronRight className="w-3 h-3" />
+                </button>
+              )}
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
               >
-                See All <ChevronRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+            </div>
+          </button>
 
-          {/* Cards or Empty State */}
-          {hasPinnedCards ? (
-            <div className="py-2">
-              <div
-                ref={scrollRef}
-                data-drag-scroll="x"
-                className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
-                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+          {/* Collapsible Content */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
               >
-                {pinnedCards.slice(0, 5).map((card) => (
-                  <PinnedCardPreview
-                    key={card.id}
-                    card={card}
-                    onClick={() => onCardClick(card)}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="py-3">
-              <div className="bg-muted/30 rounded-lg p-4 text-center">
-                <Bookmark className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No saved cards yet</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  Pin flashcards from Core Concepts to review later
-                </p>
-              </div>
-            </div>
-          )}
+                {/* Cards or Empty State */}
+                {hasPinnedCards ? (
+                  <div className="py-2">
+                    <div
+                      ref={scrollRef}
+                      data-drag-scroll="x"
+                      className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
+                      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                    >
+                      {pinnedCards.slice(0, 5).map((card) => (
+                        <PinnedCardPreview
+                          key={card.id}
+                          card={card}
+                          onClick={() => onCardClick(card)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-3">
+                    <div className="bg-muted/30 rounded-lg p-4 text-center">
+                      <Bookmark className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No saved cards yet</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        Pin flashcards from Core Concepts to review later
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
