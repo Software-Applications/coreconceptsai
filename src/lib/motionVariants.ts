@@ -9,6 +9,7 @@ export const springTransition: Transition = {
 export const cardHover = {
   scale: 1.02,
   y: -2,
+  boxShadow: "0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -4px rgba(0, 0, 0, 0.06)",
 };
 
 export const cardTap = {

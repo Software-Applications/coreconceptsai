@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { springTransition } from '@/lib/motionVariants';
+import { cardHover, cardTap, springTransition } from '@/lib/motionVariants';
 import { useHaptics } from '@/hooks/useHaptics';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
@@ -43,9 +43,9 @@ export const PinnedCardPreview = forwardRef<HTMLDivElement, PinnedCardPreviewPro
     return (
       <div ref={ref} className="flex-shrink-0 snap-start">
         <motion.button
-          className="w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between select-none"
-          whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}
-          whileTap={isDragging ? {} : { scale: 0.98 }}
+          className="w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between select-none shadow-sm"
+          whileHover={cardHover}
+          whileTap={isDragging ? {} : cardTap}
           transition={springTransition}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
