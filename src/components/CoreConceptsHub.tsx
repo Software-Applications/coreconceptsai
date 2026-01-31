@@ -83,9 +83,6 @@ export const CoreConceptsHub = ({
           </motion.button>
         </div>
 
-        {/* Separator */}
-        <div className="border-t border-border/50" />
-
         {/* Saved Cards Section */}
         <div className="px-3 py-2">
           {/* Section Header */}
