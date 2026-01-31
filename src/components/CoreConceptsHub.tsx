@@ -40,7 +40,7 @@ export const CoreConceptsHub = ({
         <div className="p-2">
           <motion.button
             onClick={handleMainClick}
-            className="w-full px-3 py-2.5 text-left bg-secondary text-secondary-foreground border border-primary/20 rounded-lg hover:bg-primary/10 hover:border-primary/40 active:bg-primary/15 transition-all duration-200 shadow-sm"
+            className="w-full px-3 py-2.5 text-left bg-navy-100 dark:bg-navy-800 text-navy-800 dark:text-navy-100 rounded-lg hover:bg-navy-200 dark:hover:bg-navy-700 active:bg-navy-300 dark:active:bg-navy-600 transition-all duration-200 shadow-sm"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={springTransition}
@@ -49,8 +49,8 @@ export const CoreConceptsHub = ({
           >
             <div className="flex items-center gap-3">
               {/* Icon with unlistened badge */}
-                <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 relative">
-                  <Headphones className="w-5 h-5 text-primary" />
+                <div className="w-9 h-9 rounded-full bg-navy-200 dark:bg-navy-700 flex items-center justify-center flex-shrink-0 relative">
+                  <Headphones className="w-5 h-5 text-navy-600 dark:text-navy-300" />
                 <AnimatePresence>
                   {unlistenedCount > 0 && (
                     <motion.div
@@ -67,17 +67,17 @@ export const CoreConceptsHub = ({
 
               {/* Title */}
               <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50 flex items-center gap-1.5">
                     Core Concepts <AIBadge size="sm" />
                   </h3>
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[11px] text-navy-600 dark:text-navy-400 truncate">
                     AI explanations of tough topics
                   </p>
               </div>
 
               {/* Animated chevron indicator */}
                   <motion.div
-                    className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 flex-shrink-0"
+                    className="flex items-center justify-center w-6 h-6 rounded-full bg-navy-200 dark:bg-navy-700 flex-shrink-0"
                     animate={{ x: [0, 3, 0] }}
                     transition={{ 
                       duration: 1.5, 
@@ -86,7 +86,7 @@ export const CoreConceptsHub = ({
                       repeatDelay: 1
                     }}
                   >
-                    <ChevronRight className="w-4 h-4 text-primary" />
+                    <ChevronRight className="w-4 h-4 text-navy-600 dark:text-navy-300" />
                   </motion.div>
             </div>
           </motion.button>
