@@ -43,6 +43,9 @@ All colors MUST be HSL.
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --warning-foreground: 0 0% 100%;
 
     /* Custom Navy theme colors */
     --navy-50: 214 100% 97%;
@@ -101,6 +104,8 @@ All colors MUST be HSL.
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 100%;
 
     --sidebar-background: 226 57% 11%;
     --sidebar-foreground: 210 40% 98%;
