@@ -287,7 +287,7 @@ const Index = () => {
               )}
             </div>
             
-            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden data-[state=open]:overflow-visible">
               {subjectPinnedCards.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
@@ -299,11 +299,11 @@ const Index = () => {
                   </p>
                 </div>
               ) : (
-              <div className="-mx-4 px-4 -my-2 py-2">
+              <div className="-mx-4 px-4 py-2">
                   <div
                     ref={pinnedCardsScrollRef}
                     data-drag-scroll="x"
-                    className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-stretch pr-4 snap-x snap-mandatory overscroll-x-contain select-none"
+                    className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-stretch pr-4 snap-x snap-mandatory overscroll-x-contain select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
                     {subjectPinnedCards.slice(0, 5).map((card) => (
@@ -360,8 +360,8 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
           </div>
-          <div className="-mx-4 px-4 -my-2 py-2">
-            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+          <div className="-mx-4 px-4 py-2">
+            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectVideos.map((video) => (
                 <VideoCard 
                   key={video.id} 
@@ -381,8 +381,8 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
           </div>
-          <div className="-mx-4 px-4 -my-2 py-2">
-            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+          <div className="-mx-4 px-4 py-2">
+            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectPractice.map((practice) => (
                 <PracticeCard 
                   key={practice.id} 
