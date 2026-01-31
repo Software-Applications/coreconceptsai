@@ -96,5 +96,9 @@ export const useListenedTopics = () => {
     return topicIds.filter(id => !listenedTopicIds.has(id)).length;
   }, [listenedTopicIds]);
 
-  return { markAsListened, isListened, getUnlistenedCount, loading };
+  const getListenedCount = useCallback((topicIds: string[]) => {
+    return topicIds.filter(id => listenedTopicIds.has(id)).length;
+  }, [listenedTopicIds]);
+
+  return { markAsListened, isListened, getUnlistenedCount, getListenedCount, loading };
 };

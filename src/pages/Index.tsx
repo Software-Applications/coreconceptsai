@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Plus, Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { Video, HelpCircle, ChevronRight, ChevronDown, Bookmark, Sun, Moon, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
 import { ExpandedCardModal } from "@/components/ExpandedCardModal";
+import { SubjectChips } from "@/components/SubjectChips";
 
 import { PinnedCardPreview } from "@/components/PinnedCardPreview";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
@@ -28,6 +29,7 @@ import { useConfetti } from "@/hooks/useConfetti";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useChapters } from "@/hooks/useChapters";
 import { useTopics, type DailyDownloadTopic } from "@/hooks/useTopics";
+import { subjectCrossFade } from "@/lib/motionVariants";
 import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { type PinnedCard } from "@/data/dailyDownloadData";
 
@@ -67,7 +69,6 @@ const Index = () => {
   
   // Scroll refs
   const mainScrollRef = useDragScroll<HTMLElement>();
-  const subjectsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const videosScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const pinnedCardsScrollRef = useDragScrollHorizontal<HTMLDivElement>();
   const practiceScrollRef = useDragScrollHorizontal<HTMLDivElement>();
@@ -216,36 +217,24 @@ const Index = () => {
       </header>
 
       {/* Subject Chips */}
-      <section className="px-4 py-2">
-        <div ref={subjectsScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          <button className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-            <Plus className="w-6 h-6 text-muted-foreground" />
-          </button>
-          {subjects.map((subject) => (
-            <button
-              key={subject.id}
-              onClick={() => handleSubjectChange(subject)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
-                selectedSubject.id === subject.id
-                  ? 'border-2 border-primary bg-card'
-                  : 'border border-border bg-card hover:bg-accent'
-              }`}
-            >
-              <img 
-                src={subject.image_url || ''} 
-                alt={subject.name}
-                className="w-8 h-8 rounded-lg object-cover"
-              />
-              <span className={`text-sm font-medium ${selectedSubject.id === subject.id ? 'text-primary' : 'text-foreground'}`}>
-                {subject.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <SubjectChips
+        subjects={subjects}
+        allTopics={allTopics}
+        selectedSubjectId={selectedSubject.id}
+        onSubjectChange={handleSubjectChange}
+      />
 
-      {/* Main Scrollable Content */}
-      <section ref={mainScrollRef} className="px-4 flex-1 overflow-y-auto scrollbar-hide relative">
+      {/* Main Scrollable Content with Cross-Fade */}
+      <AnimatePresence mode="wait">
+        <motion.section 
+          key={selectedSubject.id}
+          ref={mainScrollRef} 
+          className="px-4 flex-1 overflow-y-auto scrollbar-hide relative"
+          variants={subjectCrossFade}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
         {/* Your eTextbook */}
         <div className="py-2 pb-2">
           <div className="mb-3">
@@ -402,7 +391,8 @@ const Index = () => {
           </div>
         </div>
         </div>
-      </section>
+      </motion.section>
+      </AnimatePresence>
 
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

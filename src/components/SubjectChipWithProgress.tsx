@@ -1,0 +1,108 @@
+import { forwardRef } from 'react';
+import { motion } from 'framer-motion';
+import { springTransition, cardTap } from '@/lib/motionVariants';
+import type { SubjectWithTextbook } from '@/hooks/useSubjects';
+
+interface ProgressRingProps {
+  progress: number;
+  size: number;
+  strokeWidth: number;
+}
+
+const ProgressRing = ({ progress, size, strokeWidth }: ProgressRingProps) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      className="absolute inset-0 -rotate-90"
+    >
+      {/* Background circle */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="hsl(var(--muted))"
+        strokeWidth={strokeWidth}
+      />
+      {/* Progress circle */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        className="transition-all duration-500 ease-out"
+      />
+    </svg>
+  );
+};
+
+interface SubjectChipWithProgressProps {
+  subject: SubjectWithTextbook;
+  isSelected: boolean;
+  progress: number;
+  onClick: () => void;
+}
+
+export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChipWithProgressProps>(
+  ({ subject, isSelected, progress, onClick }, ref) => {
+    const imageSize = 32;
+    const ringSize = 40;
+    const strokeWidth = 2.5;
+
+    return (
+      <motion.button
+        ref={ref}
+        onClick={onClick}
+        whileTap={cardTap}
+        transition={springTransition}
+        className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-colors ${
+          isSelected
+            ? 'border-2 border-primary bg-card shadow-sm'
+            : 'border border-border bg-card hover:bg-accent'
+        }`}
+      >
+        {/* Image with progress ring */}
+        <div className="relative" style={{ width: ringSize, height: ringSize }}>
+          {progress > 0 && (
+            <ProgressRing 
+              progress={progress} 
+              size={ringSize} 
+              strokeWidth={strokeWidth} 
+            />
+          )}
+          <div 
+            className="absolute rounded-lg overflow-hidden"
+            style={{ 
+              width: imageSize, 
+              height: imageSize,
+              top: (ringSize - imageSize) / 2,
+              left: (ringSize - imageSize) / 2,
+            }}
+          >
+            <img 
+              src={subject.image_url || ''} 
+              alt={subject.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+        
+        <span className={`text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+          {subject.name}
+        </span>
+      </motion.button>
+    );
+  }
+);
+
+SubjectChipWithProgress.displayName = 'SubjectChipWithProgress';

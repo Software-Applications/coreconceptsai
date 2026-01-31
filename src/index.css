@@ -318,3 +318,32 @@ button:active {
   background: hsl(0 84% 60% / 0.25) !important;
   color: hsl(0 84% 60%) !important;
 }
+
+/* Scroll fade gradients for horizontal scrollable sections */
+.scroll-fade-container {
+  position: relative;
+}
+
+.scroll-fade-left {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to right, hsl(var(--background)), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scroll-fade-right {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to left, hsl(var(--background)), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
