@@ -1,178 +1,79 @@
 
 
-# UI Refinement Plan
+# UI Refinement: Remove Progress & Better AI Background
 
-This plan addresses three focused improvements to reduce visual clutter and enhance the hierarchy of the home screen.
+## Changes
 
----
+### 1. Remove Progress Bar from ChapterDropdown
 
-## Summary of Changes
+**File:** `src/components/ChapterDropdown.tsx`
 
-| Task | Component(s) Affected | Key Change |
-|------|-----------------------|------------|
-| 1. Streamline Video Card | `VideoCard.tsx`, `VideoPlayerSheet.tsx` | Remove author/pages from card, enhance detail page |
-| 2. Consolidate Section Progress | `Index.tsx`, `ChapterDropdown.tsx` | Replace 2 pills with single progress bar in dropdown |
-| 3. Refine Core Concepts Hub | `CoreConceptsHub.tsx` | Remove outer border, add soft background, reduce CTA size |
+Remove the progress bar and related text that was just added inside the dropdown button. This includes:
+- The progress bar container with `mt-2`
+- The `h-1.5` progress track
+- The animated fill div
+- The "X of Y completed" text
 
----
+Keep the props in case they're needed later, but don't render the progress UI.
 
-## Task 1: Streamline Video Card Metadata
+### 2. Update Core Concepts AI Background
 
-### Current State
-- Video cards display: title, duration, author avatar, author name, and textbook page references
-- This creates visual clutter in the horizontal carousel
+**File:** `src/components/CoreConceptsHub.tsx`
 
-### Changes
+Replace the current soft lavender background with a more visible option.
 
-**VideoCard.tsx**
-- Remove the author name line (`By {video.author}`)
-- Remove the textbook pages section (the `BookOpen` icon and `{video.textbookPages}`)
-- Keep: thumbnail, play button overlay, duration badge, "Watched" badge, title, and author avatar (for visual continuity)
+**Current:** `bg-violet-50/50 dark:bg-violet-950/20` (too light)
 
-**VideoPlayerSheet.tsx**
-- Already displays author name and textbook reference on the detail page - no changes needed there
+**Recommended options:**
 
-### Visual Before/After
+| Option | Light Mode | Dark Mode | Feel |
+|--------|------------|-----------|------|
+| **A. Muted** | `bg-muted` | `bg-muted` | Neutral, uses design system |
+| **B. Stronger violet** | `bg-violet-100/80` | `bg-violet-900/40` | Still on-brand, more visible |
+| **C. Navy-tinted** | `bg-navy-50/70` | `bg-navy-900/40` | Matches the button inside |
+| **D. Slate** | `bg-slate-100/80` | `bg-slate-800/50` | Professional, high contrast |
 
-```text
-BEFORE (Card):                    AFTER (Card):
-┌─────────────────┐               ┌─────────────────┐
-│   [Thumbnail]   │               │   [Thumbnail]   │
-│     ▶ 12:34     │               │     ▶ 12:34     │
-├─────────────────┤               ├─────────────────┤
-│ 🧑 Title...     │               │ 🧑 Title...     │
-│   By Author     │               └─────────────────┘
-│   📖 pp. 1-28   │
-└─────────────────┘
-```
-
----
-
-## Task 2: Consolidate Section Progress Indicators
-
-### Current State
-- Two separate pills below "Related Videos and Practice" header:
-  - `"X of Y videos watched"` (primary color background)
-  - `"X of Y practice sets done"` (accent color background)
-
-### Changes
-
-**Index.tsx**
-- Remove the two progress pills from the section header
-- Pass progress data to `ChapterDropdown`
-
-**ChapterDropdown.tsx**
-- Add a horizontal progress bar inside the dropdown button (below the chapter title)
-- Use the combined progress: `(watchedVideos + completedPractice) / (totalVideos + totalPractice)`
-- Style: neutral `bg-muted` background with `bg-primary` fill
-- Add subtle text showing progress (e.g., "4 of 9 items completed")
-
-### Visual Before/After
-
-```text
-BEFORE:
-┌────────────────────────────────────────┐
-│ Related Videos and Practice            │
-│ [2/5 videos] [1/4 practice]            │
-├────────────────────────────────────────┤
-│ Ch. 1 - The Study of Life         ▾    │
-└────────────────────────────────────────┘
-
-AFTER:
-┌────────────────────────────────────────┐
-│ Related Videos and Practice            │
-├────────────────────────────────────────┤
-│ Ch. 1 - The Study of Life         ▾    │
-│ ████████░░░░░░ 3 of 9 completed        │
-└────────────────────────────────────────┘
-```
-
----
-
-## Task 3: Refine Visual Hierarchy of AI Components
-
-### Current State
-- CoreConceptsHub has an outer container with `border border-border`
-- The Core Concepts button has navy-themed styling with an "Explore" pill CTA
-- The "Explore" button uses `px-3 py-1.5` padding
-
-### Changes
-
-**CoreConceptsHub.tsx**
-
-1. **Remove outer border, add soft background**
-   - Change outer container from `bg-muted/40 border border-border` to `bg-violet-50/50 dark:bg-violet-950/20` (soft lavender)
-   - Remove `border border-border`
-
-2. **Reduce "Explore" CTA size**
-   - Change from `px-3 py-1.5 text-xs` to `px-2 py-1 text-[11px]`
-   - Remove chevron icon to further reduce visual weight
-
-3. **Maintain AI sparkle as primary differentiator**
-   - Keep the existing `AIBadge` component - it already uses the violet gradient with sparkles icon
-   - The softer container background will make the AI badge stand out more
-
-### Visual Before/After
-
-```text
-BEFORE:
-┌─────────────────────────────────────────┐  ← border
-│ 🎧 Core Concepts [AI] ━━━ [Explore ▸]   │
-│     AI explanations...                   │
-├─────────────────────────────────────────┤
-│ 🔖 My Saved Cards (3)                   │
-└─────────────────────────────────────────┘
-
-AFTER:
-╭───────────────────────────────────────╮  ← no border, soft lavender bg
-│ 🎧 Core Concepts [AI] ━━━━ [Explore]  │  ← smaller CTA, no chevron
-│     AI explanations...                 │
-├───────────────────────────────────────┤
-│ 🔖 My Saved Cards (3)                 │
-╰───────────────────────────────────────╯
-```
+**Recommendation:** Option **B (Stronger violet)** or **C (Navy-tinted)** would work best since they coordinate with the existing AI branding while being more visible.
 
 ---
 
 ## Technical Details
 
-### Files to Modify
+### ChapterDropdown Changes
 
-| File | Changes |
-|------|---------|
-| `src/components/VideoCard.tsx` | Remove lines 66-71 (author + textbook pages) |
-| `src/pages/Index.tsx` | Remove progress pills (lines 298-305), pass progress props to ChapterDropdown |
-| `src/components/ChapterDropdown.tsx` | Add progress bar with props for watched/completed counts |
-| `src/components/CoreConceptsHub.tsx` | Update outer container styling, reduce Explore button size |
-
-### New Props for ChapterDropdown
-
-```typescript
-interface ChapterDropdownProps {
-  chapters: Chapter[];
-  selectedChapter: Chapter | null;
-  onSelectChapter: (chapter: Chapter) => void;
-  // New props:
-  watchedCount: number;
-  totalVideos: number;
-  completedPracticeCount: number;
-  totalPractice: number;
-}
+```tsx
+// REMOVE this block (around lines 67-77):
+{totalItems > 0 && (
+  <div className="mt-2">
+    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+      <motion.div ... />
+    </div>
+    <p className="text-[11px] text-muted-foreground mt-1">
+      {completedItems} of {totalItems} completed
+    </p>
+  </div>
+)}
 ```
 
-### Progress Bar Calculation
+### CoreConceptsHub Changes
 
-```typescript
-const totalItems = totalVideos + totalPractice;
-const completedItems = watchedCount + completedPracticeCount;
-const progressPercent = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+```tsx
+// Line 52 - Change from:
+<div className="rounded-xl bg-violet-50/50 dark:bg-violet-950/20">
+
+// To (Option B - Stronger violet):
+<div className="rounded-xl bg-violet-100/80 dark:bg-violet-900/40">
+
+// Or (Option C - Navy-tinted):
+<div className="rounded-xl bg-navy-50/70 dark:bg-navy-900/40">
 ```
 
 ---
 
-## Implementation Order
+## Summary
 
-1. **VideoCard.tsx** - Remove metadata (quick, isolated change)
-2. **CoreConceptsHub.tsx** - Restyle container and CTA (quick, isolated change)
-3. **ChapterDropdown.tsx + Index.tsx** - Add progress bar and remove pills (requires prop changes)
+| File | Change |
+|------|--------|
+| `ChapterDropdown.tsx` | Remove progress bar UI (keep props) |
+| `CoreConceptsHub.tsx` | Update background to stronger violet or navy tint |
 
