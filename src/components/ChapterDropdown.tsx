@@ -41,7 +41,7 @@ export const ChapterDropdown = forwardRef<HTMLDivElement, ChapterDropdownProps>(
     if (!selectedChapter) return null;
     
     return (
-      <div ref={ref} className="relative mb-5">
+      <div ref={ref} className="relative mb-3">
         <div ref={dropdownRef}>
           <motion.button 
             onClick={handleToggle}
