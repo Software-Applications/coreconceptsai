@@ -1,7 +1,6 @@
 import { forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Check } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { springTransition, cardTap, fadeInUp } from '@/lib/motionVariants';
 import type { SubjectWithTextbook } from '@/hooks/useSubjects';
 
@@ -74,26 +73,51 @@ export const AddSubjectSheet = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent 
-        side="bottom" 
-        className="rounded-t-3xl max-h-[80vh] flex flex-col p-0"
+    <>
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/50 z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[80vh] overflow-hidden flex flex-col"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={springTransition}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <SheetHeader className="px-6 pb-4">
-          <SheetTitle className="text-lg font-semibold text-foreground">
-            Manage Subjects
-          </SheetTitle>
-          <p className="text-sm text-muted-foreground">
-            Select which subjects to show on your home screen
-          </p>
-        </SheetHeader>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Manage Subjects
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Select which subjects to show on your home screen
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
 
+        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 pb-8">
           <AnimatePresence mode="popLayout">
             <div className="space-y-2">
@@ -114,7 +138,7 @@ export const AddSubjectSheet = ({
             </div>
           </AnimatePresence>
         </div>
-      </SheetContent>
-    </Sheet>
+      </motion.div>
+    </>
   );
 };
