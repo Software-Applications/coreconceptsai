@@ -68,8 +68,10 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
               </div>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="font-medium text-foreground text-xs line-clamp-2">{practice.title}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="min-w-0">
+              <p className="font-medium text-foreground text-xs line-clamp-2">{practice.title}</p>
+            </div>
           </div>
         </motion.button>
       </div>
