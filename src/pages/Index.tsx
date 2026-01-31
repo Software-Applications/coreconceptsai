@@ -303,7 +303,7 @@ const Index = () => {
                   <div
                     ref={pinnedCardsScrollRef}
                     data-drag-scroll="x"
-                    className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-stretch pr-4 snap-x snap-mandatory overscroll-x-contain select-none scroll-smooth"
+                    className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-stretch pr-4 snap-x snap-mandatory overscroll-x-contain select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
                     {subjectPinnedCards.slice(0, 5).map((card) => (
@@ -361,7 +361,7 @@ const Index = () => {
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
           </div>
           <div className="-mx-4 px-4 -my-1 py-1">
-            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory scroll-smooth overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectVideos.map((video) => (
                 <VideoCard 
                   key={video.id} 
@@ -382,7 +382,7 @@ const Index = () => {
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
           </div>
           <div className="-mx-4 px-4 -my-1 py-1">
-            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory scroll-smooth overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectPractice.map((practice) => (
                 <PracticeCard 
                   key={practice.id} 
