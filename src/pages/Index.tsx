@@ -193,7 +193,7 @@ const Index = () => {
   return (
     <div className="h-full bg-background flex flex-col w-full safe-area-inset overflow-hidden relative">
       {/* Header */}
-      <header className="px-4 pt-14 pb-1 flex items-center justify-between">
+      <header className="px-4 pt-12 pb-1 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground mt-2">Home</h1>
           <div className="w-12 h-1 bg-primary mt-1.5 rounded-full" />
