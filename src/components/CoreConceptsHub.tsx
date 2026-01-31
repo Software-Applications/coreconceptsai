@@ -75,6 +75,10 @@ export const CoreConceptsHub = ({
                   </p>
               </div>
 
+              {/* Explore CTA */}
+              <div className="flex-shrink-0 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1">
+                Explore <ChevronRight className="w-3 h-3" />
+              </div>
             </div>
           </motion.button>
         </div>
