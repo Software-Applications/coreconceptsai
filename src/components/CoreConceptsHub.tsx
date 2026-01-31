@@ -42,16 +42,18 @@ export const CoreConceptsHub = ({
   };
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm">
-      {/* Row 1: Core Concepts AI bar */}
-      <div className="py-1.5">
-        <motion.button
+    <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
+      {/* Single unified container */}
+      <motion.div
+        className="rounded-xl bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 border border-primary/20 overflow-hidden"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={springTransition}
+      >
+        {/* Row 1: Core Concepts - always tappable, opens topics */}
+        <button
           onClick={handleMainClick}
-          className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 border border-primary/20 text-left"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={springTransition}
-          whileTap={{ scale: 0.98 }}
+          className="w-full px-3 py-2.5 text-left active:bg-primary/10 transition-colors"
         >
           <div className="flex items-center gap-3">
             {/* Icon with unlistened badge */}
@@ -84,18 +86,19 @@ export const CoreConceptsHub = ({
             {/* Right chevron */}
             <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           </div>
-        </motion.button>
-      </div>
+        </button>
 
-      {/* Row 2: My Saved Cards (only when cards exist) */}
-      {hasPinnedCards && (
-        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <div className="pb-1.5">
+        {/* Row 2: Saved Cards (only when cards exist) */}
+        {hasPinnedCards && (
+          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+            {/* Separator line */}
+            <div className="border-t border-primary/10" />
+
+            {/* Saved Cards trigger row */}
             <CollapsibleTrigger asChild>
-              <motion.button
+              <button
                 onClick={handleToggleExpand}
-                className="w-full px-3 py-2.5 rounded-xl bg-card/80 border border-border/50 text-left"
-                whileTap={{ scale: 0.98 }}
+                className="w-full px-3 py-2.5 text-left active:bg-primary/10 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   {/* Bookmark icon */}
@@ -124,45 +127,48 @@ export const CoreConceptsHub = ({
                     style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
                   />
                 </div>
-              </motion.button>
+              </button>
             </CollapsibleTrigger>
-          </div>
 
-          {/* Expandable Pinned Cards Section */}
-          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden data-[state=open]:overflow-visible">
-            <div className="pb-2">
-              {/* Horizontal scroll of cards */}
-              <div
-                ref={scrollRef}
-                data-drag-scroll="x"
-                className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none"
-                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-              >
-                {pinnedCards.slice(0, 5).map((card) => (
-                  <PinnedCardPreview
-                    key={card.id}
-                    card={card}
-                    onClick={() => onCardClick(card)}
-                  />
-                ))}
-              </div>
+            {/* Expandable content */}
+            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden data-[state=open]:overflow-visible">
+              {/* Separator line */}
+              <div className="border-t border-primary/10" />
               
-              {/* See All link */}
-              {pinnedCards.length > 0 && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={onOpenReviewBoard}
-                    className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                  >
-                    See All
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
+              <div className="px-3 pt-2 pb-3">
+                {/* Horizontal scroll of cards */}
+                <div
+                  ref={scrollRef}
+                  data-drag-scroll="x"
+                  className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                >
+                  {pinnedCards.slice(0, 5).map((card) => (
+                    <PinnedCardPreview
+                      key={card.id}
+                      card={card}
+                      onClick={() => onCardClick(card)}
+                    />
+                  ))}
                 </div>
-              )}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+                
+                {/* See All link */}
+                {pinnedCards.length > 0 && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={onOpenReviewBoard}
+                      className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                    >
+                      See All
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </motion.div>
     </div>
   );
 };
