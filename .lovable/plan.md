@@ -1,317 +1,265 @@
 
 
-# Plan: Unified Core Concepts AI Hub
+# Exploration: Pinned Cards Tap Target Solutions
 
-## Overview
-
-Combine the Core Concepts AI sticky bar and Pinned Cards into a single cohesive component called `CoreConceptsHub`. This creates a clear information hierarchy where pinned cards are visually connected to their source feature.
+## Current Problem
+The pinned badge inside the Core Concepts AI bar is too small (~70×24px) and cramped within the header, making it difficult to tap reliably on mobile devices.
 
 ---
 
-## Visual Design
+## Solution Options
 
-### Collapsed State (Default)
+### Option A: Larger Tap Target (Current Approach)
+Keep the badge inside the bar but increase its size to meet the 44×44px minimum.
+
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ 🎧  Core Concepts AI  [3 new]         📌 2 saved     →     │
+│ 🎧  Core Concepts AI  [3]         [    📌 2 ▾    ]         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Expanded State (Pinned Cards Visible)
+**Pros:**
+- Minimal layout change
+- Keeps everything unified
+
+**Cons:**
+- Still feels cramped in the bar
+- Two competing tap targets in one row
+- May accidentally tap wrong area
+
+---
+
+### Option B: Separate Row for Pinned Cards (Recommended)
+Move the pinned cards toggle to its own row below the Core Concepts bar. This creates a clear, full-width tap target.
+
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ 🎧  Core Concepts AI  [3 new]         📌 2 saved     ∨     │
+│ 🎧  Core Concepts AI  [3 new]                         →    │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ 📌  My Saved Cards                                 2   ▾   │
+└─────────────────────────────────────────────────────────────┘
+   └── Expands to show horizontal card scroll ──┘
+```
+
+**Pros:**
+- Full-width tap target (~100% of row)
+- Clear visual hierarchy: Core Concepts → Saved Cards
+- Each feature has dedicated space
+- Easy to understand what each row does
+
+**Cons:**
+- Takes slightly more vertical space (adds ~40px)
+- Two visual elements instead of one
+
+---
+
+### Option C: Always-Visible Inline Cards
+Remove the collapsible behavior entirely. Show pinned cards in a horizontal scroll that's always visible (if cards exist).
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                         →    │
+└─────────────────────────────────────────────────────────────┘
+  📌 My Saved Cards                              See All →
+┌────────┐  ┌────────┐  ┌────────┐
+│ Card 1 │  │ Card 2 │  │ Card 3 │  ···
+└────────┘  └────────┘  └────────┘
+```
+
+**Pros:**
+- No toggle needed at all
+- Pinned cards always discoverable
+- Cards are immediately actionable
+
+**Cons:**
+- Takes more vertical space when cards exist
+- Less compact UI
+- Can't collapse when user doesn't want to see them
+
+---
+
+### Option D: Floating Action Button (FAB) for Pinned Cards
+Keep Core Concepts bar clean, add a FAB in the corner for saved cards.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                         →    │
+└─────────────────────────────────────────────────────────────┘
+                                                          ┌───┐
+                                                          │📌2│
+                                                          └───┘
+```
+
+**Pros:**
+- Very clear tap target
+- Core Concepts bar stays clean
+- Always accessible regardless of scroll position
+
+**Cons:**
+- FAB can cover content
+- Disconnects pinned cards from Core Concepts visually
+- Another floating element on screen
+
+---
+
+### Option E: Swipe-to-Reveal Pinned Cards
+Swipe left on the Core Concepts bar to reveal pinned cards section.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                    ← swipe   │
+└─────────────────────────────────────────────────────────────┘
+   After swiping:
+┌─────────────────────────────────────────────────────────────┐
+│ 📌 2 saved cards                        ← swipe to go back │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌────────┐  ┌────────┐  ┌────────┐                        │
 │  │ Card 1 │  │ Card 2 │  │ Card 3 │  ···                   │
 │  └────────┘  └────────┘  └────────┘                        │
-│                                            See All →        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Empty Pinned Cards State
+**Pros:**
+- Unique interaction pattern
+- No visible toggle button
+- Clean default state
+
+**Cons:**
+- Not discoverable (hidden gesture)
+- Users may not know it exists
+- Adds complexity
+
+---
+
+## Recommendation: Option B (Separate Row)
+
+This approach provides the best balance of:
+1. **Usability**: Full-width tap target, impossible to miss
+2. **Clarity**: Each feature (Core Concepts vs Saved Cards) has its own dedicated space
+3. **Hierarchy**: Clear parent-child relationship (Core Concepts creates → Saved Cards stores)
+4. **Minimal overhead**: Only adds ~40px when cards exist, hidden entirely when no saved cards
+
+---
+
+## Proposed Visual Design
+
+### With Saved Cards (Collapsed)
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🎧  Core Concepts AI  [3 new]                        →     │
-└─────────────────────────────────────────────────────────────┘
-```
-(No pinned indicator shown when empty, cleaner look)
-
----
-
-## Component Behavior
-
-| Interaction | Action |
-|-------------|--------|
-| Tap main bar (left side) | Opens Topic Selection Sheet |
-| Tap pinned badge/count | Toggles pinned cards section |
-| Tap a pinned card | Opens ExpandedCardModal |
-| Tap "See All" | Opens ReviewBoard |
-| Swipe horizontal | Scrolls through pinned cards |
-
----
-
-## Implementation Details
-
-### 1. Create New Component: `CoreConceptsHub.tsx`
-
-A unified component that contains:
-- **Header bar** (sticky): Headphones icon, title with AI badge, unlistened count, pinned count badge, expand/collapse chevron
-- **Collapsible pinned cards section**: Horizontal scroll of preview cards with "See All" link
-- Uses Radix `Collapsible` for smooth expand/collapse animation
-
-**Props interface**:
-```tsx
-interface CoreConceptsHubProps {
-  onOpenTopics: () => void;           // Opens Topic Selection
-  onOpenReviewBoard: () => void;      // Opens full Review Board
-  onCardClick: (card: PinnedCard) => void;  // Opens expanded modal
-  pinnedCards: PinnedCard[];          // Cards for current subject
-  unlistenedCount: number;            // Badge count for new topics
-}
+┌───────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                            →   │
+└───────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│ 📌  My Saved Cards                                   2    ▾  │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-**Key design decisions**:
-- Sticky positioning with `sticky top-0 z-20`
-- Gradient background matching current style
-- Pinned count only shows when cards exist
-- Chevron rotates on expand/collapse
-- Horizontal scroll for pinned cards with snap behavior
-- Background blur + opacity for readability over content
+### With Saved Cards (Expanded)
+```text
+┌───────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                            →   │
+└───────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│ 📌  My Saved Cards                                   2    ∧  │
+├───────────────────────────────────────────────────────────────┤
+│  ┌────────┐  ┌────────┐  ┌────────┐                          │
+│  │ Card 1 │  │ Card 2 │  │ Card 3 │  ···                     │
+│  └────────┘  └────────┘  └────────┘                          │
+│                                              See All →        │
+└───────────────────────────────────────────────────────────────┘
+```
 
-### 2. Update `src/pages/Index.tsx`
-
-**Remove**:
-- The `CoreConceptsStickyBar` component usage (lines 260-264)
-- The entire "My Pinned Cards Section" block (lines 266-327)
-- `isPinnedCardsOpen` state (can be moved into the new component)
-
-**Add**:
-- Import `CoreConceptsHub`
-- Single `<CoreConceptsHub>` component in place of the removed sections
-- Pass handlers for topic selection, review board, and card expansion
+### Without Saved Cards
+```text
+┌───────────────────────────────────────────────────────────────┐
+│ 🎧  Core Concepts AI  [3 new]                            →   │
+└───────────────────────────────────────────────────────────────┘
+(No saved cards row shown - clean single-bar experience)
+```
 
 ---
 
-## Technical Changes
+## Technical Implementation
 
-### File 1: `src/components/CoreConceptsHub.tsx` (NEW)
+### File: `src/components/CoreConceptsHub.tsx`
+
+**Changes:**
+1. Remove the pinned badge from inside the header bar
+2. Add a separate row below the Core Concepts bar for pinned cards
+3. The pinned row only renders when `hasPinnedCards` is true
+4. Full-width button with clear tap target
+
+**Key structure:**
 
 ```tsx
-import { useState, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { Headphones, ChevronDown, Bookmark, ChevronRight } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useHaptics } from '@/hooks/useHaptics';
-import { springTransition } from '@/lib/motionVariants';
-import { AIBadge } from './AIBadge';
-import { PinnedCardPreview } from './PinnedCardPreview';
-import { useDragScrollHorizontal } from '@/hooks/useDragScroll';
-import type { PinnedCard } from '@/data/dailyDownloadData';
+return (
+  <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm">
+    {/* Row 1: Core Concepts AI bar */}
+    <div className="py-1.5">
+      <motion.button onClick={handleMainClick} className="w-full ...">
+        {/* Headphones icon, title, badge, chevron right */}
+      </motion.button>
+    </div>
 
-interface CoreConceptsHubProps {
-  onOpenTopics: () => void;
-  onOpenReviewBoard: () => void;
-  onCardClick: (card: PinnedCard) => void;
-  pinnedCards: PinnedCard[];
-  unlistenedCount: number;
-}
-
-export const CoreConceptsHub = ({
-  onOpenTopics,
-  onOpenReviewBoard,
-  onCardClick,
-  pinnedCards,
-  unlistenedCount
-}: CoreConceptsHubProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { mediumTap, lightTap } = useHaptics();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  useDragScrollHorizontal(scrollRef);
-  
-  const hasPinnedCards = pinnedCards.length > 0;
-
-  const handleMainClick = () => {
-    mediumTap();
-    onOpenTopics();
-  };
-
-  const handleToggleExpand = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    lightTap();
-    setIsExpanded(!isExpanded);
-  };
-
-  return (
-    <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm">
+    {/* Row 2: Pinned Cards (only when cards exist) */}
+    {hasPinnedCards && (
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        {/* Main Header Bar */}
-        <div className="py-1.5">
-          <motion.div
-            className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 border border-primary/20"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={springTransition}
-          >
-            <div className="flex items-center gap-3">
-              {/* Left: Core Concepts button */}
-              <button
-                onClick={handleMainClick}
-                className="flex items-center gap-3 flex-1 min-w-0 text-left"
-              >
-                {/* Icon with unlistened badge */}
-                <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
-                  <Headphones className="w-5 h-5 text-primary" />
-                  <AnimatePresence>
-                    {unlistenedCount > 0 && (
-                      <motion.div
-                        className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        {unlistenedCount}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Title */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    Core Concepts <AIBadge size="sm" />
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    AI explanations of tough topics
-                  </p>
-                </div>
-              </button>
-
-              {/* Right: Pinned badge + expand toggle */}
-              {hasPinnedCards ? (
-                <CollapsibleTrigger asChild>
-                  <button
-                    onClick={handleToggleExpand}
-                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
-                  >
-                    <Bookmark className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-medium text-primary">
-                      {pinnedCards.length}
-                    </span>
-                    <ChevronDown 
-                      className="w-4 h-4 text-muted-foreground transition-transform duration-200" 
-                      style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-              ) : (
-                <ChevronRight 
-                  className="w-4 h-4 text-muted-foreground flex-shrink-0" 
-                  onClick={handleMainClick}
-                />
-              )}
-            </div>
-          </motion.div>
+        <div className="pb-1.5">
+          <CollapsibleTrigger asChild>
+            <motion.button className="w-full px-3 py-2.5 rounded-xl ...">
+              {/* Bookmark icon, "My Saved Cards", count, chevron */}
+            </motion.button>
+          </CollapsibleTrigger>
         </div>
 
-        {/* Expandable Pinned Cards Section */}
-        <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden data-[state=open]:overflow-visible">
-          <div className="pb-2">
-            {/* Horizontal scroll of cards */}
-            <div
-              ref={scrollRef}
-              data-drag-scroll="x"
-              className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none"
-              style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-            >
-              {pinnedCards.slice(0, 5).map((card) => (
-                <PinnedCardPreview
-                  key={card.id}
-                  card={card}
-                  onClick={() => onCardClick(card)}
-                />
-              ))}
-            </div>
-            
-            {/* See All link */}
-            {pinnedCards.length > 0 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={onOpenReviewBoard}
-                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                >
-                  See All
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-          </div>
+        <CollapsibleContent>
+          {/* Horizontal scroll of cards + See All link */}
         </CollapsibleContent>
       </Collapsible>
-    </div>
-  );
-};
+    )}
+  </div>
+);
 ```
-
-### File 2: `src/pages/Index.tsx`
-
-**Changes**:
-
-1. Update imports:
-   - Remove: `CoreConceptsStickyBar`
-   - Add: `CoreConceptsHub`
-
-2. Remove state (line 49):
-   ```tsx
-   // DELETE: const [isPinnedCardsOpen, setIsPinnedCardsOpen] = useState(false);
-   ```
-
-3. Replace Core Concepts + Pinned Cards sections (lines 260-327) with:
-   ```tsx
-   {/* Core Concepts AI Hub (with integrated pinned cards) */}
-   <CoreConceptsHub
-     onOpenTopics={() => setShowTopicSelection(true)}
-     onOpenReviewBoard={() => setShowReviewBoard(true)}
-     onCardClick={setExpandedPinnedCard}
-     pinnedCards={subjectPinnedCards}
-     unlistenedCount={unlistenedCount}
-   />
-   ```
-
-4. Optional cleanup: Remove `CoreConceptsStickyBar.tsx` file after migration
 
 ---
 
-## Files Summary
+## Styling Details
+
+**Saved Cards Row:**
+- Background: `bg-card/80` (slightly different from Core Concepts gradient)
+- Border: `border border-border/50`
+- Height: Same as Core Concepts bar (~44px)
+- Full width tap target
+- Icon: `Bookmark` in `text-primary`
+- Count badge: Circular badge on the right
+- Chevron rotates on expand
+
+---
+
+## Files to Modify
 
 | File | Action |
 |------|--------|
-| `src/components/CoreConceptsHub.tsx` | CREATE - New unified component |
-| `src/pages/Index.tsx` | EDIT - Replace separate components with hub |
-| `src/components/CoreConceptsStickyBar.tsx` | DELETE (optional cleanup) |
+| `src/components/CoreConceptsHub.tsx` | EDIT - Restructure into two rows |
 
 ---
 
-## Benefits of This Approach
+## Benefits
 
-1. **Clear Information Hierarchy**: Pinned cards are visually nested under their source feature
-2. **Reduced Cognitive Load**: One component to understand instead of two separate sections  
-3. **Space Efficient**: Collapsed by default, only expands when user has pinned cards and wants to see them
-4. **Consistent Sticky Behavior**: Both the header and expanded cards are part of the same sticky container
-5. **Better Empty State**: No pinned badge shown when empty, reducing visual noise
-6. **Discoverable**: Users see the bookmark count and can expand to preview cards
+1. **Clear tap target**: Full-width row is impossible to miss
+2. **Visual separation**: Two distinct features, two distinct rows
+3. **Conditional display**: Empty state shows only Core Concepts (clean)
+4. **Maintained hierarchy**: Pinned cards still visually connected to Core Concepts
+5. **Accessibility**: Meets 44×44px tap target requirements easily
 
 ---
 
-## Testing Checklist
+## Alternative: If You Want Even Simpler
 
-1. Verify the hub appears below the textbook container
-2. Tap the main bar → Topic Selection opens
-3. Tap the pinned badge → Cards section expands/collapses
-4. Tap a pinned card → ExpandedCardModal opens
-5. Tap "See All" → ReviewBoard opens
-6. Horizontal scroll works on pinned cards
-7. Sticky behavior works while scrolling
-8. Empty state shows no pinned badge (just chevron right)
-9. Badge counts update correctly when listening/pinning
+Option C (always-visible cards) could work well if:
+- You prefer discoverability over compactness
+- Users frequently interact with pinned cards
+- Vertical space is not a major concern
+
+Would you like me to proceed with **Option B (separate row)** or would you prefer a different approach?
 
