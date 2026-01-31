@@ -5,6 +5,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { springTransition } from '@/lib/motionVariants';
+import { formatRelativeDate } from '@/lib/formatDate';
 import { ExpandedCardModal } from '@/components/ExpandedCardModal';
 import type { PinnedCard } from '@/data/dailyDownloadData';
 
@@ -48,18 +49,6 @@ export const ReviewBoard = ({
     setExpandedCard(card);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  };
 
   if (!isOpen) return null;
 
@@ -171,7 +160,7 @@ export const ReviewBoard = ({
                   {/* Timestamp */}
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    <span>Pinned {formatDate(card.pinnedAt)}</span>
+                    <span>Pinned {formatRelativeDate(card.pinnedAt)}</span>
                   </div>
                 </div>
               </motion.div>

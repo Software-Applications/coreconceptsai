@@ -54,11 +54,3 @@ export const useGenerateContent = () => {
   });
 };
 
-// Keep these for backwards compatibility but they now just call the unified function
-export const useGenerateSummary = () => {
-  return useGenerateContent();
-};
-
-export const useGenerateTranscript = () => {
-  return useGenerateContent();
-};

@@ -54,11 +54,11 @@ export const useTopics = (subjectId?: string) => {
       // Transform to match DailyDownloadTopic interface
       return (data || []).map(topic => {
         const flashSummary = topic.flash_summaries?.[0];
-        const chapter = topic.chapters as { subject_id: string };
-        
+        const chapter = topic.chapters as { subject_id: string } | null;
+        const subjectId = chapter?.subject_id || '';
         return {
           id: topic.id,
-          subjectId: chapter?.subject_id || '',
+          subjectId,
           chapterId: topic.chapter_id,
           title: topic.title,
           description: topic.description || '',
@@ -110,11 +110,12 @@ export const useTopicById = (topicId: string | undefined) => {
       if (!data) return null;
       
       const flashSummary = data.flash_summaries?.[0];
-      const chapter = data.chapters as { subject_id: string };
+      const chapter = data.chapters as { subject_id: string } | null;
+      const subjectId = chapter?.subject_id || '';
       
       return {
         id: data.id,
-        subjectId: chapter?.subject_id || '',
+        subjectId,
         chapterId: data.chapter_id,
         title: data.title,
         description: data.description || '',
