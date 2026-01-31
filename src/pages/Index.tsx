@@ -30,6 +30,14 @@ import { subjectCrossFade } from "@/lib/motionVariants";
 import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { type PinnedCard } from "@/data/dailyDownloadData";
 
+// Map subject names to hardcoded IDs in courseData.ts
+// This bridges the gap between Supabase UUIDs and static video/practice data
+const SUBJECT_NAME_TO_ID: Record<string, number> = {
+  'Microbiology': 1,
+  'Chemistry': 2,
+  'Biology': 3,
+};
+
 const Index = () => {
   // ALL HOOKS MUST BE CALLED FIRST - before any conditional returns
   const [activeTab, setActiveTab] = useState("home");
@@ -85,14 +93,6 @@ const Index = () => {
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
   const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
   
-  // Map subject names to hardcoded IDs in courseData.ts
-  // This bridges the gap between Supabase UUIDs and static video/practice data
-  const subjectNameToId: Record<string, number> = {
-    'Microbiology': 1,
-    'Chemistry': 2,
-    'Biology': 3,
-  };
-  
   // Memoize filtered content to prevent recalculation on every render
   const subjectChapters = useMemo(() => 
     selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [],
@@ -101,13 +101,13 @@ const Index = () => {
   
   const subjectVideos = useMemo(() => {
     if (!selectedSubject) return [];
-    const numericId = subjectNameToId[selectedSubject.name] || 0;
+    const numericId = SUBJECT_NAME_TO_ID[selectedSubject.name] || 0;
     return videoTiles.filter(v => v.subjectId === numericId);
   }, [selectedSubject?.id, selectedSubject?.name]);
   
   const subjectPractice = useMemo(() => {
     if (!selectedSubject) return [];
-    const numericId = subjectNameToId[selectedSubject.name] || 0;
+    const numericId = SUBJECT_NAME_TO_ID[selectedSubject.name] || 0;
     return practiceTiles.filter(p => p.subjectId === numericId);
   }, [selectedSubject?.id, selectedSubject?.name]);
   
