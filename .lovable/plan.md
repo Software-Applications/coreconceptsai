@@ -1,51 +1,46 @@
 
 
-## Apply Secondary Fill Style to Core Concepts AI Button
+## Add "Explore" CTA to Core Concepts AI Button
 
-This change will update the Core Concepts AI button from the current bold primary fill to a softer, more subtle secondary fill that blends better with the overall UI while still being clearly interactive.
+This will add a clear "Explore" call-to-action pill to the right side of the Core Concepts AI button, making it more inviting and actionable.
 
 ### What Will Change
 
-The Core Concepts AI button will get a gentler appearance using the theme's secondary color palette:
-- **Background**: Soft gray-blue (`bg-secondary`) instead of bold primary blue
-- **Text**: Dark text (`text-secondary-foreground`) for good readability
-- **Border**: Subtle primary accent border (`border-primary/20`) to maintain brand connection
-- **Hover state**: Light primary tint (`hover:bg-primary/10`) for clear interactivity
-- **Icons**: Primary-colored icons to draw attention while keeping button subtle
+An "Explore" CTA badge will be added to the button:
+- **Position**: Right-aligned within the button
+- **Style**: Primary-colored pill badge that stands out against the navy background
+- **Content**: "Explore" text with a small chevron icon
 
-### Visual Comparison
+### Visual Layout
 
-| Element | Current (Primary Fill) | New (Secondary Fill) |
-|---------|----------------------|---------------------|
-| Background | Bold blue (`bg-primary`) | Soft gray (`bg-secondary`) |
-| Text | White (`text-primary-foreground`) | Dark (`text-secondary-foreground`) |
-| Headphones icon | White circle | Primary-tinted circle |
-| Chevron | White | Primary color |
+```text
+┌─────────────────────────────────────────────────────────┐
+│  🎧  Core Concepts [AI]                    [ Explore → ]│
+│      AI explanations of tough topics                    │
+└─────────────────────────────────────────────────────────┘
+```
 
 ### Technical Changes
 
 **File: `src/components/CoreConceptsHub.tsx`**
 
-1. Update button classes:
-   - Change `bg-primary text-primary-foreground` to `bg-secondary text-secondary-foreground`
-   - Add subtle border: `border border-primary/20`
-   - Update hover states: `hover:bg-primary/10 hover:border-primary/40`
-   - Keep shadow for depth: `shadow-sm`
+Add the CTA element after the title `div` (line 76), before the closing `</div>` of the flex container:
 
-2. Update icon container:
-   - Change `bg-primary-foreground/20` to `bg-primary/15`
-   - Change icon color to `text-primary`
+```tsx
+{/* Explore CTA */}
+<div className="flex-shrink-0 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1">
+  Explore <ChevronRight className="w-3 h-3" />
+</div>
+```
 
-3. Update text colors:
-   - Title: `text-foreground` (dark text)
-   - Subtitle: `text-muted-foreground`
+The `ChevronRight` icon is already imported at the top of the file, so no additional imports are needed.
 
-4. Update badge counter:
-   - Use `bg-primary text-primary-foreground` for visibility
+### Styling Details
 
-5. Update chevron indicator:
-   - Container: `bg-primary/15`
-   - Icon: `text-primary`
-
-This creates a button that feels native to the UI while still being clearly tappable, with the primary color used as an accent rather than the dominant fill.
+- `flex-shrink-0` - Prevents the CTA from shrinking
+- `px-3 py-1.5` - Comfortable pill padding
+- `rounded-full` - Fully rounded pill shape
+- `bg-primary text-primary-foreground` - Uses primary accent color for visibility
+- `text-xs font-medium` - Small but readable text
+- `flex items-center gap-1` - Aligns text and chevron icon
 
