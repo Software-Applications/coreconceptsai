@@ -360,7 +360,7 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
           </div>
-          <div className="-mx-4 px-4">
+          <div className="-mx-4 px-4 -my-1 py-1">
             <div ref={videosScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory scroll-smooth">
               {subjectVideos.map((video) => (
                 <VideoCard 
@@ -381,7 +381,7 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
           </div>
-          <div className="-mx-4 px-4">
+          <div className="-mx-4 px-4 -my-1 py-1">
             <div ref={practiceScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory scroll-smooth">
               {subjectPractice.map((practice) => (
                 <PracticeCard 
