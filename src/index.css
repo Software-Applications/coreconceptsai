@@ -259,10 +259,6 @@ button:active {
     align-items: center;
   }
   
-  /* Add top padding to clear Dynamic Island + Status Bar on desktop frame */
-  .mobile-frame-content {
-    padding-top: 40px;
-  }
 }
 
 /* On actual mobile devices, no frame needed */

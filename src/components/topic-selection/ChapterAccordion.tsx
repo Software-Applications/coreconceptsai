@@ -98,7 +98,7 @@ export const ChapterAccordion = forwardRef<HTMLDivElement, ChapterAccordionProps
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="pt-2 space-y-2 pl-2">
+              <div className="pt-1.5 space-y-1.5 pl-2">
                 {topics.map((topic, index) => {
                   const listened = isListened?.(topic.id) ?? false;
                   const hasResume = !listened && (hasProgress?.(topic.id) ?? false);

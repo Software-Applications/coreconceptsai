@@ -28,7 +28,7 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 pt-14 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 pt-12 border-b border-border">
         <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
