@@ -360,7 +360,7 @@ const Index = () => {
         />
 
         {/* Videos Section */}
-        <div className="mb-5">
+        <div className="mb-3">
           <div className="sticky top-[72px] z-10 bg-background/95 backdrop-blur-sm py-1.5 -mx-4 px-4 flex items-center gap-2">
             <Video className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
