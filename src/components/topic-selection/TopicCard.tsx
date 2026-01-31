@@ -44,7 +44,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
           listened 
             ? 'border-primary/30 bg-primary/5' 
             : hasResume
-              ? 'border-amber-500/50 bg-amber-500/5'
+              ? 'border-warning/50 bg-warning/5'
               : 'border-border hover:border-primary/50'
         }`}
         initial={{ opacity: 0, x: -10 }}
@@ -53,12 +53,12 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            listened ? 'bg-primary/20' : hasResume ? 'bg-amber-500/20' : 'bg-primary/10'
+            listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
           }`}>
             {listened ? (
               <CheckCircle className="w-4 h-4 text-primary" />
             ) : hasResume ? (
-              <RotateCcw className="w-4 h-4 text-amber-500" />
+              <RotateCcw className="w-4 h-4 text-warning" />
             ) : (
               <Sparkles className="w-4 h-4 text-primary" />
             )}
@@ -72,7 +72,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
                 <span className="text-xs text-primary font-medium">✓</span>
               )}
               {hasResume && (
-                <span className="text-xs text-amber-500 font-medium">Resume</span>
+                <span className="text-xs text-warning font-medium">Resume</span>
               )}
             </div>
             <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">

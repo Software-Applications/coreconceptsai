@@ -128,7 +128,7 @@ export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetPro
             >
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  topic.completed ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'
+                  topic.completed ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
                 }`}>
                   {topic.completed ? (
                     <CheckCircle2 className="w-5 h-5" />
