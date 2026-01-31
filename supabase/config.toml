@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.google-tts]
 verify_jwt = false
+
+[functions.generate-textbook-cover]
+verify_jwt = false

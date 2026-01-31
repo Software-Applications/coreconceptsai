@@ -8,6 +8,7 @@ export interface SubjectWithTextbook extends Subject {
   textbook: {
     title: string;
     imageUrl: string;
+    author?: string;
   };
 }
 
@@ -27,7 +28,8 @@ export const useSubjects = () => {
         ...subject,
         textbook: {
           title: subject.textbook_title || subject.name,
-          imageUrl: subject.textbook_image_url || subject.image_url || ''
+          imageUrl: subject.textbook_image_url || subject.image_url || '',
+          author: (subject as any).textbook_author || undefined
         }
       }));
     },
@@ -54,7 +56,8 @@ export const useSubjectById = (subjectId: string | undefined) => {
         ...data,
         textbook: {
           title: data.textbook_title || data.name,
-          imageUrl: data.textbook_image_url || data.image_url || ''
+          imageUrl: data.textbook_image_url || data.image_url || '',
+          author: (data as any).textbook_author || undefined
         }
       };
     },
