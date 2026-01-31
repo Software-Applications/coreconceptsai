@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from "framer-motion";
-import { Trophy, BookOpen } from "lucide-react";
+import { Trophy, CheckCircle, Clock } from "lucide-react";
 import type { PracticeTile } from "@/data/courseData";
 import { cardHover, cardTap, springTransition } from "@/lib/motionVariants";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -10,15 +10,36 @@ interface PracticeCardProps {
   onClick: () => void;
   bestScore?: number | null;
   isCompleted?: boolean;
+  isInProgress?: boolean;
 }
 
 export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
-  ({ practice, onClick, bestScore, isCompleted = false }, ref) => {
+  ({ practice, onClick, bestScore, isCompleted = false, isInProgress = false }, ref) => {
     const { lightTap } = useHaptics();
 
     const handleClick = () => {
       lightTap();
       onClick();
+    };
+
+    const renderStatusBadge = () => {
+      if (isCompleted && bestScore !== null && bestScore !== undefined) {
+        return (
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-success text-success-foreground text-xs px-2 py-1 rounded-full">
+            <Trophy className="w-3 h-3" />
+            <span>{bestScore}%</span>
+          </div>
+        );
+      }
+      if (isInProgress) {
+        return (
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-warning text-warning-foreground text-xs px-2 py-1 rounded-full">
+            <Clock className="w-3 h-3" />
+            <span>In progress</span>
+          </div>
+        );
+      }
+      return null;
     };
 
     return (
@@ -37,12 +58,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
               className={`w-full h-full object-cover ${isCompleted ? 'opacity-75' : ''}`}
             />
             <div className="absolute inset-0 bg-black/40" />
-            {isCompleted && bestScore !== null && bestScore !== undefined && (
-              <div className="absolute top-2 left-2 flex items-center gap-1 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full">
-                <Trophy className="w-3 h-3" />
-                <span>{bestScore}%</span>
-              </div>
-            )}
+            {renderStatusBadge()}
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
               <div className="flex justify-between items-end">
                 <span className="text-white/80 text-xs">{practice.questions} questions</span>
@@ -53,13 +69,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
             </div>
           </div>
           <div className="mt-2">
-            <p className="font-medium text-foreground text-xs">{practice.title}</p>
-            {practice.textbookPages && (
-              <p className="text-muted-foreground/70 text-xs flex items-center gap-1 mt-0.5">
-                <BookOpen className="w-3 h-3" />
-                {practice.textbookPages}
-              </p>
-            )}
+            <p className="font-medium text-foreground text-xs line-clamp-2">{practice.title}</p>
           </div>
         </motion.button>
       </div>
