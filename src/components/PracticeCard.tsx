@@ -15,7 +15,6 @@ interface PracticeCardProps {
 export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
   ({ practice, onClick, bestScore, isCompleted = false }, ref) => {
     const { lightTap } = useHaptics();
-    const estimatedTime = Math.ceil(practice.questions * 1.5);
 
     const handleClick = () => {
       lightTap();
@@ -44,10 +43,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
                 <span>{bestScore}%</span>
               </div>
             )}
-            <div className="absolute inset-0 p-3 flex flex-col justify-between">
-              <div>
-                <p className="text-white font-semibold text-sm leading-tight">{practice.title}</p>
-              </div>
+            <div className="absolute inset-0 p-3 flex flex-col justify-end">
               <div className="flex justify-between items-end">
                 <span className="text-white/80 text-xs">{practice.questions} questions</span>
                 <span className="text-white text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
@@ -57,8 +53,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
             </div>
           </div>
           <div className="mt-2">
-            <p className="font-medium text-foreground text-xs">{isCompleted ? 'Retake quiz' : 'Start quiz'}</p>
-            <p className="text-muted-foreground text-xs">~{estimatedTime} min</p>
+            <p className="font-medium text-foreground text-xs">{practice.title}</p>
             {practice.textbookPages && (
               <p className="text-muted-foreground/70 text-xs flex items-center gap-1 mt-0.5">
                 <BookOpen className="w-3 h-3" />
