@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { springTransition } from '@/lib/motionVariants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -12,18 +12,44 @@ interface PinnedCardPreviewProps {
 export const PinnedCardPreview = forwardRef<HTMLDivElement, PinnedCardPreviewProps>(
   ({ card, onClick }, ref) => {
     const { lightTap } = useHaptics();
+    const startPos = useRef({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+      startPos.current = { x: e.clientX, y: e.clientY };
+      setIsDragging(false);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+      const dx = Math.abs(e.clientX - startPos.current.x);
+      const dy = Math.abs(e.clientY - startPos.current.y);
+      // If moved more than 5px, consider it a drag
+      if (dx > 5 || dy > 5) {
+        setIsDragging(true);
+      }
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+      // Don't trigger click if user was dragging
+      if (isDragging) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      lightTap();
+      onClick();
+    };
 
     return (
       <div ref={ref} className="flex-shrink-0 snap-start">
         <motion.button
           className="w-40 h-28 bg-card border border-border rounded-xl p-3 text-left flex flex-col justify-between select-none"
           whileHover={{ scale: 1.02, borderColor: 'hsl(var(--primary) / 0.5)' }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={isDragging ? {} : { scale: 0.98 }}
           transition={springTransition}
-          onClick={() => {
-            lightTap();
-            onClick();
-          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onClick={handleClick}
         >
           {/* Flashcard title - Primary */}
           <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
