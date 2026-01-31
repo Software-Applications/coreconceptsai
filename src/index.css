@@ -226,21 +226,18 @@ button:active {
     z-index: 9999;
   }
   
-  /* iOS Status Bar styling */
+  /* iOS Status Bar styling - aligned with Dynamic Island */
   .status-bar {
     position: absolute;
-    top: 52px;
+    top: 12px;
     left: 0;
     right: 0;
-    height: 24px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 28px;
     z-index: 9998;
-    background: hsl(var(--background) / 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     color: hsl(var(--foreground));
     font-size: 15px;
     font-weight: 600;
