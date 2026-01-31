@@ -228,7 +228,7 @@ const Index = () => {
           exit="exit"
         >
         {/* Compact Textbook Reference */}
-        <div className="py-1">
+        <div className="py-3">
           <div className="bg-card border border-border rounded-xl p-2 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200 active:scale-[0.98]">
             <div className="w-10 h-[52px] rounded-md flex-shrink-0 overflow-hidden shadow-sm bg-muted">
               <img 
