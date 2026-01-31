@@ -15,6 +15,7 @@ import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
 import { GeneratingOverlay } from './GeneratingOverlay';
+import { SwipeHintHandle } from './SwipeHintHandle';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to generate mock transcript (moved from dailyDownloadData.ts)
@@ -438,10 +439,8 @@ export const DailyDownloadPlayer = ({
       transition={springTransition}
       {...swipeDragProps}
     >
-          {/* Drag Handle */}
-          <div className="flex justify-center pt-2 pb-1">
-            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-          </div>
+          {/* Drag Handle with swipe hint */}
+          <SwipeHintHandle direction="down" />
 
           {/* Header */}
           <header className="flex items-center justify-between p-4 pt-8 sm:pt-8">
