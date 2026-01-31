@@ -1,200 +1,127 @@
 
 
-## Add Textbook Page References to Videos and Practice
+# Plan: Fix Unsmooth Horizontal Scroll on Desktop Mouse Drag
 
-Integrate contextual textbook page references into study tools, allowing students to quickly see which textbook sections correspond to each video and practice set.
+## Problem Summary
+When using mouse click-and-drag on desktop in the pinned cards, videos, and practice sets rows, the scrolling feels choppy and not smooth. The user wants native momentum scrolling on touch devices while improving the custom drag behavior on desktop.
 
----
+## Root Cause Analysis
+The `useDragScrollHorizontal` hook directly manipulates `element.scrollLeft` during pointer move events without any smoothing, easing, or momentum. This causes:
+1. **Abrupt, frame-by-frame position changes** - no interpolation between drag positions
+2. **No momentum after release** - scrolling stops immediately when the user releases
+3. **Blocking touch on touch devices** - the hook captures all pointer events including touch, preventing native momentum scrolling
 
-### Overview
+## Solution Overview
+1. **Disable custom drag for touch devices** - allow native browser momentum scrolling on touch
+2. **Add smooth momentum/inertia for mouse drag** - track velocity during drag and apply deceleration after release
+3. **Use CSS `scroll-behavior: smooth`** - already applied but needs the momentum animation to work with it
 
-Students often need to cross-reference videos and practice questions with their textbook. By showing page references directly on cards and in detail sheets, we create a seamless bridge between the app's study tools and the physical/digital textbook.
+## Technical Changes
 
----
+### File: `src/hooks/useDragScroll.ts`
 
-### Proposed Design
-
-**On Cards (Compact Hint):**
-```text
-┌─────────────────────────────────────────┐
-│  [Video Thumbnail]                      │
-│  ▶ Cell Division & Mitosis              │
-│  By Dr. Maria Santos                    │
-│  📖 pp. 245-268                         │
-└─────────────────────────────────────────┘
-```
-
-**In Detail Sheets (Expanded Reference):**
-```text
-┌─────────────────────────────────────────┐
-│  📖 Textbook Reference                  │
-│  ─────────────────────────────────────  │
-│  Campbell Biology, 12th Ed.             │
-│  Chapter 9: Cell Division               │
-│  Pages 245-268                          │
-│                                         │
-│  [Open Textbook →]                      │
-└─────────────────────────────────────────┘
-```
-
----
-
-### Data Model Changes
-
-**Option A: Static Data (Recommended for MVP)**
-Add page references directly to `courseData.ts`:
+#### 1. Skip custom drag handling for touch/pen inputs
+Modify `useDragScrollHorizontal` to only handle mouse events, allowing native touch scrolling:
 
 ```typescript
-export interface VideoTile {
-  id: number;
-  subjectId: number;
-  title: string;
-  author: string;
-  duration: string;
-  // ... existing fields
-  textbookPages?: string;      // e.g., "pp. 245-268"
-  textbookChapter?: string;    // e.g., "Chapter 9"
-}
-
-export interface PracticeTile {
-  id: number;
-  subjectId: number;
-  title: string;
-  // ... existing fields
-  textbookPages?: string;
-  textbookChapter?: string;
-}
+const handlePointerDown = (e: PointerEvent) => {
+  // Only handle mouse events - let touch use native scrolling
+  if (e.pointerType !== 'mouse') return;
+  if (e.button !== 0) return;
+  // ... rest of handler
+};
 ```
 
-**Option B: Database-Driven (Future Enhancement)**
-Add columns to a future `videos` and `practice_sets` table in Supabase for dynamic management.
-
----
-
-### UI Changes
-
-#### 1. VideoCard Component (`src/components/VideoCard.tsx`)
-
-Add a subtle page reference below the author name:
-
-```text
-Lines 64-67, after author line:
-+ {video.textbookPages && (
-+   <p className="text-muted-foreground/70 text-xs flex items-center gap-1">
-+     <BookOpen className="w-3 h-3" />
-+     {video.textbookPages}
-+   </p>
-+ )}
-```
-
-#### 2. PracticeCard Component (`src/components/PracticeCard.tsx`)
-
-Add page reference in the metadata section below the card:
-
-```text
-Lines 59-62, after estimated time:
-+ {practice.textbookPages && (
-+   <p className="text-muted-foreground/70 text-xs flex items-center gap-1">
-+     <BookOpen className="w-3 h-3" />
-+     {practice.textbookPages}
-+   </p>
-+ )}
-```
-
-#### 3. VideoPlayerSheet Component (`src/components/VideoPlayerSheet.tsx`)
-
-Add a textbook reference card after the Key Points section:
-
-```text
-New section after Key Points (around line 130):
-+ {/* Textbook Reference */}
-+ {video.textbookPages && (
-+   <div className="bg-accent/50 border border-border rounded-xl p-4 mx-4 mb-4">
-+     <div className="flex items-center gap-2 mb-2">
-+       <BookOpen className="w-4 h-4 text-primary" />
-+       <h3 className="font-semibold text-foreground text-sm">Textbook Reference</h3>
-+     </div>
-+     <p className="text-sm text-muted-foreground">
-+       {video.textbookChapter && <span>{video.textbookChapter} • </span>}
-+       {video.textbookPages}
-+     </p>
-+   </div>
-+ )}
-```
-
-#### 4. PracticeQuizSheet Component (`src/components/PracticeQuizSheet.tsx`)
-
-Add textbook reference after the study tip:
-
-```text
-New section after study tip (around line 150):
-+ {/* Textbook Reference */}
-+ {quiz.textbookPages && (
-+   <div className="bg-accent/50 border border-border rounded-xl p-4 mb-4">
-+     <div className="flex items-center gap-2 mb-2">
-+       <BookOpen className="w-4 h-4 text-primary" />
-+       <h3 className="font-semibold text-foreground text-sm">Review in Textbook</h3>
-+     </div>
-+     <p className="text-sm text-muted-foreground">
-+       {quiz.textbookChapter && <span>{quiz.textbookChapter} • </span>}
-+       {quiz.textbookPages}
-+     </p>
-+   </div>
-+ )}
-```
-
----
-
-### Sample Data Updates
-
-**File: `src/data/courseData.ts`**
+#### 2. Track velocity during drag
+Add velocity tracking to calculate momentum:
 
 ```typescript
-// Biology Videos
-{ 
-  id: 10, 
-  subjectId: 3,
-  title: "Cell Division & Mitosis", 
-  author: "Dr. Maria Santos", 
-  duration: "19:28",
-  textbookPages: "pp. 245-268",
-  textbookChapter: "Chapter 9",
-  // ... rest of fields
-},
+let lastX = 0;
+let lastTime = 0;
+let velocity = 0;
 
-// Biology Practice
-{ 
-  id: 10, 
-  subjectId: 3, 
-  title: "Cell Biology Basics", 
-  questions: 20, 
-  difficulty: "Easy",
-  textbookPages: "pp. 95-142",
-  textbookChapter: "Chapter 4-5",
-  // ... rest of fields
-},
+const handlePointerMove = (e: PointerEvent) => {
+  if (!isDown || e.pointerType !== 'mouse') return;
+  
+  const now = performance.now();
+  const deltaTime = now - lastTime;
+  
+  if (deltaTime > 0) {
+    velocity = (e.clientX - lastX) / deltaTime;
+  }
+  
+  lastX = e.clientX;
+  lastTime = now;
+  // ... scroll position update
+};
 ```
 
----
+#### 3. Apply momentum animation on release
+Add smooth deceleration using `requestAnimationFrame`:
 
-### Files to Modify
+```typescript
+const applyMomentum = () => {
+  if (Math.abs(velocity) < 0.01) {
+    velocity = 0;
+    return;
+  }
+  
+  element.scrollLeft -= velocity * 16; // ~16ms per frame
+  velocity *= 0.95; // friction/deceleration
+  
+  animationFrameId = requestAnimationFrame(applyMomentum);
+};
 
-| File | Changes |
-|------|---------|
-| `src/data/courseData.ts` | Add `textbookPages` and `textbookChapter` to interfaces and sample data |
-| `src/components/VideoCard.tsx` | Add page reference hint below author |
-| `src/components/PracticeCard.tsx` | Add page reference hint below estimated time |
-| `src/components/VideoPlayerSheet.tsx` | Add textbook reference card section |
-| `src/components/PracticeQuizSheet.tsx` | Add textbook reference card section |
+const endPointerDrag = () => {
+  if (!isDown) return;
+  isDown = false;
+  
+  // Start momentum animation
+  applyMomentum();
+};
+```
 
----
+#### 4. Cancel momentum on new interaction
+Stop any running momentum animation when user starts a new drag:
 
-### Visual Hierarchy
+```typescript
+let animationFrameId: number | null = null;
 
-The page references use:
-- **Muted styling** (`text-muted-foreground/70`) to avoid competing with primary content
-- **Small book icon** (`BookOpen` at `w-3 h-3`) for quick recognition
-- **Compact format** ("pp. 245-268") to minimize space usage
+const handlePointerDown = (e: PointerEvent) => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  // ... rest of handler
+};
+```
 
-This ensures the textbook references are discoverable but don't distract from the main study experience.
+#### 5. Cleanup animation frame on unmount
+Ensure proper cleanup:
+
+```typescript
+return () => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  // ... remove event listeners
+};
+```
+
+### File: `src/pages/Index.tsx`
+Remove unnecessary scroll-related CSS classes that may interfere:
+- Remove `scroll-smooth` from the horizontal scroll containers (interferes with JS-controlled scrolling)
+- Keep `overscroll-x-contain`, `snap-x snap-mandatory` for snap behavior
+
+## Expected Behavior After Fix
+| Input Method | Behavior |
+|--------------|----------|
+| Desktop mouse drag | Smooth momentum scrolling with deceleration after release |
+| Desktop trackpad | Native browser momentum scrolling |
+| Touch (mobile/tablet) | Native browser momentum scrolling |
+| Capacitor app | Native iOS/Android momentum scrolling |
+
+## Files to Modify
+1. `src/hooks/useDragScroll.ts` - Update `useDragScrollHorizontal` hook
+2. `src/pages/Index.tsx` - Remove conflicting `scroll-smooth` classes from horizontal containers
 
