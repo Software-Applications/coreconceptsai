@@ -76,6 +76,8 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     let startX = 0;
     let scrollLeft = 0;
     let pointerId: number | null = null;
+    let isPointerCaptured = false;
+    let lastDragAt = 0;
     
     // Velocity tracking for momentum
     let lastX = 0;
@@ -139,6 +141,7 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       isDown = true;
       hasDragged = false;
       pointerId = e.pointerId;
+      isPointerCaptured = false;
       startX = e.clientX;
       scrollLeft = element.scrollLeft;
       
@@ -147,8 +150,10 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       lastTime = performance.now();
       velocity = 0;
 
-      // Capture pointer so dragging continues even if cursor leaves element
-      element.setPointerCapture(e.pointerId);
+      // IMPORTANT:
+      // Do NOT capture the pointer on pointerdown.
+      // Capturing here can prevent nested buttons/links from receiving the eventual click.
+      // We capture only AFTER the user moves enough to be considered a drag.
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -163,6 +168,13 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
           hasDragged = true;
           element.style.cursor = 'grabbing';
           disableSnap();
+
+          // Capture pointer so dragging continues even if cursor leaves element
+          // (capture only after we know the user is dragging)
+          try {
+            element.setPointerCapture(e.pointerId);
+            isPointerCaptured = true;
+          } catch {}
         } else {
           return; // Not dragging yet
         }
@@ -195,9 +207,12 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       pointerId = null;
 
       // Release pointer capture
-      try {
-        element.releasePointerCapture(e.pointerId);
-      } catch {}
+      if (isPointerCaptured) {
+        try {
+          element.releasePointerCapture(e.pointerId);
+        } catch {}
+        isPointerCaptured = false;
+      }
 
       // Only apply momentum if we actually dragged
       if (hasDragged && Math.abs(velocity) > 0.1) {
@@ -205,6 +220,10 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       } else {
         element.style.cursor = 'grab';
         if (hasDragged) restoreSnap();
+      }
+
+      if (hasDragged) {
+        lastDragAt = Date.now();
       }
       
       hasDragged = false;
@@ -216,8 +235,23 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       isDown = false;
       hasDragged = false;
       pointerId = null;
+      if (isPointerCaptured) {
+        try {
+          element.releasePointerCapture(e.pointerId);
+        } catch {}
+        isPointerCaptured = false;
+      }
       element.style.cursor = 'grab';
       restoreSnap();
+    };
+
+    // If the user was dragging, suppress the click that may happen right after pointerup.
+    // (helps prevent accidental activations during horizontal scrolling)
+    const handleClickCapture = (e: MouseEvent) => {
+      if (Date.now() - lastDragAt < 250) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
 
     const handleDragStart = (e: DragEvent) => {
@@ -245,6 +279,9 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
     element.addEventListener('pointerup', handlePointerUp);
     element.addEventListener('pointercancel', handlePointerCancel);
 
+    // Capture-phase click suppression (only after real drag)
+    element.addEventListener('click', handleClickCapture, true);
+
     // Touch - just cancel momentum, let native scrolling work
     element.addEventListener('touchstart', handleTouchStart, { passive: true });
 
@@ -260,6 +297,7 @@ export function useDragScrollHorizontal<T extends HTMLElement>(): RefObject<T> {
       element.removeEventListener('pointermove', handlePointerMove);
       element.removeEventListener('pointerup', handlePointerUp);
       element.removeEventListener('pointercancel', handlePointerCancel);
+      element.removeEventListener('click', handleClickCapture, true);
       element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('dragstart', handleDragStart);
     };
