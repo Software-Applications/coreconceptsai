@@ -1,6 +1,10 @@
 import { forwardRef } from "react";
+import { motion } from "framer-motion";
 import { X, Clock, BarChart3, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuizProgress } from "@/hooks/useQuizProgress";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
+import { useHaptics } from "@/hooks/useHaptics";
+import { springTransition } from "@/lib/motionVariants";
 import type { PracticeTile } from "@/data/courseData";
 import type { Chapter } from "@/hooks/useChapters";
 
@@ -14,6 +18,12 @@ interface PracticeQuizSheetProps {
 export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetProps>(
   function PracticeQuizSheet({ quiz, chapter, isOpen, onClose }, ref) {
   const { getCompletionPercentage, getAttemptCount, getBestScore, recordAttempt } = useQuizProgress();
+  const { lightTap } = useHaptics();
+  
+  const { dragProps, backdropOpacity } = useSwipeToDismiss({
+    onDismiss: onClose,
+    threshold: 120,
+  });
   
   if (!isOpen || !quiz || !chapter) return null;
 
@@ -35,10 +45,23 @@ export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetPro
   };
 
   return (
-    <div ref={ref} className="absolute inset-0 z-50 flex flex-col bg-background">
+    <motion.div 
+      ref={ref} 
+      className="absolute inset-0 z-50 flex flex-col bg-background"
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: backdropOpacity, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={springTransition}
+      {...dragProps}
+    >
+      {/* Drag Handle */}
+      <div className="flex justify-center pt-2 pb-1">
+        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 pt-12 border-b border-border">
-        <button onClick={onClose} className="p-2 -ml-2 active:scale-95">
+      <div className="flex items-center justify-between px-4 py-3 pt-8 border-b border-border">
+        <button onClick={() => { lightTap(); onClose(); }} className="p-2 -ml-2 active:scale-95">
           <X className="w-6 h-6 text-foreground" />
         </button>
         <div className="flex-1 mx-4 text-center">
@@ -142,6 +165,6 @@ export const PracticeQuizSheet = forwardRef<HTMLDivElement, PracticeQuizSheetPro
           {attemptCount > 0 ? 'Practice Again' : 'Start Practice'}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 });

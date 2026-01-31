@@ -9,6 +9,7 @@ import { useGoogleTTS } from '@/hooks/useGoogleTTS';
 import { useVoicePreference } from '@/hooks/useVoicePreference';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useGenerateContent } from '@/hooks/useAIGeneration';
+import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
@@ -421,18 +422,29 @@ export const DailyDownloadPlayer = ({
       delay: i * 0.02
     })), []);
 
+  const { dragProps: swipeDragProps, backdropOpacity } = useSwipeToDismiss({
+    onDismiss: onClose,
+    threshold: 120,
+  });
+
   if (!topic || !isOpen) return null;
 
   return (
     <motion.div
       className="absolute inset-0 z-50 bg-background flex flex-col"
       initial={{ opacity: 0, y: '100%' }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: backdropOpacity, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
       transition={springTransition}
+      {...swipeDragProps}
     >
+          {/* Drag Handle */}
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+          </div>
+
           {/* Header */}
-          <header className="flex items-center justify-between p-4 pt-12 sm:pt-12">
+          <header className="flex items-center justify-between p-4 pt-8 sm:pt-8">
             <button
               onClick={() => { lightTap(); onClose(); }}
               className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
