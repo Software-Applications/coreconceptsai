@@ -260,7 +260,7 @@ const Index = () => {
         {/* My Pinned Cards Section */}
         <div className="py-1 pb-2">
           <Collapsible open={isPinnedCardsOpen} onOpenChange={setIsPinnedCardsOpen}>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between py-1.5 mb-1.5">
               <CollapsibleTrigger asChild>
                 <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <Bookmark className="w-4 h-4 text-primary" />
