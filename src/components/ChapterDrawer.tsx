@@ -1,6 +1,6 @@
 import { useState, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Check, X } from "lucide-react";
+import { List, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Chapter } from "@/hooks/useChapters";
 import { springTransition } from "@/lib/motionVariants";
@@ -138,7 +138,7 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
               </span>
             </div>
             <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <List className="w-4 h-4 text-muted-foreground" />
             </div>
           </div>
         </motion.button>
