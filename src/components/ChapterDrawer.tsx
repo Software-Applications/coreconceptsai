@@ -137,9 +137,7 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
                 {selectedChapter.title}
               </span>
             </div>
-            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-              <List className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <List className="w-4 h-4 text-muted-foreground" />
           </div>
         </motion.button>
 
