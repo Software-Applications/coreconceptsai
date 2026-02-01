@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Sparkles, CheckCircle, RotateCcw } from 'lucide-react';
+import { ChevronRight, Sparkles, CheckCircle, RotateCcw } from 'lucide-react';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to highlight matching text
@@ -79,10 +79,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
               <HighlightText text={topic.description} query={highlightQuery} />
             </p>
           </div>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-            <Clock className="w-3 h-3" />
-            {topic.duration}
-          </span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </div>
       </motion.button>
     );
