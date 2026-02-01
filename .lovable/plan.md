@@ -1,14 +1,25 @@
 
 
-# Add AI Disclaimer to Core Concepts Drawer
+# Make Suggested Topics Header More Actionable
 
 ## Overview
-Add "AI can make mistakes." disclaimer to the header subtitle in the Core Concepts drawer.
+Update the "Suggested Topics" section header to be more engaging and action-oriented, encouraging users to tap and explore.
 
 ---
 
-## Approach
-Combine the disclaimer with the existing subtitle using a middle dot (·) separator for a clean, compact presentation.
+## Options
+
+| Approach | Text | Vibe |
+|----------|------|------|
+| A | "Pick a topic to listen" | Direct instruction |
+| B | "Tap to start listening" | Clear CTA |
+| C | "Choose a topic" | Simple action |
+| D | "Start listening" | Minimal, punchy |
+
+---
+
+## Recommended Approach
+**Option A: "Pick a topic to listen"** - This is clear, friendly, and tells users exactly what to do while indicating the audio nature of the content.
 
 ---
 
@@ -16,36 +27,43 @@ Combine the disclaimer with the existing subtitle using a middle dot (·) separa
 
 ### File: `src/components/TopicSelectionSheet.tsx`
 
-**Update the subtitle (line 234)**
+**Update line 482**
 
 Current:
 ```tsx
-<p className="text-xs text-muted-foreground mt-0.5">AI explanations of tough topics</p>
+<CommandGroup heading={`Suggested Topics (${topics.length})`}>
 ```
 
 New:
 ```tsx
-<p className="text-xs text-muted-foreground mt-0.5">AI explanations of tough topics · AI can make mistakes.</p>
+<CommandGroup heading="Pick a topic to listen">
 ```
+
+Note: Removing the count keeps the header cleaner and more action-focused. The number of available topics is less important than guiding the user to take action.
 
 ---
 
 ## Visual Result
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │  Core Concepts [AI]                  ✕  │
 │  AI explanations of tough topics ·      │
 │  AI can make mistakes.                  │
 │─────────────────────────────────────────│
 │  🔍 Search topics...                    │
+│  ┌─────────────────────────────────┐    │
+│  │ Recent  │  DNA  │  Enzymes      │    │
+│  └─────────────────────────────────┘    │
+│─────────────────────────────────────────│
+│  Pick a topic to listen                 │  ← Action-oriented
+│─────────────────────────────────────────│
+│  🎧 ATP Synthesis                    >  │
+│  🎧 Cell Division                    >  │
 ```
-
-The disclaimer will appear in muted text directly below the title, ensuring users see it when opening the drawer without being intrusive.
 
 ---
 
 ## Technical Details
-
-Single line change - updating the subtitle paragraph content. No new components or dependencies required.
+Single line text change - updates the CommandGroup heading prop.
 
