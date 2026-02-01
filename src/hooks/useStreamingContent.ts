@@ -190,6 +190,11 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
               const chunkIndex = data.index;
               const chunkText = data.text;
               const isLast = data.isLast;
+              const isCached = data.cached || false;
+              
+              if (isCached) {
+                console.log(`[StreamContent] Using cached chunk ${chunkIndex}`);
+              }
               
               console.log(`[StreamContent] Received transcript chunk ${chunkIndex}${isLast ? ' (last)' : ''}`);
               
