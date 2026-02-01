@@ -111,6 +111,31 @@ export const TopicSelectionSheet = ({
   const isSearching = debouncedQuery.trim().length >= 2;
   const hasSearchResults = hasResults(searchResults);
 
+  // Generate quick suggestion chips from topic titles
+  const suggestionChips = useMemo(() => {
+    // Extract key terms from topic titles (first word or short phrases)
+    const terms = new Set<string>();
+    topics.forEach(topic => {
+      // Get first meaningful word from title (skip common words)
+      const words = topic.title.split(' ').filter(w => 
+        w.length > 2 && !['the', 'and', 'for', 'with', 'how'].includes(w.toLowerCase())
+      );
+      if (words[0]) {
+        terms.add(words[0]);
+      }
+    });
+    // Return top 6 unique terms, sorted by length for visual balance
+    return Array.from(terms)
+      .slice(0, 8)
+      .sort((a, b) => a.length - b.length)
+      .slice(0, 6);
+  }, [topics]);
+
+  const handleChipClick = useCallback((term: string) => {
+    lightTap();
+    setSearchQuery(term);
+  }, [lightTap]);
+
   // Calculate progress stats
   const progressStats = useMemo(() => {
     const total = topics.length;
@@ -192,11 +217,36 @@ export const TopicSelectionSheet = ({
         >
           <CommandInput
             ref={inputRef}
-            placeholder="Search topics... (e.g., ATP, DNA, mitosis)"
+            placeholder="Search topics..."
             value={searchQuery}
             onValueChange={setSearchQuery}
             className="border-0"
           />
+          
+          {/* Quick suggestion chips - only show when not searching */}
+          <AnimatePresence>
+            {!isSearching && suggestionChips.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="px-3 pb-2 border-b border-border overflow-hidden"
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestionChips.map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => handleChipClick(term)}
+                      className="px-2.5 py-1 text-xs font-medium bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <CommandList className="max-h-none flex-1 overflow-y-auto pb-safe">
             <AnimatePresence mode="wait">
               {isSearching ? (
