@@ -441,14 +441,12 @@ export const DailyDownloadPlayer = ({
     }
   }, [activeSegmentIndex]);
 
-  // Check if topic needs AI content generation
+  // Always trigger streaming flow - edge function handles transcript caching internally
+  // This allows the edge function to check for cached transcripts and return them without AI call
   const needsAIContent = useMemo(() => {
     if (!topic) return false;
-    // Check if flash summary has meaningful content (AI-generated content has longer bullet points)
-    const hasFlashSummary = topic.flashSummary.bulletPoints.some(bp => bp.length > 20);
-    // Check if description is substantial (AI transcripts are typically 1000+ chars)
-    const hasTranscript = topic.description.length > 500;
-    return !hasFlashSummary || !hasTranscript;
+    // Always go through streaming flow - edge function handles caching
+    return true;
   }, [topic]);
 
   // Track which topic we're generating for to prevent duplicate requests

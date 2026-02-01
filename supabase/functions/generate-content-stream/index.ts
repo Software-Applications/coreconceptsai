@@ -75,6 +75,32 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
+// Split cached transcript into chunks for streaming
+function splitIntoChunks(text: string, wordsPerChunk: number): string[] {
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  let currentWords = 0;
+  
+  for (const sentence of sentences) {
+    const sentenceWords = sentence.split(/\s+/).length;
+    if (currentWords + sentenceWords > wordsPerChunk && currentChunk) {
+      chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+      currentWords = sentenceWords;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+      currentWords += sentenceWords;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks;
+}
+
 // Parse streaming response to extract text
 function extractTextFromStreamChunk(chunk: string): string {
   try {
@@ -132,7 +158,17 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[Stream] Starting streaming content generation for: ${topicTitle}`);
+    console.log(`[Stream] Starting content generation for: ${topicTitle}`);
+
+    // Create Supabase client for database operations
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Check for cached transcript in database
+    const { data: existingTopic } = await supabase
+      .from("topics")
+      .select("transcript, description")
+      .eq("id", topicId)
+      .single();
 
     // Create SSE response stream
     const encoder = new TextEncoder();
@@ -145,8 +181,52 @@ serve(async (req) => {
         };
 
         try {
-          // Start streaming transcript generation
-          console.log("[Stream] Starting Gemini streaming...");
+          // Check if we have a cached transcript (at least 500 chars = meaningful content)
+          if (existingTopic?.transcript && existingTopic.transcript.length > 500) {
+            console.log("[Stream] Found cached transcript, streaming from database");
+            
+            // Stream pre-existing transcript in chunks
+            const chunks = splitIntoChunks(existingTopic.transcript, WORDS_PER_30_SEC);
+            
+            // Send metadata indicating cached content
+            sendEvent("metadata", { status: "streaming", cached: true });
+            
+            for (let i = 0; i < chunks.length; i++) {
+              console.log(`[Stream] Sending cached chunk ${i}: ${countWords(chunks[i])} words`);
+              sendEvent("chunk", { 
+                index: i, 
+                text: chunks[i], 
+                isLast: i === chunks.length - 1,
+                cached: true 
+              });
+            }
+            
+            // Try to get existing flash summary
+            const { data: existingSummary } = await supabase
+              .from("flash_summaries")
+              .select("*")
+              .eq("topic_id", topicId)
+              .maybeSingle();
+            
+            if (existingSummary) {
+              sendEvent("summary", { flashSummary: existingSummary });
+            }
+            
+            sendEvent("done", { 
+              fullTranscript: existingTopic.transcript, 
+              fromCache: true,
+              totalChunks: chunks.length
+            });
+            
+            console.log("[Stream] Cached content streaming complete!");
+            controller.close();
+            return;
+          }
+
+          // No cached transcript - generate via AI
+          console.log("[Stream] No cached transcript, starting Gemini streaming...");
+          
+          sendEvent("metadata", { status: "streaming", cached: false });
           
           const streamResponse = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse",
@@ -192,9 +272,6 @@ Create an engaging, educational transcript that helps a student understand this 
           let chunkBuffer = "";
           let chunkIndex = 0;
           let fullTranscript = "";
-          
-          // Send initial metadata
-          sendEvent("metadata", { status: "streaming" });
 
           while (true) {
             const { done, value } = await reader.read();
@@ -268,9 +345,6 @@ Create an engaging, educational transcript that helps a student understand this 
 
           console.log(`[Stream] Transcript complete: ${countWords(fullTranscript)} words, ${chunkIndex + 1} chunks`);
 
-          // Background tasks: generate flash summary and save to DB
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-          
           // Generate flash summary
           console.log("[Stream] Generating flash summary...");
           let flashSummary: FlashSummaryData | null = null;
@@ -385,18 +459,52 @@ IMPORTANT: Return ONLY a valid JSON object.`
             console.warn("[Stream] Topic summary generation failed:", e);
           }
 
-          // Save to database
-          console.log("[Stream] Saving to database...");
-          
-          const updateData: { transcript: string; description?: string } = { transcript: fullTranscript.trim() };
-          if (topicSummary) updateData.description = topicSummary;
-          
-          const { error: topicError } = await supabase
-            .from("topics")
-            .update(updateData)
-            .eq("id", topicId);
+          // Check if this is a user-requested topic
+          console.log("[Stream] Checking if topic was user-requested...");
+          const { data: topicRequest } = await supabase
+            .from("topic_requests")
+            .select("id")
+            .ilike("query", topicTitle.trim())
+            .eq("status", "pending")
+            .maybeSingle();
 
-          if (topicError) console.error("[Stream] Topic update error:", topicError);
+          if (topicRequest) {
+            // Save transcript for user-requested topics
+            console.log("[Stream] Topic was user-requested, saving transcript to database");
+            
+            const updateData: { transcript: string; description?: string } = { 
+              transcript: fullTranscript.trim() 
+            };
+            if (topicSummary) updateData.description = topicSummary;
+            
+            const { error: topicError } = await supabase
+              .from("topics")
+              .update(updateData)
+              .eq("id", topicId);
+
+            if (topicError) {
+              console.error("[Stream] Topic update error:", topicError);
+            }
+
+            // Mark request as fulfilled
+            await supabase
+              .from("topic_requests")
+              .update({ status: "fulfilled" })
+              .eq("id", topicRequest.id);
+              
+            console.log("[Stream] Request marked as fulfilled");
+          } else {
+            // Don't save transcript for default topics - generate on-demand each time
+            console.log("[Stream] Not a user-requested topic - not saving transcript");
+            
+            // Still update description if we have one
+            if (topicSummary) {
+              await supabase
+                .from("topics")
+                .update({ description: topicSummary })
+                .eq("id", topicId);
+            }
+          }
 
           // Upsert flash summary
           const { data: existingSummary } = await supabase
@@ -442,7 +550,8 @@ IMPORTANT: Return ONLY a valid JSON object.`
           // Send done event
           sendEvent("done", { 
             fullTranscript: fullTranscript.trim(),
-            totalChunks: chunkIndex + 1
+            totalChunks: chunkIndex + 1,
+            fromCache: false
           });
 
           console.log("[Stream] Complete!");
