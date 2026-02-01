@@ -266,9 +266,9 @@ const Index = () => {
 
 
         {/* Related Videos and Practice */}
-        <div className="py-3">
+        <div className="pt-4 pb-3 border-t border-border/40 -mx-4 px-4">
           {/* Sticky Section Header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-1.5 -mx-4 px-4 pt-0.5">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-1.5 pt-0.5">
             <h2 className="text-base font-semibold text-foreground">Related Videos and Practice</h2>
           </div>
         
