@@ -1,60 +1,100 @@
 
-# Fix Topic Card Descriptions
+# Replace Core Concepts Topics
 
-## The Problem
+## Summary
 
-Currently, the topic card descriptions are showing audio transcripts instead of topic summaries. This happens because the `generate-content` edge function overwrites the `description` field with the generated transcript.
+Delete all 24 existing topics and their associated flash summaries, then insert 30 new topics (10 per subject) with your provided titles and descriptions. No transcripts or audio will be generated.
 
-Looking at the database:
-- **Proper summary**: "How cells extract energy from glucose" (short, helpful)
-- **Transcript in description**: "Hello there, and welcome! I am so glad you are joining me today..." (long, not suitable for cards)
+## Current State
 
-## The Solution
+| Data | Count | Action |
+|------|-------|--------|
+| Topics | 24 | Delete all |
+| Flash Summaries | 24 | Delete all (foreign key to topics) |
+| User Progress | 0 | Nothing to delete |
+| Pinned Cards | 0 | Nothing to delete |
 
-Add a separate `transcript` column to the `topics` table, keeping `description` reserved for short summaries. Update the edge function to write transcripts to the new column and generate a separate summary for the description.
+## New Topics Distribution
 
-## Database Changes
+Since there are 10 topics per subject and 8 chapters per subject, I'll distribute topics across the first few chapters (roughly 1-2 topics per chapter).
 
-Add a `transcript` column to the `topics` table:
+### Biology (Subject ID: 33333333-3333-3333-3333-333333333333)
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| transcript | text | Stores the full audio transcript |
+| Topic | Chapter Assignment |
+|-------|-------------------|
+| Oxidative Phosphorylation | Ch. 7 - Cellular Respiration |
+| Signal Transduction | Ch. 5 - Cell Membranes |
+| Epigenetics | Ch. 3 - Biological Macromolecules |
+| The Calvin Cycle | Ch. 8 - Photosynthesis |
+| Action Potentials | Ch. 5 - Cell Membranes |
+| Phylogenetics | Ch. 1 - The Study of Life |
+| Genetic Recombination | Ch. 3 - Biological Macromolecules |
+| Adaptive Immunity | Ch. 4 - Cell Structure |
+| Homeostatic Feedback | Ch. 6 - Metabolism |
+| Hardy-Weinberg Equilibrium | Ch. 1 - The Study of Life |
 
-## Edge Function Changes
+### Chemistry (Subject ID: 22222222-2222-2222-2222-222222222222)
 
-### `supabase/functions/generate-content/index.ts`
+| Topic | Chapter Assignment |
+|-------|-------------------|
+| Quantum Mechanical Model | Ch. 6 - Electronic Structure of Atoms |
+| Gibbs Free Energy | Ch. 5 - Thermochemistry |
+| Stereochemistry | Ch. 2 - Atoms, Molecules, and Ions |
+| Reaction Mechanisms | Ch. 4 - Reactions in Aqueous Solution |
+| Chemical Equilibrium | Ch. 4 - Reactions in Aqueous Solution |
+| Electrochemistry | Ch. 4 - Reactions in Aqueous Solution |
+| Acid-Base Titrations | Ch. 3 - Stoichiometry |
+| Molecular Orbital Theory | Ch. 6 - Electronic Structure of Atoms |
+| Spectroscopy | Ch. 1 - Matter and Measurements |
+| Crystal Field Theory | Ch. 7 - Periodic Properties |
 
-1. Generate a brief topic summary (1-2 sentences) in addition to the transcript
-2. Save the transcript to the new `transcript` column
-3. Save the summary to the `description` column
-4. Only update `description` if it's empty or was previously a transcript
+### Microbiology (Subject ID: 11111111-1111-1111-1111-111111111111)
 
-New prompt to add for summary generation:
+| Topic | Chapter Assignment |
+|-------|-------------------|
+| Horizontal Gene Transfer | Ch. 3 - Bacterial Genetics |
+| Viral Replication Cycles | Ch. 6 - Viruses and Prions |
+| Microbial Metabolism | Ch. 4 - Microbial Metabolism |
+| Antibiotic Resistance Mechanisms | Ch. 8 - Antimicrobial Drugs |
+| The Complement System | Ch. 7 - Control of Microbial Growth |
+| Bacterial Growth Kinetics | Ch. 5 - Microbial Growth |
+| Endospore Formation | Ch. 2 - Cell Structure and Function |
+| Quorum Sensing | Ch. 5 - Microbial Growth |
+| Nitrogen Fixation | Ch. 4 - Microbial Metabolism |
+| Virulence Factors | Ch. 1 - Introduction to Microbiology |
+
+## Implementation Steps
+
+1. **Delete flash_summaries** - Must delete first due to foreign key reference to topics
+2. **Delete all topics** - Remove all 24 existing topics
+3. **Insert new topics** - Add 30 new topics with titles and descriptions (no transcript, no audio_url)
+
+---
+
+## Technical Details
+
+### SQL Execution Order
+
+```text
+Step 1: DELETE FROM flash_summaries
+        (removes all 24 flash summary records)
+
+Step 2: DELETE FROM topics
+        (removes all 24 topic records)
+
+Step 3: INSERT INTO topics (id, title, description, chapter_id)
+        VALUES (...)
+        (inserts 30 new topic records)
 ```
-Generate a concise 1-2 sentence summary of this topic that explains what students will learn. Keep it under 150 characters.
-```
 
-## Hook Changes
+### Topic Record Structure
 
-### `src/hooks/useTopics.ts`
-
-Update the query to include the new `transcript` field in the `DailyDownloadTopic` interface, making it available for the audio player while keeping `description` for summaries.
-
-## Component Changes
-
-### `src/components/topic-selection/TopicCard.tsx`
-
-No changes needed - it already uses `topic.description` which will now contain the proper summary instead of transcript.
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `supabase/migrations/[new].sql` | Add `transcript` column to topics table |
-| `supabase/functions/generate-content/index.ts` | Generate summary, save transcript to new column |
-| `src/hooks/useTopics.ts` | Add transcript to DailyDownloadTopic interface |
-
-## Data Migration Note
-
-Existing topics that have transcripts stored in `description` will need their descriptions regenerated. The edge function can detect this by checking if the description starts with common transcript openings like "Hello", "Welcome", etc., and regenerate summaries for those.
+Each new topic will have:
+- `id`: Auto-generated UUID
+- `title`: Your provided topic name
+- `description`: Your provided description
+- `chapter_id`: Assigned based on topic relevance
+- `transcript`: NULL (not generated yet)
+- `audio_url`: NULL (not generated yet)
+- `generated_audio_url`: NULL (not generated yet)
+- `duration`: NULL (not generated yet)
