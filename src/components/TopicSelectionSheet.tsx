@@ -321,7 +321,7 @@ export const TopicSelectionSheet = ({
             )}
           </AnimatePresence>
 
-          <CommandList className="max-h-none flex-1 overflow-y-auto pb-safe">
+          <CommandList className="max-h-none flex-1 overflow-y-auto pb-safe scrollbar-hide">
             <AnimatePresence mode="wait">
               {isSearching ? (
                 // Search Results Mode
