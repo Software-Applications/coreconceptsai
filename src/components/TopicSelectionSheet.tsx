@@ -6,10 +6,8 @@ import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
-import type { Chapter } from '@/hooks/useChapters';
-import { useChapters } from '@/hooks/useChapters';
 import { AIBadge } from './AIBadge';
-import { HeroIntro, ChapterAccordion, SearchResultsSection } from './topic-selection';
+import { HeroIntro, TopicCard, SearchResultsSection } from './topic-selection';
 
 const HERO_SEEN_KEY = 'core-concepts-hero-seen';
 
@@ -34,7 +32,6 @@ export const TopicSelectionSheet = ({
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
   const topicRequest = useTopicRequest();
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showHero, setShowHero] = useState(() => {
@@ -49,12 +46,10 @@ export const TopicSelectionSheet = ({
     }, 200);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-  const { data: allChapters = [] } = useChapters();
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chaptersStartRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const hasAutoExpandedRef = useRef(false);
   const dragState = useRef({
     isDown: false,
     startY: 0,
@@ -106,20 +101,6 @@ export const TopicSelectionSheet = ({
     onSelectTopic(topic);
   };
 
-  const toggleChapter = (chapterId: string) => {
-    if (dragState.current.didDrag) return;
-    lightTap();
-    setExpandedChapters(prev => {
-      const next = new Set(prev);
-      if (next.has(chapterId)) {
-        next.delete(chapterId);
-      } else {
-        next.add(chapterId);
-      }
-      return next;
-    });
-  };
-
   const handleStartExploring = () => {
     lightTap();
     localStorage.setItem(HERO_SEEN_KEY, 'true');
@@ -154,36 +135,6 @@ export const TopicSelectionSheet = ({
   }, [topics, debouncedQuery]);
 
   const isSearching = debouncedQuery.trim().length >= 2;
-  const hasSearchResults = hasResults(searchResults);
-
-  // For non-search mode, use all topics
-  const filteredTopics = useMemo(() => {
-    if (isSearching) return topics; // Not used in search mode
-    return topics;
-  }, [topics, isSearching]);
-
-  const groupedTopics = useMemo(() => {
-    const groups: { chapter: Chapter; topics: DailyDownloadTopic[] }[] = [];
-    const chapterMap = new Map<string, DailyDownloadTopic[]>();
-
-    filteredTopics.forEach(topic => {
-      if (!chapterMap.has(topic.chapterId)) {
-        chapterMap.set(topic.chapterId, []);
-      }
-      chapterMap.get(topic.chapterId)!.push(topic);
-    });
-
-    chapterMap.forEach((topicList, chapterId) => {
-      const chapter = allChapters.find(c => c.id === chapterId);
-      if (chapter) {
-        groups.push({ chapter, topics: topicList });
-      }
-    });
-
-    groups.sort((a, b) => a.chapter.chapter_number - b.chapter.chapter_number);
-
-    return groups;
-  }, [filteredTopics, allChapters]);
 
   // Calculate progress stats (from all topics, not filtered)
   const progressStats = useMemo(() => {
@@ -192,33 +143,9 @@ export const TopicSelectionSheet = ({
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
 
-  // When searching in non-smart mode, expand all matching chapters
-  useEffect(() => {
-    if (searchQuery.trim() && !isSearching) {
-      const matchingChapterIds = new Set(filteredTopics.map(t => t.chapterId));
-      setExpandedChapters(matchingChapterIds);
-    }
-  }, [searchQuery, filteredTopics, isSearching]);
-
-  // Auto-expand first chapter with unlistened topics on open
-  useEffect(() => {
-    if (isOpen && groupedTopics.length > 0 && !hasAutoExpandedRef.current) {
-      // Find first chapter with unlistened topics
-      const firstUnlistenedChapter = groupedTopics.find(({ topics: chapterTopics }) =>
-        chapterTopics.some(t => !isListened?.(t.id))
-      );
-      
-      if (firstUnlistenedChapter) {
-        setExpandedChapters(new Set([firstUnlistenedChapter.chapter.id]));
-        hasAutoExpandedRef.current = true;
-      }
-    }
-  }, [isOpen, groupedTopics, isListened]);
-
+  // Reset search when sheet closes
   useEffect(() => {
     if (!isOpen) {
-      setExpandedChapters(new Set());
-      hasAutoExpandedRef.current = false;
       setSearchQuery('');
     }
   }, [isOpen]);
@@ -337,27 +264,26 @@ export const TopicSelectionSheet = ({
               />
             ) : (
               <motion.div
-                key="chapters"
+                key="topics"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-3 pb-6"
+                className="space-y-2 pb-6"
               >
-                {groupedTopics.map(({ chapter, topics: chapterTopics }, groupIndex) => (
-                  <ChapterAccordion
-                    key={chapter.id}
-                    chapter={chapter}
-                    topics={chapterTopics}
-                    isExpanded={expandedChapters.has(chapter.id)}
-                    listenedCount={chapterTopics.filter(t => isListened?.(t.id)).length}
-                    groupIndex={groupIndex}
-                    onToggle={() => toggleChapter(chapter.id)}
-                    onSelectTopic={handleSelectTopic}
-                    isListened={isListened}
-                    hasProgress={hasProgress}
-                    highlightQuery={searchQuery}
-                  />
-                ))}
+                {topics.map((topic, index) => {
+                  const listened = isListened?.(topic.id) ?? false;
+                  const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
+                  return (
+                    <TopicCard
+                      key={topic.id}
+                      topic={topic}
+                      listened={listened}
+                      hasResume={hasResume}
+                      index={index}
+                      onSelect={() => handleSelectTopic(topic)}
+                    />
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
