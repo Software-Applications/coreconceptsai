@@ -220,7 +220,7 @@ export const TopicSelectionSheet = ({
             placeholder="Search topics..."
             value={searchQuery}
             onValueChange={setSearchQuery}
-            className="border-0"
+            className={!isSearching && suggestionChips.length > 0 ? "border-0" : ""}
           />
           
           {/* Quick suggestion chips - only show when not searching */}
@@ -230,9 +230,9 @@ export const TopicSelectionSheet = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+                style={{ overflow: 'hidden' }}
               >
-                <div className="px-4 py-2.5 border-b border-border">
+                <div className="px-4 pt-1 pb-3 border-b border-border bg-popover">
                   <div className="flex flex-wrap gap-2">
                     {suggestionChips.map((term) => (
                       <button
