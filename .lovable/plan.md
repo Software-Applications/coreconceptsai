@@ -1,69 +1,54 @@
 
 
-# Make Suggested Topics Header More Actionable
+# Fix Topic Descriptions Not Updating in Core Concepts Drawer
 
-## Overview
-Update the "Suggested Topics" section header to be more engaging and action-oriented, encouraging users to tap and explore.
+## Problem
+Topic descriptions in the Core Concepts AI drawer are showing stale/old data because TanStack Query is caching the results for 5 minutes (`staleTime: 1000 * 60 * 5`), and there's no mechanism to invalidate the cache when data is updated in the database.
 
----
-
-## Options
-
-| Approach | Text | Vibe |
-|----------|------|------|
-| A | "Pick a topic to listen" | Direct instruction |
-| B | "Tap to start listening" | Clear CTA |
-| C | "Choose a topic" | Simple action |
-| D | "Start listening" | Minimal, punchy |
-
----
-
-## Recommended Approach
-**Option A: "Pick a topic to listen"** - This is clear, friendly, and tells users exactly what to do while indicating the audio nature of the content.
+## Solution
+Reduce the cache time and add automatic refetch behavior so users always see the most current data.
 
 ---
 
 ## Changes
 
-### File: `src/components/TopicSelectionSheet.tsx`
+### File: `src/hooks/useTopics.ts`
 
-**Update line 482**
+**Update the query configuration (around line 87)**
 
 Current:
-```tsx
-<CommandGroup heading={`Suggested Topics (${topics.length})`}>
+```typescript
+staleTime: 1000 * 60 * 5, // 5 minutes
 ```
 
 New:
-```tsx
-<CommandGroup heading="Pick a topic to listen">
+```typescript
+staleTime: 1000 * 30, // 30 seconds - shorter cache for fresher data
+refetchOnWindowFocus: true, // Refetch when user returns to the tab
 ```
 
-Note: Removing the count keeps the header cleaner and more action-focused. The number of available topics is less important than guiding the user to take action.
+This applies to:
+- The main `useTopics` hook (line ~87)
+- The `useTopicById` hook (add after line ~144)
 
 ---
 
-## Visual Result
+## Why This Works
 
-```text
-┌─────────────────────────────────────────┐
-│  Core Concepts [AI]                  ✕  │
-│  AI explanations of tough topics ·      │
-│  AI can make mistakes.                  │
-│─────────────────────────────────────────│
-│  🔍 Search topics...                    │
-│  ┌─────────────────────────────────┐    │
-│  │ Recent  │  DNA  │  Enzymes      │    │
-│  └─────────────────────────────────┘    │
-│─────────────────────────────────────────│
-│  Pick a topic to listen                 │  ← Action-oriented
-│─────────────────────────────────────────│
-│  🎧 ATP Synthesis                    >  │
-│  🎧 Cell Division                    >  │
-```
+| Setting | Purpose |
+|---------|---------|
+| `staleTime: 30s` | Data is considered fresh for 30 seconds, then refetched on next access |
+| `refetchOnWindowFocus: true` | Automatically refetches when user switches back to the browser tab |
+
+---
+
+## Alternative: Force Refresh Button
+
+If you'd prefer manual control, we could also add a refresh button to the Core Concepts drawer header that invalidates the topics query. Let me know if you'd like that approach instead.
 
 ---
 
 ## Technical Details
-Single line text change - updates the CommandGroup heading prop.
+
+The changes reduce the cache duration from 5 minutes to 30 seconds and enable automatic refetching when the browser tab regains focus. This ensures users see updated descriptions within 30 seconds of any database changes, or immediately when they return to the app.
 
