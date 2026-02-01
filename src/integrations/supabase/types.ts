@@ -232,6 +232,7 @@ export type Database = {
           generated_audio_url: string | null
           id: string
           title: string
+          transcript: string | null
         }
         Insert: {
           audio_url?: string | null
@@ -242,6 +243,7 @@ export type Database = {
           generated_audio_url?: string | null
           id?: string
           title: string
+          transcript?: string | null
         }
         Update: {
           audio_url?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           generated_audio_url?: string | null
           id?: string
           title?: string
+          transcript?: string | null
         }
         Relationships: [
           {
