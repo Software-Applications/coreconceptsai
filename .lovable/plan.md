@@ -1,54 +1,43 @@
 
-## Replace Timer with Chevron in TopicCard
+# Increase Chip Padding for Better Touch Targets
 
-### Current State
-The `TopicCard` in the Core Concepts drawer displays a clock icon with duration text (e.g., "5 min") on the right side of each card.
+## Overview
+Increase the padding on both recent search chips and suggestion chips in the Core Concepts drawer to improve mobile touch targets and visual balance.
 
-### Proposed Change
-Replace the timer/duration display with a right-facing chevron icon for consistency with other navigable cards in the app, particularly the CoreConceptsHub main card pattern.
+---
 
-### Rationale
-- **Consistency**: Matches the ChevronRight pattern used in CoreConceptsHub for navigable items
-- **Clearer affordance**: Chevron universally signals "tap to navigate"
-- **Style alignment**: Follows project convention of moving secondary metadata (duration) to detail views
-- **Cleaner visual**: Reduces information density in the topic list
+## Changes
 
-### Visual Change
+### File: `src/components/TopicSelectionSheet.tsx`
 
-**Before:**
-```
-[Icon] Topic Title           [Clock] 5 min
-       Description text...
-```
+**1. Update Recent Search Chips (line 295)**
+- Current: `pl-2.5 pr-1.5 py-1`
+- New: `pl-3 pr-2 py-2`
 
-**After:**
-```
-[Icon] Topic Title                    [>]
-       Description text...
-```
+**2. Update Suggestion Chips (line 326)**  
+- Current: `px-3 py-1.5`
+- New: `px-4 py-2`
 
-### Implementation
+---
 
-| File | Change |
-|------|--------|
-| `src/components/topic-selection/TopicCard.tsx` | Replace Clock icon and duration with ChevronRight |
+## Visual Impact
+- Chips will be taller (~36-40px vs ~28-32px currently)
+- Easier to tap on mobile devices (closer to 44px touch target guideline)
+- More visually balanced and less cramped
+- Consistent vertical padding across both chip types
 
-### Technical Details
+---
 
-**Current code (lines 82-85):**
+## Technical Details
+
+The changes are minimal CSS class updates:
+
 ```tsx
-<span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-  <Clock className="w-3 h-3" />
-  {topic.duration}
-</span>
+// Recent search chips - line 295
+className="flex items-center gap-1 pl-3 pr-2 py-2 text-xs font-medium..."
+
+// Suggestion chips - line 326  
+className="px-4 py-2 text-xs font-medium..."
 ```
 
-**New code:**
-```tsx
-<ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-```
-
-- Import `ChevronRight` from lucide-react (replace `Clock` import)
-- Remove the `topic.duration` text display
-- Use slightly larger icon (w-4 h-4) for better tap target visibility
-- Keep muted foreground color for subtle visual hierarchy
+Both changes maintain all existing functionality while improving the touch experience.
