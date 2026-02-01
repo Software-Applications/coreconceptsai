@@ -16,7 +16,7 @@ export const MobileFrame = ({ children }: MobileFrameProps) => {
         <StatusBar />
         
         {/* App content - relative positioning for absolute children */}
-        <div className="mobile-frame-content relative">
+        <div className="mobile-frame-content relative" data-mobile-frame>
           {children}
         </div>
       </div>
