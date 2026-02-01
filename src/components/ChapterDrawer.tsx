@@ -123,21 +123,23 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
         {/* Trigger Button */}
         <motion.button
           onClick={() => { lightTap(); setOpen(true); }}
-          className="w-full bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+          className="w-full bg-card border border-border rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
           transition={springTransition}
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
-              {selectedChapter.title}
-            </span>
-            <motion.div
-              animate={{ rotate: open ? 180 : 0 }}
-              transition={springTransition}
-            >
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            </motion.div>
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                Select Chapter
+              </span>
+              <span className="text-sm font-medium text-foreground">
+                {selectedChapter.title}
+              </span>
+            </div>
+            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
         </motion.button>
 
