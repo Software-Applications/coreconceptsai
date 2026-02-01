@@ -230,9 +230,12 @@ export const TopicSelectionSheet = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                style={{ overflow: 'hidden' }}
+                className="overflow-y-hidden"
               >
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover">
+                <div 
+                  className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover"
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                >
                   {suggestionChips.map((term) => (
                     <button
                       key={term}
