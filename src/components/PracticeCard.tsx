@@ -25,7 +25,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
     const renderStatusBadge = () => {
       if (isCompleted && bestScore !== null && bestScore !== undefined) {
         return (
-          <div className="absolute top-2 left-2 flex items-center gap-1 bg-success text-success-foreground text-xs px-2 py-1 rounded-full">
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-foreground/70 text-background text-xs px-2 py-1 rounded-full">
             <Trophy className="w-3 h-3" />
             <span>{bestScore}%</span>
           </div>
@@ -33,7 +33,7 @@ export const PracticeCard = forwardRef<HTMLDivElement, PracticeCardProps>(
       }
       if (isInProgress) {
         return (
-          <div className="absolute top-2 left-2 flex items-center gap-1 bg-warning text-warning-foreground text-xs px-2 py-1 rounded-full">
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
             <Clock className="w-3 h-3" />
             <span>In progress</span>
           </div>
