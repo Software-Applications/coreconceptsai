@@ -1,48 +1,78 @@
 
-## Create New Transcript Generation Screen
+## Fix Generating Overlay Layout and Add Cancel Button
 
-### Problem
-When selecting a topic in Core Concepts that requires AI content generation, the current `GeneratingOverlay` component displays as a semi-transparent overlay with incorrect copy:
-- **Current title**: "Finalizing Audio Brief" (implies finishing, not creating)
-- **Current sub-copy**: "Analyzing transcript...", "Optimizing narration pace..." (implies processing existing content)
+### Problem 1: Text Overlap
+The current layout has issues with the rotating messages overlapping the topic title because:
+- The rotating message container has a fixed `h-6` (24px) height
+- Messages use `absolute` positioning which removes them from normal flow
+- Long messages can overflow the container, overlapping with content above
 
-The copy is misleading since we're actually **generating** new content, not analyzing or finalizing existing content.
+### Problem 2: No Cancel Option
+Users cannot cancel the generation process once it starts, which can be frustrating if they accidentally selected the wrong topic.
+
+---
 
 ### Solution
-Create a new full-screen rendering state within `DailyDownloadPlayer` that displays when AI content is being generated, with accurate copy that reflects the content creation process.
 
-### Implementation Details
+**1. Fix the layout spacing to prevent overlap:**
 
-**1. Update `GeneratingOverlay.tsx`**
-- Change title from "Finalizing Audio Brief" to "Generating Your Brief"
-- Update rotating sub-copy messages to reflect content creation:
-  - "Writing transcript for this topic..."
-  - "Crafting key concepts and explanations..."
-  - "Building your personalized summary..."
-- Optionally add the topic title to provide context
+| Element | Current | Proposed |
+|---------|---------|----------|
+| Title margin | `mb-2` | `mb-1` |
+| Topic title margin | `mb-2` | `mb-4` (increased gap) |
+| Message container | `h-6` fixed | `h-8` (more breathing room) |
+| Message text | Single line, may overflow | Constrained with `max-w-[280px]` |
 
-**2. Update component interface**
-- Add optional `topicTitle` prop to `GeneratingOverlay` for contextual display
-- Pass topic information from `DailyDownloadPlayer`
+**2. Add Cancel button (X) in top-right corner:**
 
-**3. Updated copy options**
+Consistent with the app's existing pattern:
+```tsx
+<button
+  onClick={onCancel}
+  className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+>
+  <X className="w-5 h-5 text-muted-foreground" />
+</button>
+```
 
-| Current (Incorrect) | New (Accurate) |
-|---------------------|----------------|
-| Finalizing Audio Brief | Generating Your Brief |
-| Analyzing transcript for key academic terms... | Writing a concise transcript for this topic... |
-| Optimizing narration pace for complex topics... | Crafting key concepts and explanations... |
-| Finalizing high-fidelity audio output... | Preparing your personalized audio summary... |
+---
+
+### Updated Component Structure
+
+```text
++------------------------------------------+
+|                                    [X]   |  <- Cancel button (top-right)
+|                                          |
+|              (sparkle icon)              |
+|                                          |
+|         Generating Your Brief            |  <- Main title
+|           {Topic Title}                  |  <- Topic name (more spacing below)
+|                                          |
+|    Writing a concise transcript...       |  <- Rotating message (more height)
+|                                          |
++------------------------------------------+
+```
+
+---
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/GeneratingOverlay.tsx` | Update title and rotating messages; add optional `topicTitle` prop |
-| `src/components/DailyDownloadPlayer.tsx` | Pass `topicTitle` to `GeneratingOverlay` |
+| File | Changes |
+|------|---------|
+| `src/components/GeneratingOverlay.tsx` | Add `onCancel` prop, add X button, fix spacing |
+| `src/components/DailyDownloadPlayer.tsx` | Pass cancel handler to overlay |
 
-### Technical Notes
-- The overlay renders at z-index 30, covering the player content
-- Animation uses `AnimatePresence` for smooth enter/exit transitions
-- Messages rotate every 2 seconds with crossfade animation
-- No structural changes needed - just copy updates
+---
+
+### Technical Details
+
+**GeneratingOverlay.tsx changes:**
+1. Add `onCancel?: () => void` to props interface
+2. Import `X` from lucide-react
+3. Add cancel button positioned `absolute top-4 right-4`
+4. Increase topic title bottom margin from `mb-2` to `mb-4`
+5. Increase message container height from `h-6` to `h-8`
+6. Add `max-w-[280px]` to message text to prevent overflow
+
+**DailyDownloadPlayer.tsx changes:**
+1. Pass `onCancel={onClose}` to `GeneratingOverlay` - closing the player cancels generation
