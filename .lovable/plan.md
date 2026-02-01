@@ -1,73 +1,58 @@
 
+# Standardize Badge Colors with Subtle Visual Hierarchy
 
-# Improve Video Tile Play Button Design
+## Design Philosophy
 
-## Current Issues
+Both "Completed/Watched" and "In Progress" are informational metadata that should recede rather than compete with the thumbnail content. We'll create a subtle hierarchy where:
 
-The existing play button has several design problems that make it feel dense and heavy:
+- **Completed states** use a darker muted pill (more definitive, "done")
+- **In Progress states** use a lighter gray pill (softer, ongoing)
 
-| Issue | Current State | Problem |
-|-------|---------------|---------|
-| Size | 48px button, 24px icon | Too large for a 112px tall thumbnail (43% of height) |
-| Fill | Solid filled icon | Creates visual heaviness |
-| Background | 90% white opacity | Too opaque, blocks thumbnail content |
-| Shadow | `shadow-lg` | Adds unnecessary depth/weight |
-| Offset | `pl-1` padding hack | Indicates icon not naturally centered |
+## Color Mapping
 
-## Best Practice Guidelines
+| State | Current | New | Rationale |
+|-------|---------|-----|-----------|
+| Watched (Video) | `bg-primary/90 text-primary-foreground` | `bg-foreground/70 text-background` | Dark, confident, "finished" |
+| Completed (Practice) | `bg-success text-success-foreground` | `bg-foreground/70 text-background` | Matches watched badge |
+| In Progress (Practice) | `bg-warning text-warning-foreground` | `bg-muted text-muted-foreground` | Lighter gray, softer presence |
 
-Modern video thumbnail play buttons follow these principles:
+## Changes
 
-1. **Subtle presence**: The button should suggest interactivity without dominating the thumbnail
-2. **Semi-transparent**: Use glassmorphism or translucent backgrounds (50-70% opacity)
-3. **Proportional sizing**: Play button should be ~25-30% of thumbnail height
-4. **Outline over fill**: Unfilled icons feel lighter and more modern
-5. **Appear on hover**: Consider showing full button only on interaction (desktop)
+### 1. `src/components/VideoCard.tsx`
 
-## Proposed Changes
+Update the "Watched" badge styling:
 
-### `src/components/VideoCard.tsx`
-
-**Before:**
 ```tsx
-<motion.div 
-  className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1"
-  whileHover={{ scale: 1.1 }}
-  transition={springTransition}
->
-  <Play className="w-6 h-6 text-foreground" fill="currentColor" />
-</motion.div>
+// Line 40-43: Change from primary to muted dark pill
+<div className="absolute top-2 left-2 flex items-center gap-1 bg-foreground/70 text-background text-xs px-2 py-1 rounded-full">
+  <CheckCircle className="w-3 h-3" />
+  <span>Watched</span>
+</div>
 ```
 
-**After:**
+### 2. `src/components/PracticeCard.tsx`
+
+Update both badge styles in the `renderStatusBadge` function:
+
 ```tsx
-<motion.div 
-  className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30"
-  whileHover={{ scale: 1.1, backgroundColor: "rgba(0,0,0,0.6)" }}
-  transition={springTransition}
->
-  <Play className="w-5 h-5 text-white ml-0.5" />
-</motion.div>
+// Completed badge (lines 27-32): Change from success to muted dark pill
+<div className="absolute top-2 left-2 flex items-center gap-1 bg-foreground/70 text-background text-xs px-2 py-1 rounded-full">
+  <Trophy className="w-3 h-3" />
+  <span>{bestScore}%</span>
+</div>
+
+// In Progress badge (lines 35-40): Change from warning to light muted pill
+<div className="absolute top-2 left-2 flex items-center gap-1 bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
+  <Clock className="w-3 h-3" />
+  <span>In progress</span>
+</div>
 ```
 
-## Design Improvements Summary
+## Visual Result
 
-| Aspect | Before | After | Benefit |
-|--------|--------|-------|---------|
-| Button size | 48px | 40px | Better proportion (~28% of thumbnail) |
-| Icon size | 24px | 20px | Matches smaller container |
-| Background | `bg-white/90` | `bg-black/40 backdrop-blur-sm` | Glassmorphism effect, less blocking |
-| Shadow | `shadow-lg` | `border border-white/30` | Subtle definition without heaviness |
-| Icon style | Filled (`fill="currentColor"`) | Outline (no fill) | Lighter, more modern appearance |
-| Icon color | `text-foreground` (dark) | `text-white` | Better contrast on dark overlay |
-| Centering | `pl-1` hack | `ml-0.5` (minimal) | Cleaner optical centering |
-| Hover | Scale only | Scale + darken background | More responsive feedback |
+| Badge | Appearance | Effect |
+|-------|------------|--------|
+| Watched/Completed | Dark semi-transparent pill | Reads as "done" without shouting |
+| In Progress | Light gray pill | Softer, indicates ongoing activity |
 
-## Visual Impact
-
-The new design creates a subtle, modern play indicator that:
-- Blends naturally with the thumbnail using glassmorphism
-- Doesn't compete with the video content for attention
-- Provides clear affordance that the item is playable
-- Follows YouTube/Netflix-style modern video UI patterns
-
+Both badges will now blend harmoniously with the thumbnail while still being readable, with the completed state having slightly more visual weight than the in-progress state.
