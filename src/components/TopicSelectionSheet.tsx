@@ -226,32 +226,19 @@ export const TopicSelectionSheet = ({
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-2">
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-            Core Concepts <AIBadge size="sm" />
-          </h2>
+        <div className="flex items-center justify-between px-5 pb-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              Core Concepts <AIBadge size="sm" />
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">AI explanations of tough topics</p>
+          </div>
           <button
             onClick={() => { lightTap(); onClose(); }}
             className="p-2 rounded-full hover:bg-muted transition-colors"
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
-        </div>
-
-        {/* Progress bar */}
-        <div className="px-5 pb-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-            <span>{progressStats.listened} of {progressStats.total} listened</span>
-            <span>{progressStats.percentage}%</span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-primary rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressStats.percentage}%` }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            />
-          </div>
         </div>
 
         {/* Command Palette */}
