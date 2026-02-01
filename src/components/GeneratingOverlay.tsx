@@ -42,11 +42,11 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: Genera
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          {/* Cancel button */}
+          {/* Cancel button - positioned below status bar area */}
           {onCancel && (
             <button
               onClick={onCancel}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+              className="absolute top-10 right-4 p-2 rounded-full hover:bg-muted transition-colors z-40"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
