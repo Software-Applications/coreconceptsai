@@ -99,6 +99,7 @@ export const DailyDownloadPlayer = ({
   const streamingAudioQueueRef = useRef<string[]>([]);
   const currentStreamingChunkRef = useRef<number>(0);
   const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
+  const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
   
   // Define handleSpeechEnd first (used by multiple callbacks)
   const handleSpeechEnd = useCallback(() => {
@@ -120,21 +121,31 @@ export const DailyDownloadPlayer = ({
     const nextIndex = currentStreamingChunkRef.current + 1;
     
     if (nextIndex < queue.length && queue[nextIndex]) {
+      setIsWaitingForNextChunk(false);
       currentStreamingChunkRef.current = nextIndex;
       const audio = new Audio(queue[nextIndex]);
       streamingAudioRef.current = audio;
       
       audio.addEventListener('ended', () => {
-        if (currentStreamingChunkRef.current < queue.length - 1 && queue[currentStreamingChunkRef.current + 1]) {
+        const nextNextIndex = currentStreamingChunkRef.current + 1;
+        if (nextNextIndex < queue.length && queue[nextNextIndex]) {
           playNextStreamingChunk();
+        } else if (nextNextIndex < queue.length) {
+          // Next chunk exists but audio not ready yet - show buffering
+          console.log('[Player] Waiting for next chunk audio...');
+          setIsWaitingForNextChunk(true);
         } else {
           // All chunks played
           setIsStreamingPlayback(false);
+          setIsWaitingForNextChunk(false);
           handleSpeechEnd();
         }
       });
       
       audio.play().catch(console.error);
+    } else if (nextIndex < queue.length) {
+      // Chunk exists but audio not ready - show buffering
+      setIsWaitingForNextChunk(true);
     }
   }, [handleSpeechEnd]);
   
@@ -144,6 +155,7 @@ export const DailyDownloadPlayer = ({
       console.log('[Player] First chunk audio ready, auto-playing...');
       streamingAudioQueueRef.current[0] = blobUrl;
       currentStreamingChunkRef.current = 0;
+      setIsWaitingForNextChunk(false);
       
       // Create and play first audio chunk
       const audio = new Audio(blobUrl);
@@ -154,8 +166,9 @@ export const DailyDownloadPlayer = ({
         if (streamingAudioQueueRef.current[1]) {
           playNextStreamingChunk();
         } else {
-          // Wait for next chunk
+          // Wait for next chunk - show buffering
           console.log('[Player] Waiting for next chunk...');
+          setIsWaitingForNextChunk(true);
         }
       });
       
@@ -170,8 +183,9 @@ export const DailyDownloadPlayer = ({
       console.log(`[Player] Chunk ${chunkIndex} audio ready`);
       streamingAudioQueueRef.current[chunkIndex] = blobUrl;
       
-      // If current chunk just finished and we were waiting, play next
-      if (streamingAudioRef.current?.ended && currentStreamingChunkRef.current + 1 === chunkIndex) {
+      // If we were waiting for this chunk, play it now
+      if (isWaitingForNextChunk && currentStreamingChunkRef.current + 1 === chunkIndex) {
+        console.log('[Player] Resuming playback with newly ready chunk');
         playNextStreamingChunk();
       }
     },
@@ -641,9 +655,9 @@ export const DailyDownloadPlayer = ({
               )}
             </div>
             
-            {/* Buffering indicator */}
+            {/* Buffering indicator - shows for TTS buffering OR waiting for next streaming chunk */}
             <AnimatePresence>
-              {isBuffering && hasStarted && (
+              {((isBuffering && hasStarted) || isWaitingForNextChunk) && (
                 <motion.div
                   className="flex items-center justify-center gap-2 mb-2"
                   initial={{ opacity: 0, y: -5 }}
@@ -652,7 +666,9 @@ export const DailyDownloadPlayer = ({
                   transition={{ duration: 0.2 }}
                 >
                   <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                  <span className="text-xs text-muted-foreground">Buffering...</span>
+                  <span className="text-xs text-muted-foreground">
+                    {isWaitingForNextChunk ? 'Loading next segment...' : 'Buffering...'}
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>
