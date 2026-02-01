@@ -1,134 +1,101 @@
 
-# Save Transcripts for ALL Topics
+# Validate Topic Requests Before Submission
 
-## Summary
+## Problem
+Currently, any search query (2+ characters) can be submitted as a topic request. This could lead to:
+- Unclear/gibberish requests ("asdf", "???", "123")
+- Off-topic requests (e.g., "pizza recipes" in a Biology context)
+- Spam submissions that clutter the content queue
 
-Update the caching logic so that every topic's transcript is saved to the database after first generation, not just user-requested ones. This means once a user listens to any topic, subsequent plays will load instantly from cache.
-
----
-
-## Current Behavior
-
-The edge function currently checks the `topic_requests` table (lines 462-507) to decide whether to save:
-
-```text
-Topic Generated
-     |
-     v
-Check topic_requests table
-     |
-     +-- Match found --> Save transcript to DB
-     |
-     +-- No match --> Only save description (transcript discarded)
-```
-
-**Result**: Default topics regenerate every single time they're opened.
+## Solution
+Add client-side validation before allowing topic request submission. If the query is unclear or unrelated to the subject, show a toast asking the user to provide a cleaner, subject-relevant topic.
 
 ---
 
-## New Behavior
+## Validation Rules
 
-```text
-Topic Generated
-     |
-     v
-Always save transcript + description to DB
-     |
-     +-- If topic_requests match --> Also mark request as fulfilled
-```
+### 1. Clarity Checks
+- Minimum 3 meaningful characters (letters)
+- At least one word with 3+ letters
+- Not purely numbers or special characters
+- Not common gibberish patterns ("asdf", "qwerty", "test", etc.)
 
-**Result**: All topics cache after first generation, instant playback on subsequent opens.
+### 2. Subject Relevance Checks
+Create a lightweight keyword map for each subject to verify the query has some relevance:
+
+| Subject | Relevant Keywords (sample) |
+|---------|---------------------------|
+| Biology | cell, gene, DNA, protein, evolution, organism, tissue, etc. |
+| Chemistry | atom, molecule, reaction, bond, acid, electron, compound, etc. |
+| Microbiology | bacteria, virus, pathogen, culture, antibiotic, infection, etc. |
+
+If the query contains no subject-related keywords AND is not a recognized scientific term, show a validation message.
 
 ---
 
 ## Implementation
 
-### File: `supabase/functions/generate-content-stream/index.ts`
+### File: `src/lib/topicValidation.ts` (new)
+Create a validation utility with:
+- `isQueryClear(query: string): boolean` - checks for gibberish/unclear text
+- `isQueryRelevant(query: string, subjectName: string): boolean` - checks subject relevance
+- `validateTopicRequest(query: string, subjectName?: string): { valid: boolean; message?: string }` - combined validation
 
-**Location**: Lines 462-507
+### File: `src/components/TopicSelectionSheet.tsx`
+Update `handleRequestTopic`:
+- Import the validation utility
+- Before submitting, call `validateTopicRequest(query, subjectName)`
+- If invalid, show a toast with the validation message instead of submitting
+- Keep the CTA button visible but the submission blocked with feedback
 
-Replace the conditional save logic with unconditional saving:
+---
 
-**Before** (current logic):
-```typescript
-// Check if this is a user-requested topic
-const { data: topicRequest } = await supabase
-  .from("topic_requests")
-  .select("id")
-  .ilike("query", topicTitle.trim())
-  .eq("status", "pending")
-  .maybeSingle();
+## User Experience Flow
 
-if (topicRequest) {
-  // Save transcript for user-requested topics only
-  await supabase.from("topics").update({ transcript, description }).eq("id", topicId);
-  await supabase.from("topic_requests").update({ status: "fulfilled" }).eq("id", topicRequest.id);
-} else {
-  // Only save description, discard transcript
-  if (topicSummary) {
-    await supabase.from("topics").update({ description: topicSummary }).eq("id", topicId);
-  }
-}
-```
-
-**After** (new logic):
-```typescript
-// Always save transcript for all topics
-console.log("[Stream] Saving transcript to database for caching");
-
-const updateData: { transcript: string; description?: string } = { 
-  transcript: fullTranscript.trim() 
-};
-if (topicSummary) updateData.description = topicSummary;
-
-const { error: topicError } = await supabase
-  .from("topics")
-  .update(updateData)
-  .eq("id", topicId);
-
-if (topicError) {
-  console.error("[Stream] Topic update error:", topicError);
-}
-
-// If this was a user-requested topic, also mark the request as fulfilled
-const { data: topicRequest } = await supabase
-  .from("topic_requests")
-  .select("id")
-  .ilike("query", topicTitle.trim())
-  .eq("status", "pending")
-  .maybeSingle();
-
-if (topicRequest) {
-  await supabase
-    .from("topic_requests")
-    .update({ status: "fulfilled" })
-    .eq("id", topicRequest.id);
-  console.log("[Stream] Request marked as fulfilled");
-}
+```text
+User types query -> Clicks "Request" button
+           |
+           v
+     Run validation
+           |
+     +-----+------+
+     |            |
+   Valid        Invalid
+     |            |
+     v            v
+  Submit      Show toast:
+  request     "Please enter a clear topic
+              related to [Subject]"
 ```
 
 ---
 
-## Changes Summary
+## Validation Examples
 
-| File | Lines | Change |
-|------|-------|--------|
-| `supabase/functions/generate-content-stream/index.ts` | 462-507 | Save transcript unconditionally, keep topic_requests fulfillment as secondary step |
-
----
-
-## Behavior After Implementation
-
-| Topic Type | First Open | Subsequent Opens |
-|------------|------------|------------------|
-| Default topic | AI generates, **SAVES to DB** | **Loads from cache** (instant) |
-| User-requested topic | AI generates, SAVES to DB, marks fulfilled | Loads from cache (instant) |
+| Query | Subject | Result | Message |
+|-------|---------|--------|---------|
+| "asdfgh" | Biology | Invalid | "Please enter a clear topic name" |
+| "123" | Chemistry | Invalid | "Please enter a clear topic name" |
+| "pizza recipes" | Biology | Invalid | "Please enter a topic related to Biology" |
+| "mitochondria" | Biology | Valid | - |
+| "electron orbitals" | Chemistry | Valid | - |
+| "bacterial growth" | Microbiology | Valid | - |
+| "cell membrane" | Chemistry | Valid | - (science term, acceptable cross-subject) |
 
 ---
 
-## Technical Notes
+## Technical Changes Summary
 
-- No database migration needed - the `transcript` column already exists
-- No client-side changes needed - the streaming hook already handles cached content
-- The cache check logic (lines 184-224) remains unchanged and will correctly detect saved transcripts
-- Flash summaries are already saved unconditionally (lines 509-545)
+| File | Change |
+|------|--------|
+| `src/lib/topicValidation.ts` | New file with validation logic |
+| `src/components/TopicSelectionSheet.tsx` | Import validation, add check before `topicRequest.mutate()`, show toast on invalid |
+
+---
+
+## Edge Cases Handled
+
+- Short but valid terms like "ATP" or "DNA" will pass (recognized abbreviations)
+- Cross-subject scientific terms are allowed (e.g., "cell" is valid for any science subject)
+- Unknown but clear multi-word queries get a softer validation (benefit of the doubt)
+- Empty subject context falls back to general science relevance check
