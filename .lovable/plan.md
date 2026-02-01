@@ -1,100 +1,175 @@
 
-# Replace Core Concepts Topics
+# Advanced Topic Search in Core Concepts AI
 
 ## Summary
 
-Delete all 24 existing topics and their associated flash summaries, then insert 30 new topics (10 per subject) with your provided titles and descriptions. No transcripts or audio will be generated.
+Enhance the search functionality to search across topic titles, descriptions, and transcripts with improved semantic matching. The "Request Topic" button will appear when no matches are found.
 
-## Current State
+## Current Search Limitations
 
-| Data | Count | Action |
-|------|-------|--------|
-| Topics | 24 | Delete all |
-| Flash Summaries | 24 | Delete all (foreign key to topics) |
-| User Progress | 0 | Nothing to delete |
-| Pinned Cards | 0 | Nothing to delete |
+| Field | Currently Searched | Score Weight |
+|-------|-------------------|--------------|
+| Title | Yes | 100 (exact) / 50 (partial) |
+| Description | Yes | 25 |
+| Bullet Points | Yes | 15 |
+| Transcript | **No** | - |
+| Semantic synonyms | Partial | 5-8 |
 
-## New Topics Distribution
+## Proposed Search Enhancement
 
-Since there are 10 topics per subject and 8 chapters per subject, I'll distribute topics across the first few chapters (roughly 1-2 topics per chapter).
+### 1. Add Transcript Searching
 
-### Biology (Subject ID: 33333333-3333-3333-3333-333333333333)
+Add transcript content matching with appropriate scoring:
 
-| Topic | Chapter Assignment |
-|-------|-------------------|
-| Oxidative Phosphorylation | Ch. 7 - Cellular Respiration |
-| Signal Transduction | Ch. 5 - Cell Membranes |
-| Epigenetics | Ch. 3 - Biological Macromolecules |
-| The Calvin Cycle | Ch. 8 - Photosynthesis |
-| Action Potentials | Ch. 5 - Cell Membranes |
-| Phylogenetics | Ch. 1 - The Study of Life |
-| Genetic Recombination | Ch. 3 - Biological Macromolecules |
-| Adaptive Immunity | Ch. 4 - Cell Structure |
-| Homeostatic Feedback | Ch. 6 - Metabolism |
-| Hardy-Weinberg Equilibrium | Ch. 1 - The Study of Life |
+```text
+Field             | Score Weight | Rationale
+------------------|--------------|-----------------------------------
+Title (exact)     | 100          | Most relevant - user knows topic name
+Title (partial)   | 50           | Strong match
+Description       | 25           | Good relevance signal
+Transcript        | 15           | Content match (new)
+Bullet Points     | 15           | Summary content
+Semantic terms    | 5-8          | Related concepts
+```
 
-### Chemistry (Subject ID: 22222222-2222-2222-2222-222222222222)
+### 2. Expand Semantic Relations Map
 
-| Topic | Chapter Assignment |
-|-------|-------------------|
-| Quantum Mechanical Model | Ch. 6 - Electronic Structure of Atoms |
-| Gibbs Free Energy | Ch. 5 - Thermochemistry |
-| Stereochemistry | Ch. 2 - Atoms, Molecules, and Ions |
-| Reaction Mechanisms | Ch. 4 - Reactions in Aqueous Solution |
-| Chemical Equilibrium | Ch. 4 - Reactions in Aqueous Solution |
-| Electrochemistry | Ch. 4 - Reactions in Aqueous Solution |
-| Acid-Base Titrations | Ch. 3 - Stoichiometry |
-| Molecular Orbital Theory | Ch. 6 - Electronic Structure of Atoms |
-| Spectroscopy | Ch. 1 - Matter and Measurements |
-| Crystal Field Theory | Ch. 7 - Periodic Properties |
+Update the domain-specific synonym map to cover the new 30 topics:
 
-### Microbiology (Subject ID: 11111111-1111-1111-1111-111111111111)
+**Biology additions:**
+- "phosphorylation" -> ["ATP", "oxidative", "mitochondria", "electron transport", "respiration"]
+- "signal" -> ["transduction", "receptor", "cascade", "pathway", "cell signaling"]
+- "epigenetics" -> ["methylation", "histone", "gene expression", "chromatin", "heritable"]
+- "calvin" -> ["cycle", "carbon fixation", "photosynthesis", "glucose", "rubisco"]
+- "action potential" -> ["nerve", "neuron", "depolarization", "impulse", "axon"]
+- "phylogenetics" -> ["evolution", "tree", "ancestry", "taxonomy", "clade"]
+- "recombination" -> ["genetic", "crossing over", "chromosome", "allele", "meiosis"]
+- "adaptive immunity" -> ["B cell", "T cell", "antibody", "antigen", "lymphocyte"]
+- "homeostasis" -> ["feedback", "regulation", "balance", "equilibrium", "negative feedback"]
+- "hardy-weinberg" -> ["equilibrium", "allele frequency", "population genetics", "evolution"]
 
-| Topic | Chapter Assignment |
-|-------|-------------------|
-| Horizontal Gene Transfer | Ch. 3 - Bacterial Genetics |
-| Viral Replication Cycles | Ch. 6 - Viruses and Prions |
-| Microbial Metabolism | Ch. 4 - Microbial Metabolism |
-| Antibiotic Resistance Mechanisms | Ch. 8 - Antimicrobial Drugs |
-| The Complement System | Ch. 7 - Control of Microbial Growth |
-| Bacterial Growth Kinetics | Ch. 5 - Microbial Growth |
-| Endospore Formation | Ch. 2 - Cell Structure and Function |
-| Quorum Sensing | Ch. 5 - Microbial Growth |
-| Nitrogen Fixation | Ch. 4 - Microbial Metabolism |
-| Virulence Factors | Ch. 1 - Introduction to Microbiology |
+**Chemistry additions:**
+- "quantum" -> ["orbital", "electron", "wave", "probability", "Schrodinger"]
+- "gibbs" -> ["free energy", "spontaneous", "thermodynamics", "enthalpy", "entropy"]
+- "stereochemistry" -> ["isomer", "chiral", "enantiomer", "configuration", "3D structure"]
+- "mechanism" -> ["reaction", "step", "intermediate", "arrow pushing", "pathway"]
+- "equilibrium" -> ["reversible", "Le Chatelier", "Keq", "concentration", "dynamic"]
+- "electrochemistry" -> ["redox", "galvanic", "electrolytic", "electrode", "voltage"]
+- "titration" -> ["neutralization", "equivalence point", "indicator", "burette", "pH"]
+- "molecular orbital" -> ["bonding", "antibonding", "HOMO", "LUMO", "hybridization"]
+- "spectroscopy" -> ["absorption", "emission", "IR", "NMR", "UV-Vis", "spectrum"]
+- "crystal field" -> ["ligand", "splitting", "d orbital", "transition metal", "complex"]
+
+**Microbiology additions:**
+- "horizontal" -> ["gene transfer", "transformation", "transduction", "conjugation", "plasmid"]
+- "viral" -> ["replication", "lytic", "lysogenic", "capsid", "host"]
+- "metabolism" -> ["fermentation", "respiration", "catabolism", "anabolism", "ATP"]
+- "antibiotic" -> ["resistance", "efflux", "beta-lactamase", "mutation", "selection"]
+- "complement" -> ["cascade", "MAC", "opsonization", "C3", "innate immunity"]
+- "kinetics" -> ["growth curve", "lag phase", "log phase", "stationary", "death phase"]
+- "endospore" -> ["dormant", "survival", "Bacillus", "Clostridium", "heat resistant"]
+- "quorum" -> ["sensing", "biofilm", "autoinducer", "population density", "communication"]
+- "nitrogen" -> ["fixation", "nitrogenase", "ammonia", "legume", "rhizobium"]
+- "virulence" -> ["pathogen", "toxin", "adhesin", "invasion", "colonization"]
+
+### 3. Improved Matching Logic
+
+Add fuzzy matching for common typos and word stems:
+
+```text
+User types          | Matches
+--------------------|----------------------------------
+"oxidativ"          | "Oxidative Phosphorylation"
+"photosyn"          | "The Calvin Cycle" (via semantic)
+"gene transfer"     | "Horizontal Gene Transfer"
+"ATP production"    | "Oxidative Phosphorylation"
+```
+
+### 4. Request Topic Flow
+
+The existing request button will continue to appear when:
+- Search query has 2+ characters
+- No direct hits AND no related topics found
+- User can submit their query to the `topic_requests` table
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/lib/topicSearch.ts` | Add transcript searching, expand semantic map, add fuzzy matching |
+| `src/components/topic-selection/TopicCard.tsx` | Optional: highlight transcript matches |
 
 ## Implementation Steps
 
-1. **Delete flash_summaries** - Must delete first due to foreign key reference to topics
-2. **Delete all topics** - Remove all 24 existing topics
-3. **Insert new topics** - Add 30 new topics with titles and descriptions (no transcript, no audio_url)
+1. **Update `scoreTopic()` function**
+   - Add transcript field scoring (15 points for keyword match)
+   - Only count unique matches (avoid double-scoring same keyword)
+
+2. **Expand semantic relations map**
+   - Add 30+ new term mappings for Biology, Chemistry, Microbiology
+   - Include common abbreviations (ATP, DNA, RNA, etc.)
+
+3. **Add fuzzy/prefix matching**
+   - Match word prefixes (3+ chars) for partial typing
+   - Handle common suffixes (-tion, -ing, -ity)
+
+4. **Optimize for empty transcripts**
+   - Skip transcript scoring when transcript is empty/null
+   - New topics currently have no transcripts, so description/title matching is primary
 
 ---
 
 ## Technical Details
 
-### SQL Execution Order
+### Scoring Algorithm Update
 
 ```text
-Step 1: DELETE FROM flash_summaries
-        (removes all 24 flash summary records)
-
-Step 2: DELETE FROM topics
-        (removes all 24 topic records)
-
-Step 3: INSERT INTO topics (id, title, description, chapter_id)
-        VALUES (...)
-        (inserts 30 new topic records)
+scoreTopic(topic, keywords):
+  score = 0
+  
+  for each keyword:
+    // Title matching (unchanged)
+    if title.exactMatch(keyword): score += 100
+    else if title.includes(keyword): score += 50
+    
+    // Description matching (unchanged)
+    if description.includes(keyword): score += 25
+    
+    // NEW: Transcript matching
+    if transcript.includes(keyword): score += 15
+    
+    // Bullet points (unchanged)
+    for each bullet: if includes(keyword): score += 15
+    
+    // Semantic matching (expanded)
+    for each relatedTerm of keyword:
+      if title.includes(relatedTerm): score += 8
+      if description.includes(relatedTerm): score += 5
+      if transcript.includes(relatedTerm): score += 3  // NEW
+      
+  return { topic, score, matchType }
 ```
 
-### Topic Record Structure
+### New Semantic Map Structure
 
-Each new topic will have:
-- `id`: Auto-generated UUID
-- `title`: Your provided topic name
-- `description`: Your provided description
-- `chapter_id`: Assigned based on topic relevance
-- `transcript`: NULL (not generated yet)
-- `audio_url`: NULL (not generated yet)
-- `generated_audio_url`: NULL (not generated yet)
-- `duration`: NULL (not generated yet)
+```text
+// Group by domain for maintainability
+const semanticRelations = {
+  // Biology - Cellular
+  "phosphorylation": [...],
+  "respiration": [...],
+  
+  // Biology - Genetics
+  "epigenetics": [...],
+  "recombination": [...],
+  
+  // Chemistry - Physical
+  "quantum": [...],
+  "gibbs": [...],
+  
+  // Microbiology
+  "horizontal": [...],
+  "quorum": [...],
+  ...
+}
+```
