@@ -459,8 +459,24 @@ IMPORTANT: Return ONLY a valid JSON object.`
             console.warn("[Stream] Topic summary generation failed:", e);
           }
 
-          // Check if this is a user-requested topic
-          console.log("[Stream] Checking if topic was user-requested...");
+          // Always save transcript for all topics (enables caching)
+          console.log("[Stream] Saving transcript to database for caching");
+
+          const updateData: { transcript: string; description?: string } = { 
+            transcript: fullTranscript.trim() 
+          };
+          if (topicSummary) updateData.description = topicSummary;
+
+          const { error: topicError } = await supabase
+            .from("topics")
+            .update(updateData)
+            .eq("id", topicId);
+
+          if (topicError) {
+            console.error("[Stream] Topic update error:", topicError);
+          }
+
+          // If this was a user-requested topic, also mark the request as fulfilled
           const { data: topicRequest } = await supabase
             .from("topic_requests")
             .select("id")
@@ -469,41 +485,11 @@ IMPORTANT: Return ONLY a valid JSON object.`
             .maybeSingle();
 
           if (topicRequest) {
-            // Save transcript for user-requested topics
-            console.log("[Stream] Topic was user-requested, saving transcript to database");
-            
-            const updateData: { transcript: string; description?: string } = { 
-              transcript: fullTranscript.trim() 
-            };
-            if (topicSummary) updateData.description = topicSummary;
-            
-            const { error: topicError } = await supabase
-              .from("topics")
-              .update(updateData)
-              .eq("id", topicId);
-
-            if (topicError) {
-              console.error("[Stream] Topic update error:", topicError);
-            }
-
-            // Mark request as fulfilled
             await supabase
               .from("topic_requests")
               .update({ status: "fulfilled" })
               .eq("id", topicRequest.id);
-              
             console.log("[Stream] Request marked as fulfilled");
-          } else {
-            // Don't save transcript for default topics - generate on-demand each time
-            console.log("[Stream] Not a user-requested topic - not saving transcript");
-            
-            // Still update description if we have one
-            if (topicSummary) {
-              await supabase
-                .from("topics")
-                .update({ description: topicSummary })
-                .eq("id", topicId);
-            }
           }
 
           // Upsert flash summary
