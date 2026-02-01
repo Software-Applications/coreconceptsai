@@ -484,37 +484,42 @@ export const TopicSelectionSheet = ({
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     return (
-                      <CommandItem
+                      <motion.div
                         key={topic.id}
-                        value={topic.id}
-                        onSelect={() => handleSelectTopic(topic)}
-                        className="flex items-center gap-3 p-3 cursor-pointer"
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ duration: 0.1 }}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
-                        }`}>
-                          {listened ? (
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                          ) : hasResume ? (
-                            <RotateCcw className="w-4 h-4 text-warning" />
-                          ) : (
-                            <Headphones className="w-4 h-4 text-primary" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground text-sm truncate">
-                              {topic.title}
-                            </span>
-                            {listened && <span className="text-xs text-primary font-medium">✓</span>}
-                            {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
+                        <CommandItem
+                          value={topic.id}
+                          onSelect={() => handleSelectTopic(topic)}
+                          className="flex items-center gap-3 p-3 cursor-pointer"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
+                          }`}>
+                            {listened ? (
+                              <CheckCircle className="w-4 h-4 text-primary" />
+                            ) : hasResume ? (
+                              <RotateCcw className="w-4 h-4 text-warning" />
+                            ) : (
+                              <Headphones className="w-4 h-4 text-primary" />
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                            {topic.description}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      </CommandItem>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground text-sm truncate">
+                                {topic.title}
+                              </span>
+                              {listened && <span className="text-xs text-primary font-medium">✓</span>}
+                              {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                              {topic.description}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </CommandItem>
+                      </motion.div>
                     );
                   })}
                 </CommandGroup>
