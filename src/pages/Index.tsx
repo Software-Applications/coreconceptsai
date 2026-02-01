@@ -6,7 +6,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { useTapVsDrag } from "@/hooks/useTapVsDrag";
 import { VideoPlayerSheet } from "@/components/VideoPlayerSheet";
 import { PracticeQuizSheet } from "@/components/PracticeQuizSheet";
-import { ChapterDropdown } from "@/components/ChapterDropdown";
+import { ChapterDrawer } from "@/components/ChapterDrawer";
 import { VideoCard } from "@/components/VideoCard";
 import { PracticeCard } from "@/components/PracticeCard";
 import { BottomNav } from "@/components/BottomNav";
@@ -274,14 +274,10 @@ const Index = () => {
             <h2 className="text-base font-semibold text-foreground">Related Videos and Practice</h2>
           </div>
         
-        <ChapterDropdown 
+        <ChapterDrawer 
           chapters={subjectChapters}
           selectedChapter={selectedChapter}
           onSelectChapter={setSelectedChapter}
-          watchedCount={watchedCount}
-          totalVideos={subjectVideos.length}
-          completedPracticeCount={completedPracticeCount}
-          totalPractice={subjectPractice.length}
         />
 
         {/* Videos Section */}
