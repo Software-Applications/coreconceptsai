@@ -272,7 +272,7 @@ export const TopicSelectionSheet = ({
                   <div 
                     ref={chipsScrollRef}
                     data-drag-scroll="x"
-                    className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
+                    className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-3 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
                     {/* Recent searches first */}
