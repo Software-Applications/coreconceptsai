@@ -485,7 +485,7 @@ export const DailyDownloadPlayer = ({
           </AnimatePresence>
 
           {/* Generating overlay */}
-          <GeneratingOverlay isGenerating={isGenerating} />
+          <GeneratingOverlay isGenerating={isGenerating} topicTitle={topic.title} />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col px-6 overflow-hidden">

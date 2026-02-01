@@ -3,18 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 const LOADING_MESSAGES = [
-  "Analyzing transcript for key academic terms...",
-  "Optimizing narration pace for complex topics...",
-  "Finalizing high-fidelity audio output...",
+  "Writing a concise transcript for this topic...",
+  "Crafting key concepts and explanations...",
+  "Preparing your personalized audio summary...",
 ];
 
 const ROTATION_INTERVAL = 2000; // 2 seconds
 
 interface GeneratingOverlayProps {
   isGenerating: boolean;
+  topicTitle?: string;
 }
 
-export const GeneratingOverlay = ({ isGenerating }: GeneratingOverlayProps) => {
+export const GeneratingOverlay = ({ isGenerating, topicTitle }: GeneratingOverlayProps) => {
   const [messageIndex, setMessageIndex] = useState(0);
 
   // Rotate messages every 3 seconds while generating
@@ -50,8 +51,13 @@ export const GeneratingOverlay = ({ isGenerating }: GeneratingOverlayProps) => {
           
           {/* Static primary title */}
           <h2 className="text-lg font-semibold text-foreground text-center px-8 mb-2">
-            Finalizing Audio Brief
+            Generating Your Brief
           </h2>
+          {topicTitle && (
+            <p className="text-sm text-primary font-medium text-center px-8 mb-2 truncate max-w-xs">
+              {topicTitle}
+            </p>
+          )}
           
           {/* Rotating sub-copy with crossfade */}
           <div className="h-6 relative flex items-center justify-center">
