@@ -1,10 +1,10 @@
 import { useState, forwardRef } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Chapter } from "@/hooks/useChapters";
 import { springTransition } from "@/lib/motionVariants";
 import { useHaptics } from "@/hooks/useHaptics";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ChapterDrawerProps {
   chapters: Chapter[];
@@ -30,6 +30,94 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
 
     if (!selectedChapter) return null;
 
+    // Find the mobile frame container for the portal
+    const portalContainer = document.querySelector('[data-mobile-frame]') || document.body;
+
+    const drawerContent = (
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+            />
+
+            {/* Drawer Content */}
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[60%] flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={springTransition}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pb-3">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Select Chapter
+                </h2>
+                <button
+                  onClick={handleClose}
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Chapter List - native scroll */}
+              <div 
+                className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 scrollbar-hide"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                <div className="space-y-1.5">
+                  {chapters.map((chapter) => (
+                    <motion.button
+                      key={chapter.id}
+                      onClick={() => handleSelect(chapter)}
+                      className={`w-full px-4 py-3.5 text-left flex items-center justify-between rounded-xl transition-colors ${
+                        selectedChapter.id === chapter.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "bg-card border border-border hover:bg-accent hover:border-primary/20"
+                      }`}
+                      whileTap={{ scale: 0.98 }}
+                      transition={springTransition}
+                    >
+                      <span
+                        className={`font-medium text-sm ${
+                          selectedChapter.id === chapter.id
+                            ? "text-primary"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {chapter.title}
+                      </span>
+                      {selectedChapter.id === chapter.id && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={springTransition}
+                        >
+                          <Check className="w-4 h-4 text-primary" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+
     return (
       <div ref={ref} className="mb-3">
         {/* Trigger Button */}
@@ -53,86 +141,8 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
           </div>
         </motion.button>
 
-        {/* Drawer Sheet */}
-        <AnimatePresence>
-          {open && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={handleClose}
-              />
-
-              {/* Drawer Content */}
-              <motion.div
-                className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[60%] overflow-hidden flex flex-col"
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={springTransition}
-              >
-                {/* Handle */}
-                <div className="flex justify-center pt-3 pb-2">
-                  <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                </div>
-
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 pb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Select Chapter
-                  </h2>
-                  <button
-                    onClick={handleClose}
-                    className="p-2 rounded-full hover:bg-muted transition-colors"
-                  >
-                    <X className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                </div>
-
-                {/* Chapter List */}
-                <ScrollArea className="flex-1 px-4 pb-6">
-                  <div className="space-y-1.5">
-                    {chapters.map((chapter) => (
-                      <motion.button
-                        key={chapter.id}
-                        onClick={() => handleSelect(chapter)}
-                        className={`w-full px-4 py-3.5 text-left flex items-center justify-between rounded-xl transition-colors ${
-                          selectedChapter.id === chapter.id
-                            ? "bg-primary/10 border border-primary/20"
-                            : "bg-card border border-border hover:bg-accent hover:border-primary/20"
-                        }`}
-                        whileTap={{ scale: 0.98 }}
-                        transition={springTransition}
-                      >
-                        <span
-                          className={`font-medium text-sm ${
-                            selectedChapter.id === chapter.id
-                              ? "text-primary"
-                              : "text-foreground"
-                          }`}
-                        >
-                          {chapter.title}
-                        </span>
-                        {selectedChapter.id === chapter.id && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={springTransition}
-                          >
-                            <Check className="w-4 h-4 text-primary" />
-                          </motion.div>
-                        )}
-                      </motion.button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        {/* Portal the drawer to mobile frame root */}
+        {createPortal(drawerContent, portalContainer)}
       </div>
     );
   }
