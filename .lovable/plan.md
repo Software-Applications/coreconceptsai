@@ -1,37 +1,47 @@
 
+# Fix Double Padding Above Practice Sets Title
 
-# Align Practice Card Title Spacing with Video Card
+## Problem
+The space above "Practice Sets" title is larger than above "Videos" title due to cumulative bottom padding from the Videos section:
+- Videos scroll area: `pb-4` (16px)
+- Videos container: `py-2` bottom (8px)  
+- Videos wrapper: `mb-3` (12px)
+- **Total: 36px gap**
 
-## Summary
-Adjust the practice card title section to have consistent visual balance with the video card.
+The Videos section only has `py-2` (8px) from its container above it.
 
-## Changes
+## Solution
+Remove redundant bottom padding to create consistent spacing:
 
-### `src/components/PracticeCard.tsx`
+### `src/pages/Index.tsx`
 
-**Current state:**
-- Practice card uses `mt-2` with just text
-- Video card uses `mt-2` with avatar (28px) + text, creating more visual weight
-
-**Solution:**
-Change `mt-2` to `mt-2` with `flex items-center` layout to match video card structure, ensuring consistent vertical rhythm:
-
+**1. Videos Section (line 292-293)**
+Change from:
 ```tsx
-// Before (line 69)
-<div className="mt-2">
-  <p className="font-medium text-foreground text-xs line-clamp-2">{practice.title}</p>
-</div>
-
-// After
-<div className="flex items-center gap-2 mt-2">
-  <div className="min-w-0">
-    <p className="font-medium text-foreground text-xs line-clamp-2">{practice.title}</p>
-  </div>
-</div>
+<div className="-mx-4 px-4 py-2">
+  <div ... className="... pt-2 pb-4 ...">
+```
+To:
+```tsx
+<div className="-mx-4 px-4 pt-2">
+  <div ... className="... pt-2 pb-2 ...">
 ```
 
-This matches the exact structure of VideoCard (line 56-61), ensuring:
-- Same `flex items-center gap-2 mt-2` container
-- Same `min-w-0` wrapper for text truncation
-- Consistent visual spacing between cards in the same row
+**2. Practice Section (line 313-314)**
+Apply the same change:
+```tsx
+<div className="-mx-4 px-4 pt-2">
+  <div ... className="... pt-2 pb-2 ...">
+```
 
+This creates consistent 12px (`mb-3`) spacing between sections, with 8px internal padding for the scroll areas.
+
+## Technical Details
+| Element | Before | After |
+|---------|--------|-------|
+| Container wrapper | `py-2` (top+bottom) | `pt-2` (top only) |
+| Scroll area bottom | `pb-4` (16px) | `pb-2` (8px) |
+| Section wrapper | `mb-3` (12px) | `mb-3` (unchanged) |
+| **Total gap** | ~36px | ~20px |
+
+Both sections will now have identical spacing above their titles.
