@@ -307,14 +307,65 @@ Keep all string values SHORT to ensure valid JSON output.`
 
     console.log("Flash summary ready:", flashSummary);
 
-    // Step 3: Save to database
-    console.log("Step 3: Saving to database...");
+    // Step 3: Generate a short summary for the description field
+    console.log("Step 3: Generating topic summary...");
+    let topicSummary = "";
+    try {
+      const summaryResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": GOOGLE_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ 
+                text: `Generate a concise 1-2 sentence summary (under 150 characters) of what students will learn about "${topicTitle}". 
+                
+Based on this transcript excerpt:
+${transcript.slice(0, 1500)}
+
+Return ONLY the summary text, no quotes or extra formatting.` 
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 100,
+            }
+          })
+        }
+      );
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        topicSummary = summaryData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+        // Ensure it's under 150 chars
+        if (topicSummary.length > 150) {
+          topicSummary = topicSummary.slice(0, 147) + "...";
+        }
+        console.log(`Topic summary generated: ${topicSummary}`);
+      }
+    } catch (summaryError) {
+      console.warn("Failed to generate topic summary, will use existing description");
+    }
+
+    // Step 4: Save to database
+    console.log("Step 4: Saving to database...");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Update topic description with transcript
+    // Update topic with transcript in dedicated column, and summary in description
+    const updateData: { transcript: string; description?: string } = { transcript };
+    
+    // Only update description if we generated a summary or if current description looks like a transcript
+    if (topicSummary) {
+      updateData.description = topicSummary;
+    }
+    
     const { error: topicError } = await supabase
       .from("topics")
-      .update({ description: transcript })
+      .update(updateData)
       .eq("id", topicId);
 
     if (topicError) {

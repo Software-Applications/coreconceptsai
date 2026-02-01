@@ -17,6 +17,7 @@ export interface DailyDownloadTopic {
   chapterId: string;
   title: string;
   description: string;
+  transcript: string;
   duration: string;
   audioUrl: string;
   flashSummary: {
@@ -62,6 +63,7 @@ export const useTopics = (subjectId?: string) => {
           chapterId: topic.chapter_id,
           title: topic.title,
           description: topic.description || '',
+          transcript: (topic as any).transcript || '',
           duration: topic.duration || '0:00',
           audioUrl: topic.audio_url || topic.generated_audio_url || '/mock-audio.mp3',
           flashSummary: flashSummary ? {
@@ -119,6 +121,7 @@ export const useTopicById = (topicId: string | undefined) => {
         chapterId: data.chapter_id,
         title: data.title,
         description: data.description || '',
+        transcript: (data as any).transcript || '',
         duration: data.duration || '0:00',
         audioUrl: data.audio_url || data.generated_audio_url || '/mock-audio.mp3',
         flashSummary: flashSummary ? {
