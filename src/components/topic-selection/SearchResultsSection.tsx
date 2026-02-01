@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { Target, Lightbulb, Search } from 'lucide-react';
+import { Target, Lightbulb, Search, Loader2 } from 'lucide-react';
 import type { SearchResults, ScoredTopic } from '@/lib/topicSearch';
 import { TopicCard } from './TopicCard';
+import { Button } from '@/components/ui/button';
 
 interface SearchResultsSectionProps {
   results: SearchResults;
@@ -9,6 +10,8 @@ interface SearchResultsSectionProps {
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
   highlightQuery: string;
+  onRequestTopic?: (query: string) => void;
+  isRequestingTopic?: boolean;
 }
 
 export const SearchResultsSection = ({
@@ -17,11 +20,17 @@ export const SearchResultsSection = ({
   isListened,
   hasProgress,
   highlightQuery,
+  onRequestTopic,
+  isRequestingTopic,
 }: SearchResultsSectionProps) => {
   const { directHits, relatedTopics } = results;
   const hasDirectHits = directHits.length > 0;
   const hasRelated = relatedTopics.length > 0;
   const hasAnyResults = hasDirectHits || hasRelated;
+
+  const displayQuery = results.query.length > 30 
+    ? `${results.query.slice(0, 30)}...` 
+    : results.query;
 
   if (!hasAnyResults) {
     return (
@@ -38,6 +47,36 @@ export const SearchResultsSection = ({
         <p className="text-xs text-muted-foreground/70 mt-1">
           Try a different search term or browse by chapter
         </p>
+
+        {/* Request Topic Section */}
+        {onRequestTopic && results.query.trim().length >= 2 && (
+          <>
+            <div className="flex items-center gap-3 w-full max-w-[200px] mt-5 mb-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRequestTopic(results.query)}
+              disabled={isRequestingTopic}
+              className="gap-2"
+            >
+              {isRequestingTopic ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Lightbulb className="w-4 h-4" />
+              )}
+              Request "<span className="text-primary font-medium">{displayQuery}</span>"
+            </Button>
+
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              We'll add it to our content queue
+            </p>
+          </>
+        )}
       </motion.div>
     );
   }
