@@ -44,11 +44,11 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
             )}
             <div className="absolute inset-0 flex items-center justify-center">
               <motion.div 
-                className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg pl-1"
-                whileHover={{ scale: 1.1 }}
+                className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30"
+                whileHover={{ scale: 1.1, backgroundColor: "rgba(0,0,0,0.6)" }}
                 transition={springTransition}
               >
-                <Play className="w-6 h-6 text-foreground" fill="currentColor" />
+                <Play className="w-5 h-5 text-white ml-0.5" />
               </motion.div>
             </div>
             <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
