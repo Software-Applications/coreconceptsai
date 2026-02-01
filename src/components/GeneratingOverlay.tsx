@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 
 const LOADING_MESSAGES = [
   "Writing a concise transcript for this topic...",
@@ -13,12 +13,13 @@ const ROTATION_INTERVAL = 2000; // 2 seconds
 interface GeneratingOverlayProps {
   isGenerating: boolean;
   topicTitle?: string;
+  onCancel?: () => void;
 }
 
-export const GeneratingOverlay = ({ isGenerating, topicTitle }: GeneratingOverlayProps) => {
+export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: GeneratingOverlayProps) => {
   const [messageIndex, setMessageIndex] = useState(0);
 
-  // Rotate messages every 3 seconds while generating
+  // Rotate messages every 2 seconds while generating
   useEffect(() => {
     if (!isGenerating) {
       setMessageIndex(0);
@@ -41,6 +42,16 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle }: GeneratingOverla
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
+          {/* Cancel button */}
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+          )}
+
           <motion.div
             className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6"
             animate={{ scale: [1, 1.1, 1] }}
@@ -50,21 +61,21 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle }: GeneratingOverla
           </motion.div>
           
           {/* Static primary title */}
-          <h2 className="text-lg font-semibold text-foreground text-center px-8 mb-2">
+          <h2 className="text-lg font-semibold text-foreground text-center px-8 mb-1">
             Generating Your Brief
           </h2>
           {topicTitle && (
-            <p className="text-sm text-primary font-medium text-center px-8 mb-2 truncate max-w-xs">
+            <p className="text-sm text-primary font-medium text-center px-8 mb-4 truncate max-w-xs">
               {topicTitle}
             </p>
           )}
           
           {/* Rotating sub-copy with crossfade */}
-          <div className="h-6 relative flex items-center justify-center">
+          <div className="h-8 relative w-full flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.p
                 key={messageIndex}
-                className="text-sm text-muted-foreground text-center px-8 absolute"
+                className="text-sm text-muted-foreground text-center px-8 absolute max-w-[280px]"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
