@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search } from 'lucide-react';
+import { X, Search, ArrowDownAZ, Clock, CheckCircle2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
@@ -10,6 +10,9 @@ import { AIBadge } from './AIBadge';
 import { HeroIntro, TopicCard, SearchResultsSection } from './topic-selection';
 
 const HERO_SEEN_KEY = 'core-concepts-hero-seen';
+const SORT_PREFERENCE_KEY = 'core-concepts-sort';
+
+type SortOption = 'alphabetical' | 'progress' | 'recent';
 
 interface TopicSelectionSheetProps {
   isOpen: boolean;
@@ -37,6 +40,10 @@ export const TopicSelectionSheet = ({
   const [showHero, setShowHero] = useState(() => {
     if (typeof window === 'undefined') return true;
     return !localStorage.getItem(HERO_SEEN_KEY);
+  });
+  const [sortOption, setSortOption] = useState<SortOption>(() => {
+    if (typeof window === 'undefined') return 'recent';
+    return (localStorage.getItem(SORT_PREFERENCE_KEY) as SortOption) || 'recent';
   });
 
   // Debounce search query for performance
@@ -136,12 +143,48 @@ export const TopicSelectionSheet = ({
 
   const isSearching = debouncedQuery.trim().length >= 2;
 
+  // Sort topics based on selected option
+  const sortedTopics = useMemo(() => {
+    const sorted = [...topics];
+    switch (sortOption) {
+      case 'alphabetical':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'progress':
+        // Unlistened first, then in-progress, then completed
+        return sorted.sort((a, b) => {
+          const aListened = isListened?.(a.id) ?? false;
+          const bListened = isListened?.(b.id) ?? false;
+          const aProgress = hasProgress?.(a.id) ?? false;
+          const bProgress = hasProgress?.(b.id) ?? false;
+          
+          // Priority: unlistened (no progress) > in-progress > completed
+          const getPriority = (listened: boolean, progress: boolean) => {
+            if (listened) return 2; // Completed
+            if (progress) return 1; // In progress
+            return 0; // Not started
+          };
+          
+          return getPriority(aListened, aProgress) - getPriority(bListened, bProgress);
+        });
+      case 'recent':
+      default:
+        // Keep original order (by created_at from DB)
+        return sorted;
+    }
+  }, [topics, sortOption, isListened, hasProgress]);
+
   // Calculate progress stats (from all topics, not filtered)
   const progressStats = useMemo(() => {
     const total = topics.length;
     const listened = topics.filter(t => isListened?.(t.id)).length;
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
+
+  const handleSortChange = (option: SortOption) => {
+    lightTap();
+    setSortOption(option);
+    localStorage.setItem(SORT_PREFERENCE_KEY, option);
+  };
 
   // Reset search when sheet closes
   useEffect(() => {
@@ -227,6 +270,45 @@ export const TopicSelectionSheet = ({
           </div>
         </div>
 
+        {/* Sort options - only show when not searching */}
+        {!isSearching && (
+          <div className="px-5 pb-3 flex gap-2 overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => handleSortChange('recent')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                sortOption === 'recent'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Recent
+            </button>
+            <button
+              onClick={() => handleSortChange('alphabetical')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                sortOption === 'alphabetical'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <ArrowDownAZ className="w-3.5 h-3.5" />
+              A-Z
+            </button>
+            <button
+              onClick={() => handleSortChange('progress')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                sortOption === 'progress'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Progress
+            </button>
+          </div>
+        )}
+
         {/* Scrollable content */}
         <div
           ref={scrollContainerRef}
@@ -270,7 +352,7 @@ export const TopicSelectionSheet = ({
                 exit={{ opacity: 0 }}
                 className="space-y-2 pb-6"
               >
-                {topics.map((topic, index) => {
+                {sortedTopics.map((topic, index) => {
                   const listened = isListened?.(topic.id) ?? false;
                   const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                   return (
