@@ -289,8 +289,8 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Videos</h3>
             <span className="text-xs text-muted-foreground">({subjectVideos.length})</span>
           </div>
-          <div className="-mx-4 px-4 py-2">
-            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+          <div className="-mx-4 px-4 pt-2">
+            <div ref={videosScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-2 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectVideos.map((video) => (
                 <VideoCard 
                   key={video.id} 
@@ -310,8 +310,8 @@ const Index = () => {
             <h3 className="text-sm font-medium text-foreground">Practice Sets</h3>
             <span className="text-xs text-muted-foreground">({subjectPractice.length})</span>
           </div>
-          <div className="-mx-4 px-4 py-2">
-            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-4 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
+          <div className="-mx-4 px-4 pt-2">
+            <div ref={practiceScrollRef} data-drag-scroll="x" className="flex gap-3 overflow-x-auto pt-2 pb-2 scrollbar-hide items-start pr-4 snap-x snap-mandatory overscroll-x-contain select-none" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
               {subjectPractice.map((practice) => (
                 <PracticeCard 
                   key={practice.id} 
