@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, Volume2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
-const LOADING_MESSAGES = [
-  "Writing a concise transcript for this topic...",
+const STREAMING_MESSAGES = [
+  "Writing your personalized brief...",
   "Crafting key concepts and explanations...",
-  "Preparing your personalized audio summary...",
+  "Preparing audio narration...",
+];
+
+const AUDIO_MESSAGES = [
+  "Generating high-quality narration...",
+  "Almost ready to play...",
 ];
 
 const ROTATION_INTERVAL = 2000; // 2 seconds
@@ -14,28 +20,46 @@ interface GeneratingOverlayProps {
   isGenerating: boolean;
   topicTitle?: string;
   onCancel?: () => void;
+  // New streaming props
+  isStreaming?: boolean;
+  streamingProgress?: number;
+  chunksReady?: number;
+  totalChunks?: number;
+  isGeneratingAudio?: boolean;
 }
 
-export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: GeneratingOverlayProps) => {
+export const GeneratingOverlay = ({ 
+  isGenerating, 
+  topicTitle, 
+  onCancel,
+  isStreaming = false,
+  streamingProgress = 0,
+  chunksReady = 0,
+  totalChunks = 0,
+  isGeneratingAudio = false,
+}: GeneratingOverlayProps) => {
   const [messageIndex, setMessageIndex] = useState(0);
 
-  // Rotate messages every 2 seconds while generating
+  const messages = isGeneratingAudio ? AUDIO_MESSAGES : STREAMING_MESSAGES;
+  const showOverlay = isGenerating || isStreaming;
+
+  // Rotate messages while generating/streaming
   useEffect(() => {
-    if (!isGenerating) {
+    if (!showOverlay) {
       setMessageIndex(0);
       return;
     }
 
     const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+      setMessageIndex((prev) => (prev + 1) % messages.length);
     }, ROTATION_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isGenerating]);
+  }, [showOverlay, messages.length]);
 
   return (
     <AnimatePresence>
-      {isGenerating && (
+      {showOverlay && (
         <motion.div
           className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-30"
           initial={{ opacity: 0 }}
@@ -57,17 +81,33 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: Genera
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
-            <Sparkles className="w-10 h-10 text-primary" />
+            {isGeneratingAudio ? (
+              <Volume2 className="w-10 h-10 text-primary" />
+            ) : (
+              <Sparkles className="w-10 h-10 text-primary" />
+            )}
           </motion.div>
           
           {/* Static primary title */}
           <h2 className="text-lg font-semibold text-foreground text-center px-8 mb-1">
-            Generating Your Brief
+            {isGeneratingAudio ? "Generating Audio" : "Generating Your Brief"}
           </h2>
           {topicTitle && (
             <p className="text-sm text-primary font-medium text-center px-8 mb-4 truncate max-w-xs">
               {topicTitle}
             </p>
+          )}
+
+          {/* Progress bar for streaming */}
+          {isStreaming && streamingProgress > 0 && (
+            <div className="w-48 mb-4">
+              <Progress value={streamingProgress} className="h-1.5" />
+              {totalChunks > 0 && (
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Audio {chunksReady}/{totalChunks} ready
+                </p>
+              )}
+            </div>
           )}
           
           {/* Rotating sub-copy with crossfade */}
@@ -81,7 +121,7 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: Genera
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
               >
-                {LOADING_MESSAGES[messageIndex]}
+                {messages[messageIndex]}
               </motion.p>
             </AnimatePresence>
           </div>
