@@ -100,6 +100,10 @@ export const DailyDownloadPlayer = ({
   const currentStreamingChunkRef = useRef<number>(0);
   const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
   const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
+  const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
+  
+  // Available playback rates
+  const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
   
   // Define handleSpeechEnd first (used by multiple callbacks)
   const handleSpeechEnd = useCallback(() => {
@@ -124,6 +128,7 @@ export const DailyDownloadPlayer = ({
       setIsWaitingForNextChunk(false);
       currentStreamingChunkRef.current = nextIndex;
       const audio = new Audio(queue[nextIndex]);
+      audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
       streamingAudioRef.current = audio;
       
       audio.addEventListener('ended', () => {
@@ -147,7 +152,7 @@ export const DailyDownloadPlayer = ({
       // Chunk exists but audio not ready - show buffering
       setIsWaitingForNextChunk(true);
     }
-  }, [handleSpeechEnd]);
+  }, [handleSpeechEnd, streamingPlaybackRate]);
   
   // Streaming content hook for parallel transcript + audio generation
   const streamingContent = useStreamingContent({
@@ -159,6 +164,7 @@ export const DailyDownloadPlayer = ({
       
       // Create and play first audio chunk
       const audio = new Audio(blobUrl);
+      audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
       streamingAudioRef.current = audio;
       
       audio.addEventListener('ended', () => {
@@ -338,6 +344,35 @@ export const DailyDownloadPlayer = ({
     setVoiceId, isStreamingPlayback, streamingContent, playNextStreamingChunk,
     isWaitingForNextChunk, isPlaying, isPaused, hasStarted, clearCache, speak, fullTranscriptText
   ]);
+
+  // Cycle playback rate for streaming audio
+  const cycleStreamingPlaybackRate = useCallback(() => {
+    setStreamingPlaybackRate(currentRate => {
+      const currentIndex = PLAYBACK_RATES.indexOf(currentRate as typeof PLAYBACK_RATES[number]);
+      const nextIndex = (currentIndex + 1) % PLAYBACK_RATES.length;
+      const newRate = PLAYBACK_RATES[nextIndex];
+      
+      // Apply to current audio element immediately
+      if (streamingAudioRef.current) {
+        streamingAudioRef.current.playbackRate = newRate;
+      }
+      
+      return newRate;
+    });
+  }, []);
+
+  // Combined playback rate handler that works for both modes
+  const handleCyclePlaybackRate = useCallback(() => {
+    lightTap();
+    if (isStreamingPlayback) {
+      cycleStreamingPlaybackRate();
+    } else {
+      cyclePlaybackRate();
+    }
+  }, [isStreamingPlayback, cycleStreamingPlaybackRate, cyclePlaybackRate, lightTap]);
+
+  // Get current playback rate for display
+  const currentPlaybackRate = isStreamingPlayback ? streamingPlaybackRate : playbackRate;
 
   // Estimate total duration based on text length and speaking rate (~150 words/min)
   const estimatedDuration = useMemo(() => {
@@ -845,10 +880,10 @@ export const DailyDownloadPlayer = ({
               
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => { lightTap(); cyclePlaybackRate(); }}
+                  onClick={handleCyclePlaybackRate}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted hover:scale-105 transition-all text-[10px] font-medium text-foreground"
                 >
-                  {playbackRate}x
+                  {currentPlaybackRate}x
                 </button>
                 
                 <div className="w-px h-3 bg-border/50" />
