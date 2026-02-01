@@ -1,12 +1,15 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
+import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
+
+const RECENT_SEARCHES_KEY = 'core-concepts-recent-searches';
+const MAX_RECENT_SEARCHES = 5;
 import { AIBadge } from './AIBadge';
 import {
   Command,
@@ -65,6 +68,41 @@ export const TopicSelectionSheet = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
 
+  // Recent searches state
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save a search to recent history
+  const saveRecentSearch = useCallback((query: string) => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+    
+    setRecentSearches(prev => {
+      // Remove duplicates and add to front
+      const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [trimmed, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Clear a single recent search
+  const clearRecentSearch = useCallback((term: string) => {
+    lightTap();
+    setRecentSearches(prev => {
+      const updated = prev.filter(s => s !== term);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [lightTap]);
+
   // Auto-focus search input when sheet opens
   useEffect(() => {
     if (isOpen) {
@@ -85,9 +123,13 @@ export const TopicSelectionSheet = ({
   }, [searchQuery]);
 
   const handleSelectTopic = useCallback((topic: DailyDownloadTopic) => {
+    // Save search when user selects a topic from search results
+    if (searchQuery.trim().length >= 2) {
+      saveRecentSearch(searchQuery);
+    }
     selectionChanged();
     onSelectTopic(topic);
-  }, [selectionChanged, onSelectTopic]);
+  }, [selectionChanged, onSelectTopic, searchQuery, saveRecentSearch]);
 
   const handleRequestTopic = useCallback((query: string) => {
     lightTap();
@@ -222,12 +264,12 @@ export const TopicSelectionSheet = ({
             placeholder="Search topics..."
             value={searchQuery}
             onValueChange={setSearchQuery}
-            className={!isSearching && suggestionChips.length > 0 ? "border-0" : ""}
+            className={!isSearching && (suggestionChips.length > 0 || recentSearches.length > 0) ? "border-0" : ""}
           />
           
-          {/* Quick suggestion chips - only show when not searching */}
+          {/* Quick suggestion and recent search chips - only show when not searching */}
           <AnimatePresence>
-            {!isSearching && suggestionChips.length > 0 && (
+            {!isSearching && (suggestionChips.length > 0 || recentSearches.length > 0) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -246,9 +288,40 @@ export const TopicSelectionSheet = ({
                     className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
+                    {/* Recent searches first */}
+                    {recentSearches.map((term) => (
+                      <div
+                        key={`recent-${term}`}
+                        className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                      >
+                        <Clock className="w-3 h-3 opacity-60" />
+                        <button
+                          onClick={wrapChipClick(() => handleChipClick(term))}
+                          className="hover:underline"
+                        >
+                          {term}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearRecentSearch(term);
+                          }}
+                          className="p-0.5 hover:bg-primary/20 rounded-full transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Divider if both exist */}
+                    {recentSearches.length > 0 && suggestionChips.length > 0 && (
+                      <div className="w-px h-5 bg-border flex-shrink-0 self-center" />
+                    )}
+                    
+                    {/* Suggestion chips */}
                     {suggestionChips.map((term) => (
                       <button
-                        key={term}
+                        key={`suggest-${term}`}
                         onClick={wrapChipClick(() => handleChipClick(term))}
                         className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
                       >
