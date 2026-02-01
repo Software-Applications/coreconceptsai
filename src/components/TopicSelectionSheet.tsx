@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
+import { useDragScroll } from '@/hooks/useDragScroll';
 import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
@@ -67,6 +68,7 @@ export const TopicSelectionSheet = ({
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
+  const listScrollRef = useDragScroll<HTMLDivElement>();
 
   // Recent searches state
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -321,7 +323,11 @@ export const TopicSelectionSheet = ({
             )}
           </AnimatePresence>
 
-          <CommandList className="max-h-none flex-1 min-h-0 overflow-y-auto pb-safe scrollbar-hide">
+          <CommandList
+            ref={listScrollRef}
+            className="max-h-none flex-1 min-h-0 overflow-y-auto pb-safe scrollbar-hide overscroll-contain cursor-grab select-none touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+          >
             <AnimatePresence mode="wait">
               {isSearching ? (
                 // Search Results Mode
