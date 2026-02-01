@@ -78,17 +78,17 @@ export function isQueryClear(query: string): boolean {
   const trimmed = query.trim().toLowerCase();
   
   // Check minimum length
-  if (trimmed.length < 3) return false;
+  if (trimmed.length < 10) return false;
   
-  // Count meaningful letters
+  // Count meaningful letters - require at least 10
   const letterCount = (trimmed.match(/[a-z]/gi) || []).length;
-  if (letterCount < 3) return false;
+  if (letterCount < 10) return false;
   
-  // Check for at least one word with 3+ letters
+  // Check for at least one word with 7+ letters
   const words = trimmed.split(/\s+/);
   const hasValidWord = words.some(word => {
     const cleanWord = word.replace(/[^a-z]/gi, '');
-    return cleanWord.length >= 3;
+    return cleanWord.length >= 7;
   });
   if (!hasValidWord) return false;
   
