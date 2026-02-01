@@ -1,119 +1,212 @@
 
-# Clear All Cache and Stored Data
+# Streaming Transcript + Audio Generation
 
 ## Overview
-Clean up all cached data and stored references across the app, including:
-- **IndexedDB audio cache** (stored audio files from Google TTS)
-- **localStorage data** (user preferences, watched videos, quiz progress, etc.)
-- **TanStack Query cache** (in-memory query results)
+
+Transform the content generation pipeline from a sequential batch process to a **parallel streaming architecture** where transcript and audio are generated in 30-second chunks. The audio player screen is presented as soon as the first chunk is ready, allowing playback to begin while the rest is still being generated.
 
 ---
 
-## What Will Be Cleared
+## Current Flow (What We're Changing)
 
-| Storage Type | Data Stored | Location |
-|--------------|-------------|----------|
-| IndexedDB | Audio blobs from Google TTS | `audio-cache` database |
-| localStorage | Voice preference | `daily-download-voice` |
-| localStorage | User subjects | `user-subjects` |
-| localStorage | Quiz progress | `quiz-progress` |
-| localStorage | Pinned cards (guests) | `pinned-cards` |
-| localStorage | Watched videos | `watched-videos` |
-| localStorage | Saved cards expanded state | `saved-cards-expanded` |
-| localStorage | FAB tooltip seen | `daily-download-fab-tooltip-seen` |
-| localStorage | Recent searches | `topic-search-recent` |
-| localStorage | Supabase auth session | `sb-*` keys |
-| Memory | TanStack Query cache | In-memory |
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  1. User opens topic                                            │
+│  2. Edge function generates FULL transcript (10-20 seconds)     │
+│  3. User sees "Generating..." overlay                           │
+│  4. Transcript complete → Audio screen shown                    │
+│  5. User taps Play                                              │
+│  6. TTS generates audio via SSE streaming                       │
+│  7. Audio plays                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Total wait time before playback: 15-25 seconds
+```
 
 ---
 
-## Implementation
+## New Flow (Streaming Pipeline)
 
-### 1. Create a Cache Clearing Utility
-**New file: `src/lib/clearAllData.ts`**
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│  1. User opens topic                                                       │
+│  2. Edge function streams transcript in chunks via SSE                     │
+│     ├─ Chunk 1 (~30 sec audio worth of text) → immediately sent to TTS    │
+│     ├─ Chunk 2 → sent to TTS while chunk 1 audio plays                    │
+│     └─ Chunk 3, 4, ... → continue in parallel                             │
+│  3. First chunk audio ready → Audio screen shown + auto-play              │
+│  4. Remaining chunks stream in background                                  │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Time to first audio: 4-8 seconds (vs 15-25 seconds before)
+```
+
+---
+
+## Technical Implementation
+
+### 1. New Edge Function: `generate-content-stream`
+
+Replaces batch `generate-content` with a streaming version that:
+- Uses Gemini's `streamGenerateContent` REST API endpoint
+- Accumulates text until approximately 30 seconds worth (~75-100 words)
+- Emits each chunk as an SSE event
+- Runs flash summary generation in parallel (background task)
+
+**SSE Event Types:**
+- `{ type: "chunk", index: 0, text: "...", isLast: false }`
+- `{ type: "chunk", index: 1, text: "...", isLast: true }`
+- `{ type: "summary", flashSummary: {...} }`
+- `{ type: "done", fullTranscript: "..." }`
 
 ```typescript
-import { clearAllCache as clearAudioCache } from './audioCache';
-import { QueryClient } from '@tanstack/react-query';
+// Pseudocode for streaming approach
+const stream = await fetch("...streamGenerateContent", { ... });
+const reader = stream.body.getReader();
 
-// All localStorage keys used by the app
-const LOCALSTORAGE_KEYS = [
-  'daily-download-voice',
-  'user-subjects',
-  'quiz-progress',
-  'pinned-cards',
-  'watched-videos',
-  'saved-cards-expanded',
-  'daily-download-fab-tooltip-seen',
-  'topic-search-recent',
-];
+let buffer = "";
+let chunkIndex = 0;
 
-export async function clearAllAppData(queryClient?: QueryClient): Promise<void> {
-  // 1. Clear IndexedDB audio cache
-  await clearAudioCache();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
   
-  // 2. Clear localStorage (preserve auth session)
-  LOCALSTORAGE_KEYS.forEach(key => {
-    localStorage.removeItem(key);
-  });
+  buffer += parseChunkText(value);
   
-  // 3. Clear TanStack Query cache
-  if (queryClient) {
-    queryClient.clear();
+  // Emit when we have ~30 seconds worth of content
+  if (estimateAudioDuration(buffer) >= 30) {
+    emit({ type: "chunk", index: chunkIndex++, text: buffer });
+    buffer = "";
   }
-  
-  console.log('[ClearData] All app data cleared');
 }
 
-export function clearAllLocalStorage(): void {
-  LOCALSTORAGE_KEYS.forEach(key => {
-    localStorage.removeItem(key);
-  });
+// Emit remaining text
+if (buffer.length > 0) {
+  emit({ type: "chunk", index: chunkIndex, text: buffer, isLast: true });
 }
 ```
 
-### 2. Execute the Cleanup
+### 2. New Hook: `useStreamingContent`
 
-Since you want to clear this immediately, I'll:
-1. Add a temporary button/function to trigger the cleanup
-2. Or you can run this in the browser console
+Replaces `useAIGeneration` hook with a streaming version:
+- Connects to SSE endpoint
+- Receives transcript chunks
+- Immediately sends each chunk to TTS for audio generation
+- Tracks overall progress and ready state
 
-For a one-time cleanup, you can run this in the browser console:
-```javascript
-// Clear IndexedDB
-indexedDB.deleteDatabase('audio-cache');
+**Key State:**
+- `chunks: Array<{ text: string, audioReady: boolean }>`
+- `firstChunkReady: boolean` - triggers audio screen display
+- `isStreaming: boolean`
+- `progress: number` - 0-100 across all chunks
 
-// Clear localStorage (preserving auth)
-['daily-download-voice', 'user-subjects', 'quiz-progress', 'pinned-cards', 
- 'watched-videos', 'saved-cards-expanded', 'daily-download-fab-tooltip-seen',
- 'topic-search-recent'].forEach(key => localStorage.removeItem(key));
+### 3. Modified TTS Pipeline
 
-// Refresh to clear query cache
-location.reload();
-```
+The existing `google-tts` edge function already supports streaming. We'll:
+- Call TTS for each transcript chunk as it arrives
+- Queue audio chunks for seamless playback
+- Leverage existing `audioQueueRef` infrastructure in `useGoogleTTS`
+
+### 4. Updated `DailyDownloadPlayer`
+
+**Changes:**
+- Replace `useGenerateContent` with `useStreamingContent`
+- Auto-show audio screen when `firstChunkReady` becomes true
+- Auto-start playback (no manual play button press needed initially)
+- Show streaming progress indicator while remaining chunks load
+- Transition `GeneratingOverlay` to streaming-aware UI
+
+**New UI States:**
+1. **Streaming** - Show progress: "Preparing audio... (Chunk 2/5)"
+2. **Ready** - First chunk ready, auto-play begins
+3. **Buffering** - Next chunk not ready yet (existing behavior)
 
 ---
 
-## Approach Options
+## File Changes Summary
 
-| Option | What It Does |
-|--------|--------------|
-| **A: Console Script** | Run the above script in browser DevTools - quick one-time fix |
-| **B: Utility Function** | Create reusable `clearAllAppData()` function for future use |
-| **C: Settings Page** | Add a "Clear Cache" button in a settings area |
-
----
-
-## Recommendation
-
-**Option B** - Create the utility function so it's available for future use, plus run the console script now for immediate cleanup.
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/functions/generate-content-stream/index.ts` | Create | New streaming edge function |
+| `supabase/config.toml` | Edit | Add new function config |
+| `src/hooks/useStreamingContent.ts` | Create | New hook for SSE transcript + audio orchestration |
+| `src/hooks/useAIGeneration.ts` | Edit | Keep for backward compatibility, add deprecation |
+| `src/hooks/useGoogleTTS.ts` | Edit | Add method to queue multiple transcript chunks |
+| `src/components/DailyDownloadPlayer.tsx` | Edit | Use streaming hook, auto-show and auto-play |
+| `src/components/GeneratingOverlay.tsx` | Edit | Show chunk-based progress |
 
 ---
 
-## Technical Details
+## Detailed Changes
 
-The implementation creates a centralized utility that:
-- Clears the IndexedDB `audio-cache` database
-- Removes all app-specific localStorage keys (preserving Supabase auth)
-- Optionally clears the TanStack Query cache if a QueryClient is provided
-- Logs the cleanup for debugging purposes
+### `supabase/functions/generate-content-stream/index.ts`
+
+New edge function that:
+1. Uses Gemini REST API `streamGenerateContent` endpoint
+2. Parses streaming response and accumulates text
+3. Emits SSE events when chunks reach ~30 seconds of audio content
+4. Runs flash summary + description generation as background tasks
+5. Saves full transcript to database when complete
+
+### `src/hooks/useStreamingContent.ts`
+
+New hook that:
+1. Opens EventSource to streaming edge function
+2. Receives transcript chunks
+3. For each chunk, immediately calls `google-tts` edge function
+4. Maintains a queue of ready audio chunks
+5. Signals when first chunk audio is ready
+6. Provides overall progress percentage
+
+### `src/hooks/useGoogleTTS.ts`
+
+Add new method `queueChunks(chunks: string[], voiceId: string)`:
+- Pre-generates audio for multiple transcript chunks
+- Manages seamless playback across chunk boundaries
+- Reuses existing `audioQueueRef` and `playNextChunk` logic
+
+### `src/components/DailyDownloadPlayer.tsx`
+
+Key changes:
+1. Replace `useGenerateContent` with `useStreamingContent`
+2. Auto-transition from loading overlay to audio player when `firstChunkReady`
+3. Auto-start playback without requiring user to tap Play
+4. Show subtle progress indicator while remaining chunks stream
+
+### `src/components/GeneratingOverlay.tsx`
+
+Update to show:
+- "Preparing your brief..." initially
+- "Generating audio... (1/4)" with chunk progress
+- Smooth transition to audio player
+
+---
+
+## Edge Cases and Considerations
+
+| Scenario | Handling |
+|----------|----------|
+| User closes before first chunk | Abort controller cancels all in-flight requests |
+| Network interruption mid-stream | Fallback to existing batch generation |
+| TTS slower than transcript | Show buffering indicator, continue playback when ready |
+| Very short topics | May complete in 1-2 chunks, still works |
+| Voice change during streaming | Clear queue, regenerate audio from available transcript |
+
+---
+
+## Performance Expectations
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Time to audio screen | 15-25 sec | 4-8 sec |
+| Time to first audio | 20-30 sec | 4-8 sec |
+| Total generation time | Same | Same (work shifted earlier) |
+| Perceived responsiveness | Slow | Fast and progressive |
+
+---
+
+## Dependencies
+
+- Gemini REST API `streamGenerateContent` endpoint (confirmed available)
+- Existing SSE infrastructure in `google-tts` edge function
+- No new npm packages required
