@@ -327,6 +327,91 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     setChunks([]);
   }, []);
 
+  // Regenerate audio for all available chunks with a new voice
+  const regenerateAudioWithVoice = useCallback(async (
+    newVoiceId: string,
+    speakingRate: number = 1.0,
+    onFirstChunkReady?: (blobUrl: string) => void,
+    onChunkReady?: (chunkIndex: number, blobUrl: string) => void
+  ) => {
+    // Cancel any pending TTS requests
+    pendingTTSRef.current.forEach(controller => controller.abort());
+    pendingTTSRef.current.clear();
+    
+    // Revoke old blob URLs
+    audioQueueRef.current.forEach(url => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    audioQueueRef.current = [];
+    
+    // Get current chunks with text
+    const currentChunks = chunks.filter(c => c.text);
+    if (currentChunks.length === 0) {
+      console.log('[StreamContent] No chunks to regenerate');
+      return;
+    }
+    
+    console.log(`[StreamContent] Regenerating audio for ${currentChunks.length} chunks with voice: ${newVoiceId}`);
+    
+    // Reset audio ready state for all chunks
+    setChunks(prev => prev.map(c => ({ ...c, audioReady: false, audioBlobUrl: undefined })));
+    setFirstChunkReady(false);
+    setProgress(0);
+    
+    let completedChunks = 0;
+    const totalChunks = currentChunks.length;
+    
+    // Generate audio for each chunk
+    for (let i = 0; i < currentChunks.length; i++) {
+      const chunk = currentChunks[i];
+      const ttsController = new AbortController();
+      pendingTTSRef.current.set(i, ttsController);
+      
+      try {
+        const blobUrl = await generateAudioForChunk(
+          i,
+          chunk.text,
+          newVoiceId,
+          speakingRate,
+          ttsController.signal
+        );
+        
+        if (blobUrl) {
+          audioQueueRef.current[i] = blobUrl;
+          completedChunks++;
+          
+          // Update chunk state
+          setChunks(prev => {
+            const updated = [...prev];
+            if (updated[i]) {
+              updated[i] = { ...updated[i], audioReady: true, audioBlobUrl: blobUrl };
+            }
+            return updated;
+          });
+          
+          // Update progress
+          setProgress((completedChunks / totalChunks) * 100);
+          
+          // First chunk callback
+          if (i === 0) {
+            setFirstChunkReady(true);
+            onFirstChunkReady?.(blobUrl);
+          } else {
+            onChunkReady?.(i, blobUrl);
+          }
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error(`[StreamContent] Voice regeneration error for chunk ${i}:`, err);
+        }
+      } finally {
+        pendingTTSRef.current.delete(i);
+      }
+    }
+    
+    console.log('[StreamContent] Voice regeneration complete');
+  }, [chunks, generateAudioForChunk]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -345,5 +430,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     audioQueue: audioQueueRef.current,
     startStreaming,
     cancel,
+    regenerateAudioWithVoice,
   };
 };

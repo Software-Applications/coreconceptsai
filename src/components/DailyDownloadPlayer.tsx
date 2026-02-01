@@ -244,21 +244,100 @@ export const DailyDownloadPlayer = ({
     return transcript.map(seg => seg.text).join(' ');
   }, [transcript]);
 
-  // Handle voice change - clear cache so new voice is used, preserving playback position
+  // Handle voice change - works for both streaming and non-streaming playback
   const handleVoiceChange = useCallback((newVoiceId: string) => {
-    const wasPlaying = isPlaying || isPaused;
     setVoiceId(newVoiceId);
-    // Clear the cache with position saving, then restart with new voice
-    clearCache(undefined, true); // Save position before clearing
     
-    // If audio was playing/paused, restart with new voice (will resume from saved position)
-    if (wasPlaying && hasStarted) {
-      // Small delay to ensure cache is cleared
-      setTimeout(() => {
-        speak(fullTranscriptText, newVoiceId);
-      }, 50);
+    // Check if we're in streaming playback mode
+    if (isStreamingPlayback && streamingContent.chunks.length > 0) {
+      console.log('[Player] Voice change during streaming - regenerating audio');
+      
+      // Stop current streaming audio
+      if (streamingAudioRef.current) {
+        streamingAudioRef.current.pause();
+        streamingAudioRef.current = null;
+      }
+      
+      // Save current position (chunk index)
+      const savedChunkIndex = currentStreamingChunkRef.current;
+      
+      // Clear audio queue
+      streamingAudioQueueRef.current = [];
+      currentStreamingChunkRef.current = 0;
+      setIsWaitingForNextChunk(true);
+      
+      // Regenerate audio with new voice
+      streamingContent.regenerateAudioWithVoice(
+        newVoiceId,
+        1.0,
+        // onFirstChunkReady - resume from saved position or start
+        (blobUrl) => {
+          console.log('[Player] First chunk regenerated, resuming...');
+          streamingAudioQueueRef.current[0] = blobUrl;
+          
+          // If saved position was 0, play immediately
+          if (savedChunkIndex === 0) {
+            currentStreamingChunkRef.current = 0;
+            setIsWaitingForNextChunk(false);
+            
+            const audio = new Audio(blobUrl);
+            streamingAudioRef.current = audio;
+            
+            audio.addEventListener('ended', () => {
+              if (streamingAudioQueueRef.current[1]) {
+                playNextStreamingChunk();
+              } else {
+                setIsWaitingForNextChunk(true);
+              }
+            });
+            
+            audio.play().catch(console.error);
+          }
+        },
+        // onChunkReady
+        (chunkIndex, blobUrl) => {
+          streamingAudioQueueRef.current[chunkIndex] = blobUrl;
+          
+          // If this is the chunk we need to resume from, play it
+          if (chunkIndex === savedChunkIndex && !streamingAudioRef.current) {
+            currentStreamingChunkRef.current = chunkIndex;
+            setIsWaitingForNextChunk(false);
+            
+            const audio = new Audio(blobUrl);
+            streamingAudioRef.current = audio;
+            
+            audio.addEventListener('ended', () => {
+              const nextIndex = currentStreamingChunkRef.current + 1;
+              if (streamingAudioQueueRef.current[nextIndex]) {
+                playNextStreamingChunk();
+              } else {
+                setIsWaitingForNextChunk(true);
+              }
+            });
+            
+            audio.play().catch(console.error);
+          }
+          // If we're waiting and this is the next chunk, play it
+          else if (isWaitingForNextChunk && currentStreamingChunkRef.current + 1 === chunkIndex) {
+            playNextStreamingChunk();
+          }
+        }
+      );
+    } else {
+      // Non-streaming playback - use existing TTS logic
+      const wasPlaying = isPlaying || isPaused;
+      clearCache(undefined, true); // Save position before clearing
+      
+      if (wasPlaying && hasStarted) {
+        setTimeout(() => {
+          speak(fullTranscriptText, newVoiceId);
+        }, 50);
+      }
     }
-  }, [setVoiceId, clearCache, isPlaying, isPaused, hasStarted, speak, fullTranscriptText]);
+  }, [
+    setVoiceId, isStreamingPlayback, streamingContent, playNextStreamingChunk,
+    isWaitingForNextChunk, isPlaying, isPaused, hasStarted, clearCache, speak, fullTranscriptText
+  ]);
 
   // Estimate total duration based on text length and speaking rate (~150 words/min)
   const estimatedDuration = useMemo(() => {
