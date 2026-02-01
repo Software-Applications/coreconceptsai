@@ -216,7 +216,7 @@ export const TopicSelectionSheet = ({
       />
 
       <motion.div
-        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl h-[85vh] overflow-hidden flex flex-col"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -422,16 +422,16 @@ export const TopicSelectionSheet = ({
                         </CommandGroup>
                       )}
 
-                      {/* Request Topic - only related, no direct hits */}
-                      {searchResults.directHits.length === 0 && searchResults.relatedTopics.length > 0 && searchQuery.trim().length >= 2 && (
-                        <div className="px-4 py-3 border-t border-border">
+                      {/* Request Topic CTA - always at bottom after all results */}
+                      {searchQuery.trim().length >= 2 && (
+                        <div className="px-4 py-4 border-t border-border mt-2">
                           <p className="text-xs text-muted-foreground text-center mb-2">
-                            No exact matches. Want us to add this topic?
+                            Can't find what you're looking for?
                           </p>
                           <button
                             onClick={() => handleRequestTopic(searchQuery)}
                             disabled={topicRequest.isPending}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-muted/50 hover:bg-muted rounded-lg text-sm text-foreground transition-colors disabled:opacity-50"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-primary/10 hover:bg-primary/20 rounded-lg text-sm text-primary font-medium transition-colors disabled:opacity-50"
                           >
                             {topicRequest.isPending ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
