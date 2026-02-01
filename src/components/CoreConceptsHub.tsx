@@ -47,7 +47,7 @@ export const CoreConceptsHub = ({
   };
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 px-4 bg-background/95 backdrop-blur-sm py-1.5">
+    <div className="-mx-4 px-4 py-1.5">
       {/* Outer container - no background, just structure */}
       <div className="rounded-xl overflow-hidden">
         {/* Core Concepts AI Card - Elevated with gradient accent */}
