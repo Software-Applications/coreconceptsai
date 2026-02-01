@@ -231,7 +231,7 @@ export const TopicSelectionSheet = ({
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               Core Concepts <AIBadge size="sm" />
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">AI explanations of tough topics</p>
+            <p className="text-xs text-muted-foreground mt-0.5">AI explanations of tough topics · AI can make mistakes.</p>
           </div>
           <button
             onClick={() => { lightTap(); onClose(); }}
