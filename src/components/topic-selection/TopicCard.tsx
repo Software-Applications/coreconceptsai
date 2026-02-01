@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Sparkles, CheckCircle, RotateCcw } from 'lucide-react';
+import { ChevronRight, Headphones, CheckCircle, RotateCcw } from 'lucide-react';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to highlight matching text
@@ -60,7 +60,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
             ) : hasResume ? (
               <RotateCcw className="w-4 h-4 text-warning" />
             ) : (
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Headphones className="w-4 h-4 text-primary" />
             )}
           </div>
           <div className="flex-1 min-w-0">
