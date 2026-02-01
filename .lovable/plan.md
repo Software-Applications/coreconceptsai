@@ -1,47 +1,21 @@
 
 
-# Show Request Topic Button for Related-Only Results
+## Remove Background from List Icon
 
-## Summary
-
-Update the search results UI to show the "Request Topic" button when there are no direct hits, even if related topics are found.
-
-## Current Behavior
-
-| Search Result | Request Button |
-|---------------|----------------|
-| Direct hits found | Hidden |
-| Related only (no direct hits) | **Hidden** ← Problem |
-| No results at all | Shown |
-
-## Desired Behavior
-
-| Search Result | Request Button |
-|---------------|----------------|
-| Direct hits found | Hidden |
-| Related only (no direct hits) | **Shown** ← Fix |
-| No results at all | Shown |
-
-## File to Modify
-
-`src/components/topic-selection/SearchResultsSection.tsx`
-
-## Change Required
-
-Add a "Request Topic" section at the bottom of the search results when `hasRelated && !hasDirectHits`:
-
-```text
-Current flow:
-  if (!hasAnyResults) → Show "No topics found" + Request button
-  if (hasResults) → Show results only
-
-New flow:
-  if (!hasAnyResults) → Show "No topics found" + Request button
-  if (hasRelated && !hasDirectHits) → Show related results + Request button at bottom
-  if (hasDirectHits) → Show results only (no request button)
+### Current State
+The List icon in the chapter selector trigger has a circular muted background:
+```tsx
+<div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+  <List className="w-4 h-4 text-muted-foreground" />
+</div>
 ```
 
-## Implementation
+### Change
+Remove the wrapper div and show just the List icon directly:
+```tsx
+<List className="w-4 h-4 text-muted-foreground" />
+```
 
-Add a conditional section after the related topics display that shows the request button when there are only related matches.
+### File to Update
+- `src/components/ChapterDrawer.tsx` - Line 138-140
 
