@@ -5,8 +5,11 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { useTopicRequest } from '@/hooks/useTopicRequest';
+import { useSubjectById } from '@/hooks/useSubjects';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
+import { validateTopicRequest } from '@/lib/topicValidation';
+import { toast } from '@/hooks/use-toast';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 const RECENT_SEARCHES_KEY = 'core-concepts-recent-searches';
@@ -133,8 +136,24 @@ export const TopicSelectionSheet = ({
     onSelectTopic(topic);
   }, [selectionChanged, onSelectTopic, searchQuery, saveRecentSearch]);
 
+  // Get subject name for validation
+  const { data: currentSubject } = useSubjectById(currentSubjectId);
+  const subjectName = currentSubject?.name;
+
   const handleRequestTopic = useCallback((query: string) => {
     lightTap();
+    
+    // Validate the query before submitting
+    const validation = validateTopicRequest(query, subjectName);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid topic",
+        description: validation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     topicRequest.mutate(
       { query, subjectId: currentSubjectId },
       {
@@ -144,7 +163,7 @@ export const TopicSelectionSheet = ({
         },
       }
     );
-  }, [lightTap, topicRequest, currentSubjectId, successNotification]);
+  }, [lightTap, topicRequest, currentSubjectId, successNotification, subjectName]);
 
   // Use the smart search engine for prioritized results
   const searchResults: SearchResults = useMemo(() => {
