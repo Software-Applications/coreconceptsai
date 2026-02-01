@@ -479,7 +479,7 @@ export const TopicSelectionSheet = ({
                 </>
               ) : (
                 // Browse Mode - All topics
-                <CommandGroup heading={`Suggested Topics (${topics.length})`}>
+                <CommandGroup heading="Pick a topic to listen">
                   {topics.map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
