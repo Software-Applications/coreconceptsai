@@ -46,7 +46,7 @@ export const GeneratingOverlay = ({ isGenerating, topicTitle, onCancel }: Genera
           {onCancel && (
             <button
               onClick={onCancel}
-              className="absolute top-10 right-4 p-2 rounded-full bg-muted/50 hover:bg-muted transition-colors z-40"
+              className="absolute top-14 right-4 p-2 rounded-full bg-muted/50 hover:bg-muted transition-colors z-40"
             >
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
