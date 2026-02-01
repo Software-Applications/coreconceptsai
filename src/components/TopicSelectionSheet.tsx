@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
@@ -19,6 +20,7 @@ interface TopicSelectionSheetProps {
   onSelectTopic: (topic: DailyDownloadTopic) => void;
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
+  currentSubjectId?: string;
 }
 
 export const TopicSelectionSheet = ({
@@ -27,9 +29,11 @@ export const TopicSelectionSheet = ({
   topics,
   onSelectTopic,
   isListened,
-  hasProgress
+  hasProgress,
+  currentSubjectId
 }: TopicSelectionSheetProps) => {
-  const { lightTap, selectionChanged } = useHaptics();
+  const { lightTap, selectionChanged, successNotification } = useHaptics();
+  const topicRequest = useTopicRequest();
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -126,6 +130,19 @@ export const TopicSelectionSheet = ({
   const handleDismissHero = () => {
     localStorage.setItem(HERO_SEEN_KEY, 'true');
     setShowHero(false);
+  };
+
+  const handleRequestTopic = (query: string) => {
+    lightTap();
+    topicRequest.mutate(
+      { query, subjectId: currentSubjectId },
+      {
+        onSuccess: () => {
+          successNotification();
+          setSearchQuery('');
+        },
+      }
+    );
   };
 
   // Use the smart search engine for prioritized results
@@ -315,6 +332,8 @@ export const TopicSelectionSheet = ({
                 isListened={isListened}
                 hasProgress={hasProgress}
                 highlightQuery={searchQuery}
+                onRequestTopic={handleRequestTopic}
+                isRequestingTopic={topicRequest.isPending}
               />
             ) : (
               <motion.div

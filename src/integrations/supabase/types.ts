@@ -187,6 +187,41 @@ export type Database = {
         }
         Relationships: []
       }
+      topic_requests: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          status: string
+          subject_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          status?: string
+          subject_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          status?: string
+          subject_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_requests_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           audio_url: string | null
