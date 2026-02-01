@@ -292,7 +292,7 @@ export const TopicSelectionSheet = ({
                     {recentSearches.map((term) => (
                       <div
                         key={`recent-${term}`}
-                        className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                        className="flex items-center gap-1 pl-3 pr-2 py-2 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors whitespace-nowrap flex-shrink-0"
                       >
                         <Clock className="w-3 h-3 opacity-60" />
                         <button
@@ -323,7 +323,7 @@ export const TopicSelectionSheet = ({
                       <button
                         key={`suggest-${term}`}
                         onClick={wrapChipClick(() => handleChipClick(term))}
-                        className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                        className="px-4 py-2 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
                       >
                         {term}
                       </button>
