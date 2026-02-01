@@ -153,11 +153,29 @@ export const SearchResultsSection = ({
         </div>
       )}
 
-      {/* Only related topics, no direct hits */}
-      {!hasDirectHits && hasRelated && (
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          No exact matches found, showing related topics
-        </p>
+      {/* Only related topics, no direct hits - show request button */}
+      {!hasDirectHits && hasRelated && onRequestTopic && results.query.trim().length >= 2 && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <p className="text-xs text-muted-foreground text-center mb-3">
+            No exact matches found. Want us to add this topic?
+          </p>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRequestTopic(results.query)}
+              disabled={isRequestingTopic}
+              className="gap-2"
+            >
+              {isRequestingTopic ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Lightbulb className="w-4 h-4" />
+              )}
+              Request "<span className="text-primary font-medium">{displayQuery}</span>"
+            </Button>
+          </div>
+        </div>
       )}
     </motion.div>
   );
