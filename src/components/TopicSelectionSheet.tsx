@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useTopicRequest } from '@/hooks/useTopicRequest';
 import { springTransition } from '@/lib/motionVariants';
 import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch';
@@ -62,6 +63,7 @@ export const TopicSelectionSheet = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
 
   // Auto-focus search input when sheet opens
   useEffect(() => {
@@ -233,13 +235,15 @@ export const TopicSelectionSheet = ({
                 className="overflow-y-hidden"
               >
                 <div 
-                  className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover"
+                  ref={chipsScrollRef}
+                  data-drag-scroll="x"
+                  className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
                   style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                 >
                   {suggestionChips.map((term) => (
                     <button
                       key={term}
-                      onClick={() => handleChipClick(term)}
+                      onClick={wrapChipClick(() => handleChipClick(term))}
                       className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
                     >
                       {term}
