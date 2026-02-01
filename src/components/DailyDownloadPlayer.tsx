@@ -8,7 +8,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useGoogleTTS } from '@/hooks/useGoogleTTS';
 import { useVoicePreference } from '@/hooks/useVoicePreference';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
-import { useGenerateContent } from '@/hooks/useAIGeneration';
+import { useStreamingContent } from '@/hooks/useStreamingContent';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { VoiceSelector } from './VoiceSelector';
@@ -88,16 +88,19 @@ export const DailyDownloadPlayer = ({
   // Voice preference hook
   const { voiceId, setVoiceId } = useVoicePreference();
   
-  // AI generation hook
-  const generateContent = useGenerateContent();
-  const isGenerating = generateContent.isPending;
-  
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
   const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0, didDrag: false });
   const lastSaveTime = useRef<number>(0);
   
+  // Audio element ref for streaming playback
+  const streamingAudioRef = useRef<HTMLAudioElement | null>(null);
+  const streamingAudioQueueRef = useRef<string[]>([]);
+  const currentStreamingChunkRef = useRef<number>(0);
+  const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
+  
+  // Define handleSpeechEnd first (used by multiple callbacks)
   const handleSpeechEnd = useCallback(() => {
     if (topic) {
       setShowCelebration(true);
@@ -110,6 +113,84 @@ export const DailyDownloadPlayer = ({
       clearProgress(topic.id);
     }
   }, [topic, onTopicListened, clearProgress]);
+  
+  // Play next chunk in streaming queue
+  const playNextStreamingChunk = useCallback(() => {
+    const queue = streamingAudioQueueRef.current;
+    const nextIndex = currentStreamingChunkRef.current + 1;
+    
+    if (nextIndex < queue.length && queue[nextIndex]) {
+      currentStreamingChunkRef.current = nextIndex;
+      const audio = new Audio(queue[nextIndex]);
+      streamingAudioRef.current = audio;
+      
+      audio.addEventListener('ended', () => {
+        if (currentStreamingChunkRef.current < queue.length - 1 && queue[currentStreamingChunkRef.current + 1]) {
+          playNextStreamingChunk();
+        } else {
+          // All chunks played
+          setIsStreamingPlayback(false);
+          handleSpeechEnd();
+        }
+      });
+      
+      audio.play().catch(console.error);
+    }
+  }, [handleSpeechEnd]);
+  
+  // Streaming content hook for parallel transcript + audio generation
+  const streamingContent = useStreamingContent({
+    onFirstChunkAudioReady: (blobUrl) => {
+      console.log('[Player] First chunk audio ready, auto-playing...');
+      streamingAudioQueueRef.current[0] = blobUrl;
+      currentStreamingChunkRef.current = 0;
+      
+      // Create and play first audio chunk
+      const audio = new Audio(blobUrl);
+      streamingAudioRef.current = audio;
+      
+      audio.addEventListener('ended', () => {
+        // Check if next chunk is ready
+        if (streamingAudioQueueRef.current[1]) {
+          playNextStreamingChunk();
+        } else {
+          // Wait for next chunk
+          console.log('[Player] Waiting for next chunk...');
+        }
+      });
+      
+      // Auto-start playback
+      setHasStarted(true);
+      setShowResumePrompt(false);
+      setIsStreamingPlayback(true);
+      
+      audio.play().catch(console.error);
+    },
+    onChunkAudioReady: (chunkIndex, blobUrl) => {
+      console.log(`[Player] Chunk ${chunkIndex} audio ready`);
+      streamingAudioQueueRef.current[chunkIndex] = blobUrl;
+      
+      // If current chunk just finished and we were waiting, play next
+      if (streamingAudioRef.current?.ended && currentStreamingChunkRef.current + 1 === chunkIndex) {
+        playNextStreamingChunk();
+      }
+    },
+    onError: (error) => {
+      sonnerToast.error("Generation Issue", {
+        description: error || "Using fallback content. Try again later.",
+        duration: 3000,
+      });
+      setIsStreamingPlayback(false);
+    },
+    onComplete: () => {
+      console.log('[Player] Streaming generation complete');
+    },
+  });
+  
+  const isStreaming = streamingContent.isStreaming;
+  const streamingProgress = streamingContent.progress;
+  const chunksReady = streamingContent.chunks.filter(c => c.audioReady).length;
+  const totalChunks = streamingContent.chunks.length;
 
   const {
     isPlaying,
@@ -247,42 +328,41 @@ export const DailyDownloadPlayer = ({
 
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
-    if (isOpen && topic && needsAIContent && !isGenerating && !generateContent.isSuccess) {
+    if (isOpen && topic && needsAIContent && !isStreaming && !streamingContent.firstChunkReady) {
       // Prevent re-entrant generation for the same topic
       if (generatingForTopicId.current === topic.id) {
         return;
       }
       
-      console.log('Auto-generating AI content for topic:', topic.title);
+      console.log('Auto-generating streaming AI content for topic:', topic.title);
       
       // Track that we're generating for this topic
       generatingForTopicId.current = topic.id;
       
-      generateContent.mutate({
+      // Start streaming generation with voice preference
+      streamingContent.startStreaming({
         topicId: topic.id,
         topicTitle: topic.title,
         topicDescription: topic.description,
         subjectName,
+        voiceId,
       });
     }
-  }, [isOpen, topic?.id, needsAIContent, isGenerating, generateContent.isSuccess, subjectName]);
+  }, [isOpen, topic?.id, needsAIContent, isStreaming, streamingContent.firstChunkReady, subjectName, voiceId]);
 
-  // Show error toast when generation fails
+  // Clear generation tracking when streaming completes or errors
   useEffect(() => {
-    if (generateContent.status === 'error') {
-      sonnerToast.error("Generation Issue", {
-        description: "Using fallback content. Try again later.",
-        duration: 3000,
-      });
+    if (streamingContent.error) {
       generatingForTopicId.current = null;
-    } else if (generateContent.status === 'success') {
+    } else if (streamingContent.fullTranscript) {
       generatingForTopicId.current = null;
     }
-  }, [generateContent.status]);
+  }, [streamingContent.error, streamingContent.fullTranscript]);
 
   // Reset state when topic changes
   useEffect(() => {
     stop();
+    streamingContent.cancel();
     setShowFlashCard(false);
     setHasStarted(false);
     setShowResumePrompt(false);
@@ -484,8 +564,19 @@ export const DailyDownloadPlayer = ({
             )}
           </AnimatePresence>
 
-          {/* Generating overlay */}
-          <GeneratingOverlay isGenerating={isGenerating} topicTitle={topic.title} onCancel={onClose} />
+          {/* Generating overlay - now uses streaming props */}
+          <GeneratingOverlay 
+            isGenerating={false} 
+            isStreaming={isStreaming}
+            streamingProgress={streamingProgress}
+            chunksReady={chunksReady}
+            totalChunks={totalChunks}
+            topicTitle={topic.title} 
+            onCancel={() => {
+              streamingContent.cancel();
+              onClose();
+            }}
+          />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col px-6 overflow-hidden">
