@@ -84,7 +84,8 @@ export const useTopics = (subjectId?: string) => {
         };
       });
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds - shorter cache for fresher data
+    refetchOnWindowFocus: true, // Refetch when user returns to the tab
   });
 };
 
@@ -142,5 +143,7 @@ export const useTopicById = (topicId: string | undefined) => {
       };
     },
     enabled: !!topicId,
+    staleTime: 1000 * 30, // 30 seconds - shorter cache for fresher data
+    refetchOnWindowFocus: true, // Refetch when user returns to the tab
   });
 };
