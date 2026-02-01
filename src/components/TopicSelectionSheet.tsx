@@ -234,21 +234,28 @@ export const TopicSelectionSheet = ({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-y-hidden"
               >
-                <div 
-                  ref={chipsScrollRef}
-                  data-drag-scroll="x"
-                  className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
-                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-                >
-                  {suggestionChips.map((term) => (
-                    <button
-                      key={term}
-                      onClick={wrapChipClick(() => handleChipClick(term))}
-                      className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
-                    >
-                      {term}
-                    </button>
-                  ))}
+                <div className="relative">
+                  {/* Left fade gradient */}
+                  <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-popover to-transparent z-10 pointer-events-none" />
+                  {/* Right fade gradient */}
+                  <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-popover to-transparent z-10 pointer-events-none" />
+                  
+                  <div 
+                    ref={chipsScrollRef}
+                    data-drag-scroll="x"
+                    className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
+                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                  >
+                    {suggestionChips.map((term) => (
+                      <button
+                        key={term}
+                        onClick={wrapChipClick(() => handleChipClick(term))}
+                        className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
