@@ -232,18 +232,16 @@ export const TopicSelectionSheet = ({
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden' }}
               >
-                <div className="px-4 pt-1 pb-3 border-b border-border bg-popover">
-                  <div className="flex flex-wrap gap-2">
-                    {suggestionChips.map((term) => (
-                      <button
-                        key={term}
-                        onClick={() => handleChipClick(term)}
-                        className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors"
-                      >
-                        {term}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-3 border-b border-border bg-popover">
+                  {suggestionChips.map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => handleChipClick(term)}
+                      className="px-3 py-1.5 text-xs font-medium bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                    >
+                      {term}
+                    </button>
+                  ))}
                 </div>
               </motion.div>
             )}
