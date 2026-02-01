@@ -1,125 +1,206 @@
 
-# Streaming Transcript + Audio Generation
+
+# Transcript Caching Architecture
 
 ## Overview
 
-Transform the content generation pipeline from a sequential batch process to a **parallel streaming architecture** where transcript and audio are generated in 30-second chunks. The audio player screen is presented as soon as the first chunk is ready, allowing playback to begin while the rest is still being generated.
+Implement a database-first caching strategy where transcripts are only persisted for user-requested topics. When a topic is opened, the system first checks the database for an existing transcript before triggering AI generation.
 
 ---
 
-## Current Flow (What We're Changing)
+## Current State
+
+| Component | Current Behavior |
+|-----------|------------------|
+| `topics` table | All rows have `transcript = null` |
+| `generate-content-stream` | Always generates new transcript, saves to DB |
+| `DailyDownloadPlayer` | Checks `needsAIContent` based on description length, always generates |
+| Audio cache | IndexedDB stores audio blobs, not transcripts |
+
+---
+
+## Proposed Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  1. User opens topic                                            │
-│  2. Edge function generates FULL transcript (10-20 seconds)     │
-│  3. User sees "Generating..." overlay                           │
-│  4. Transcript complete → Audio screen shown                    │
-│  5. User taps Play                                              │
-│  6. TTS generates audio via SSE streaming                       │
-│  7. Audio plays                                                 │
-└─────────────────────────────────────────────────────────────────┘
-
-Total wait time before playback: 15-25 seconds
+User opens topic
+       │
+       ▼
+┌──────────────────────────────────────┐
+│  1. Check database for transcript    │
+│     SELECT transcript FROM topics    │
+│     WHERE id = topicId               │
+└──────────────────────────────────────┘
+       │
+       ├─── Transcript exists ───────────────────────┐
+       │                                             ▼
+       │                              ┌──────────────────────────────┐
+       │                              │  Use cached transcript       │
+       │                              │  Generate audio chunks       │
+       │                              │  (TTS only, no AI call)      │
+       │                              └──────────────────────────────┘
+       │
+       ├─── No transcript ─────────────────────────────────────────┐
+       │                                                           ▼
+       ▼                                            ┌────────────────────────────┐
+┌──────────────────────────────────────┐            │  Call generate-content-    │
+│  2. Call AI to generate transcript   │◀───────────│  stream edge function      │
+│     Stream in 30-sec chunks          │            └────────────────────────────┘
+└──────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────┐
+│  3. Was this a user-requested topic? │
+│     Check topic_requests table       │
+└──────────────────────────────────────┘
+       │
+       ├─── Yes (user requested) ────────────────────┐
+       │                                             ▼
+       │                              ┌──────────────────────────────┐
+       │                              │  SAVE transcript to DB       │
+       │                              │  topics.transcript = content │
+       │                              │  Update topic_requests.status│
+       │                              └──────────────────────────────┘
+       │
+       └─── No (default topic) ──────────────────────┐
+                                                     ▼
+                                      ┌──────────────────────────────┐
+                                      │  DO NOT save transcript      │
+                                      │  Content generated on-demand │
+                                      │  each time                   │
+                                      └──────────────────────────────┘
 ```
 
 ---
 
-## New Flow (Streaming Pipeline)
+## Implementation Plan
 
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│  1. User opens topic                                                       │
-│  2. Edge function streams transcript in chunks via SSE                     │
-│     ├─ Chunk 1 (~30 sec audio worth of text) → immediately sent to TTS    │
-│     ├─ Chunk 2 → sent to TTS while chunk 1 audio plays                    │
-│     └─ Chunk 3, 4, ... → continue in parallel                             │
-│  3. First chunk audio ready → Audio screen shown + auto-play              │
-│  4. Remaining chunks stream in background                                  │
-└────────────────────────────────────────────────────────────────────────────┘
+### Phase 1: Data Cleanup
 
-Time to first audio: 4-8 seconds (vs 15-25 seconds before)
+**One-time database operation:**
+- Clear all `transcript` fields in the `topics` table
+- Clear all `generated_audio_url` fields
+- This starts fresh with no cached content
+
+```sql
+UPDATE topics SET transcript = NULL, generated_audio_url = NULL;
 ```
+
+**Client-side cleanup:**
+- Run `clearAllAppData()` to clear IndexedDB audio cache
 
 ---
 
-## Technical Implementation
+### Phase 2: Edge Function Updates
 
-### 1. New Edge Function: `generate-content-stream`
+**File: `supabase/functions/generate-content-stream/index.ts`**
 
-Replaces batch `generate-content` with a streaming version that:
-- Uses Gemini's `streamGenerateContent` REST API endpoint
-- Accumulates text until approximately 30 seconds worth (~75-100 words)
-- Emits each chunk as an SSE event
-- Runs flash summary generation in parallel (background task)
-
-**SSE Event Types:**
-- `{ type: "chunk", index: 0, text: "...", isLast: false }`
-- `{ type: "chunk", index: 1, text: "...", isLast: true }`
-- `{ type: "summary", flashSummary: {...} }`
-- `{ type: "done", fullTranscript: "..." }`
+Add logic at the beginning to check for cached transcript:
 
 ```typescript
-// Pseudocode for streaming approach
-const stream = await fetch("...streamGenerateContent", { ... });
-const reader = stream.body.getReader();
+// 1. Check if transcript exists in database
+const { data: existingTopic } = await supabase
+  .from('topics')
+  .select('transcript, description')
+  .eq('id', topicId)
+  .single();
 
-let buffer = "";
-let chunkIndex = 0;
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  
-  buffer += parseChunkText(value);
-  
-  // Emit when we have ~30 seconds worth of content
-  if (estimateAudioDuration(buffer) >= 30) {
-    emit({ type: "chunk", index: chunkIndex++, text: buffer });
-    buffer = "";
+if (existingTopic?.transcript && existingTopic.transcript.length > 500) {
+  // Stream pre-existing transcript in chunks
+  const chunks = splitIntoChunks(existingTopic.transcript, WORDS_PER_30_SEC);
+  for (let i = 0; i < chunks.length; i++) {
+    sendEvent('chunk', { 
+      index: i, 
+      text: chunks[i], 
+      isLast: i === chunks.length - 1,
+      cached: true 
+    });
   }
+  sendEvent('done', { fullTranscript: existingTopic.transcript, fromCache: true });
+  return;
 }
 
-// Emit remaining text
-if (buffer.length > 0) {
-  emit({ type: "chunk", index: chunkIndex, text: buffer, isLast: true });
+// 2. No cached transcript - generate via AI (existing logic)
+```
+
+Modify the save logic at the end:
+
+```typescript
+// Only save transcript if this is a user-requested topic
+const { data: topicRequest } = await supabase
+  .from('topic_requests')
+  .select('id')
+  .eq('query', topicTitle)  // Match by title
+  .maybeSingle();
+
+if (topicRequest) {
+  // Save transcript for user-requested topics
+  await supabase
+    .from('topics')
+    .update({ transcript: fullTranscript.trim(), description: topicSummary })
+    .eq('id', topicId);
+    
+  // Mark request as fulfilled
+  await supabase
+    .from('topic_requests')
+    .update({ status: 'fulfilled' })
+    .eq('id', topicRequest.id);
+} else {
+  // Don't save transcript for default topics - generate on-demand each time
+  console.log('[Stream] Not saving transcript - not a user-requested topic');
 }
 ```
 
-### 2. New Hook: `useStreamingContent`
+---
 
-Replaces `useAIGeneration` hook with a streaming version:
-- Connects to SSE endpoint
-- Receives transcript chunks
-- Immediately sends each chunk to TTS for audio generation
-- Tracks overall progress and ready state
+### Phase 3: Client Updates
 
-**Key State:**
-- `chunks: Array<{ text: string, audioReady: boolean }>`
-- `firstChunkReady: boolean` - triggers audio screen display
-- `isStreaming: boolean`
-- `progress: number` - 0-100 across all chunks
+**File: `src/hooks/useStreamingContent.ts`**
 
-### 3. Modified TTS Pipeline
+Add handling for cached transcript chunks:
 
-The existing `google-tts` edge function already supports streaming. We'll:
-- Call TTS for each transcript chunk as it arrives
-- Queue audio chunks for seamless playback
-- Leverage existing `audioQueueRef` infrastructure in `useGoogleTTS`
+```typescript
+if (data.cached) {
+  console.log(`[StreamContent] Using cached chunk ${data.index}`);
+}
+```
 
-### 4. Updated `DailyDownloadPlayer`
+**File: `src/components/DailyDownloadPlayer.tsx`**
 
-**Changes:**
-- Replace `useGenerateContent` with `useStreamingContent`
-- Auto-show audio screen when `firstChunkReady` becomes true
-- Auto-start playback (no manual play button press needed initially)
-- Show streaming progress indicator while remaining chunks load
-- Transition `GeneratingOverlay` to streaming-aware UI
+Update `needsAIContent` check to always trigger streaming (which will handle cache internally):
 
-**New UI States:**
-1. **Streaming** - Show progress: "Preparing audio... (Chunk 2/5)"
-2. **Ready** - First chunk ready, auto-play begins
-3. **Buffering** - Next chunk not ready yet (existing behavior)
+```typescript
+const needsAIContent = useMemo(() => {
+  if (!topic) return false;
+  // Always go through streaming flow - edge function handles caching
+  return true;
+}, [topic]);
+```
+
+---
+
+### Phase 4: Topic Request Linking
+
+**Enhancement to link topic requests to actual topics:**
+
+When a user makes a topic request via search:
+1. Check if a topic with that title already exists
+2. If yes, associate the request with that topic
+3. When the topic is opened, the edge function will see the request and save the transcript
+
+**File: `src/hooks/useTopicRequest.ts`**
+
+```typescript
+// After inserting request, check if matching topic exists
+const { data: matchingTopic } = await supabase
+  .from('topics')
+  .select('id, title')
+  .ilike('title', query.trim())
+  .maybeSingle();
+
+if (matchingTopic) {
+  // Update request with topic reference (optional - can use title matching)
+}
+```
 
 ---
 
@@ -127,86 +208,83 @@ The existing `google-tts` edge function already supports streaming. We'll:
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/functions/generate-content-stream/index.ts` | Create | New streaming edge function |
-| `supabase/config.toml` | Edit | Add new function config |
-| `src/hooks/useStreamingContent.ts` | Create | New hook for SSE transcript + audio orchestration |
-| `src/hooks/useAIGeneration.ts` | Edit | Keep for backward compatibility, add deprecation |
-| `src/hooks/useGoogleTTS.ts` | Edit | Add method to queue multiple transcript chunks |
-| `src/components/DailyDownloadPlayer.tsx` | Edit | Use streaming hook, auto-show and auto-play |
-| `src/components/GeneratingOverlay.tsx` | Edit | Show chunk-based progress |
+| `supabase/functions/generate-content-stream/index.ts` | Edit | Add cache check at start, conditional save at end |
+| `src/hooks/useStreamingContent.ts` | Edit | Handle cached chunks in SSE events |
+| `src/components/DailyDownloadPlayer.tsx` | Edit | Simplify needsAIContent to always stream |
+| Database | Migration | Clear existing transcripts |
 
 ---
 
-## Detailed Changes
-
-### `supabase/functions/generate-content-stream/index.ts`
-
-New edge function that:
-1. Uses Gemini REST API `streamGenerateContent` endpoint
-2. Parses streaming response and accumulates text
-3. Emits SSE events when chunks reach ~30 seconds of audio content
-4. Runs flash summary + description generation as background tasks
-5. Saves full transcript to database when complete
-
-### `src/hooks/useStreamingContent.ts`
-
-New hook that:
-1. Opens EventSource to streaming edge function
-2. Receives transcript chunks
-3. For each chunk, immediately calls `google-tts` edge function
-4. Maintains a queue of ready audio chunks
-5. Signals when first chunk audio is ready
-6. Provides overall progress percentage
-
-### `src/hooks/useGoogleTTS.ts`
-
-Add new method `queueChunks(chunks: string[], voiceId: string)`:
-- Pre-generates audio for multiple transcript chunks
-- Manages seamless playback across chunk boundaries
-- Reuses existing `audioQueueRef` and `playNextChunk` logic
-
-### `src/components/DailyDownloadPlayer.tsx`
-
-Key changes:
-1. Replace `useGenerateContent` with `useStreamingContent`
-2. Auto-transition from loading overlay to audio player when `firstChunkReady`
-3. Auto-start playback without requiring user to tap Play
-4. Show subtle progress indicator while remaining chunks stream
-
-### `src/components/GeneratingOverlay.tsx`
-
-Update to show:
-- "Preparing your brief..." initially
-- "Generating audio... (1/4)" with chunk progress
-- Smooth transition to audio player
-
----
-
-## Edge Cases and Considerations
+## Edge Cases
 
 | Scenario | Handling |
 |----------|----------|
-| User closes before first chunk | Abort controller cancels all in-flight requests |
-| Network interruption mid-stream | Fallback to existing batch generation |
-| TTS slower than transcript | Show buffering indicator, continue playback when ready |
-| Very short topics | May complete in 1-2 chunks, still works |
-| Voice change during streaming | Clear queue, regenerate audio from available transcript |
+| Same topic opened multiple times | Edge function returns cached transcript if available |
+| User requests topic then opens it | First open generates and saves transcript |
+| Default topic opened | Generates but doesn't save - re-generates each time |
+| Topic request matches existing topic | Uses title matching in edge function |
 
 ---
 
-## Performance Expectations
+## Expected Behavior After Implementation
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Time to audio screen | 15-25 sec | 4-8 sec |
-| Time to first audio | 20-30 sec | 4-8 sec |
-| Total generation time | Same | Same (work shifted earlier) |
-| Perceived responsiveness | Slow | Fast and progressive |
+| Topic Type | First Open | Subsequent Opens |
+|------------|------------|------------------|
+| Default topic | AI generates, does NOT save | AI generates again |
+| User-requested topic | AI generates, SAVES to DB | Uses cached transcript |
 
 ---
 
-## Dependencies
+## Technical Details
 
-- Gemini REST API `streamGenerateContent` endpoint (confirmed available)
-- Existing SSE infrastructure in `google-tts` edge function
-- No new npm packages required
+### Chunk Splitting for Cached Transcripts
+
+```typescript
+function splitIntoChunks(text: string, wordsPerChunk: number): string[] {
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  let currentWords = 0;
+  
+  for (const sentence of sentences) {
+    const sentenceWords = sentence.split(/\s+/).length;
+    if (currentWords + sentenceWords > wordsPerChunk && currentChunk) {
+      chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+      currentWords = sentenceWords;
+    } else {
+      currentChunk += ' ' + sentence;
+      currentWords += sentenceWords;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks;
+}
+```
+
+### Database Check Query
+
+The edge function will check for cached content first:
+
+```sql
+SELECT transcript 
+FROM topics 
+WHERE id = $1 
+  AND transcript IS NOT NULL 
+  AND length(transcript) > 500
+```
+
+### Topic Request Matching
+
+Match requests to topics by normalized title:
+
+```sql
+SELECT id FROM topic_requests 
+WHERE LOWER(TRIM(query)) = LOWER(TRIM($topicTitle))
+LIMIT 1
+```
+
