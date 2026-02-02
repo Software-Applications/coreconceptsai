@@ -171,7 +171,7 @@ serve(async (req) => {
       throw new Error("Supabase credentials not configured");
     }
 
-    const { topicId, topicTitle, topicDescription, subjectName } = await req.json();
+    const { topicId, topicTitle, topicDescription, subjectName, forceRegenerate } = await req.json();
 
     if (!topicId || !topicTitle) {
       return new Response(
@@ -204,7 +204,8 @@ serve(async (req) => {
 
         try {
           // Check if we have a cached transcript (at least 500 chars = meaningful content)
-          if (existingTopic?.transcript && existingTopic.transcript.length > 500) {
+          // Skip cache if forceRegenerate is true
+          if (!forceRegenerate && existingTopic?.transcript && existingTopic.transcript.length > 500) {
             console.log("[Stream] Found cached transcript, streaming from database");
             
             // Stream pre-existing transcript in chunks

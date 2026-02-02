@@ -32,6 +32,7 @@ interface StreamingContentParams {
   subjectName?: string;
   voiceId?: string;
   speakingRate?: number;
+  forceRegenerate?: boolean;
 }
 
 const SUPABASE_URL = "https://uzlkbqfxlamwetmvpqsi.supabase.co";
@@ -155,6 +156,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
             topicTitle: params.topicTitle,
             topicDescription: params.topicDescription,
             subjectName: params.subjectName,
+            forceRegenerate: params.forceRegenerate || false,
           }),
           signal: mainSignal,
         }
