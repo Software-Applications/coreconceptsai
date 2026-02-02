@@ -1,203 +1,95 @@
 
-# Audio Player Simplification and Fixes
 
-## Overview
+# Fix: Infinite Audio Generation Loop
 
-You want to make three key changes to the audio player:
+## Problem Identified
 
-1. **Resume on voice change**: When changing the audio speaker, resume from the current position instead of restarting from the beginning
-2. **Remove chunking**: Eliminate transcript and audio chunking - show the audio player only after the entire transcript and audio is fully generated
-3. **Fix transcript highlighting sync**: Ensure word highlighting is properly synchronized with audio playback
-
-## Current Architecture Issues
-
-### 1. Voice Change Problem
-The current `handleVoiceChange` function in `DailyDownloadPlayer.tsx` (lines 371-463) regenerates audio with the new voice but doesn't properly track and restore the current playback position. It saves the chunk index but doesn't account for the position *within* the chunk being played.
-
-### 2. Chunking Complexity
-The current architecture has:
-- **Streaming content hook** (`useStreamingContent.ts`): Generates transcript in chunks and TTS for each chunk separately
-- **Edge function** (`generate-content-stream`): Streams transcript chunks via SSE
-- **Player component**: Manages a queue of audio blobs for each chunk, auto-plays next chunk when current ends
-
-This creates complexity in:
-- Progress tracking across multiple audio elements
-- Character index calculation for highlighting
-- Buffering states between chunks
-
-### 3. Highlighting Sync Problem
-The `streamingCharIndex` calculation in `updateStreamingProgress` (lines 118-141) estimates character position using:
+The console logs show a repeating pattern:
 ```
-charIndex = (totalProgress / 100) * totalChars
+[StreamContent] Audio ready: 580800ms
+[StreamContent] Generation complete
+[StreamContent] Cancelling...
+[Player] Starting generation for: Signal Transduction
 ```
 
-This is inaccurate because:
-- Audio duration per chunk varies based on content (pauses, speaking rate)
-- The calculation assumes linear character distribution across audio time
-- Word highlighting uses this flawed character index
+**Root Cause**: There are two conflicting useEffects in `DailyDownloadPlayer.tsx`:
+
+1. **Auto-generation effect (lines 305-320)**: Starts generation when `isOpen && topic && !transcriptReady && !isGenerating`
+2. **Tracking clear effect (lines 323-327)**: Clears `generatingForTopicId.current = null` when `audioReady` becomes true
+
+The problem flow:
+1. Generation starts, `generatingForTopicId.current = topic.id`
+2. Transcript ready → Audio generation starts
+3. Audio ready → Second effect clears `generatingForTopicId.current = null`
+4. First effect re-runs (due to dependencies like `voiceId` or other state changes)
+5. Since `generatingForTopicId.current` is null and `transcriptReady` may have been reset, generation restarts
+6. Loop continues forever
 
 ## Technical Solution
 
-### Strategy: Simplify to Single Audio + Accurate Timing
-
-Instead of chunked streaming, we'll:
-1. Wait for **full transcript** to be generated
-2. Generate **one complete audio file** for the entire transcript
-3. Use **actual audio.currentTime** for progress tracking
-4. Calculate character index based on **proportion of audio played**
-
----
-
-### 1. Update `generate-content-stream` Edge Function
-
-**File**: `supabase/functions/generate-content-stream/index.ts`
-
-Remove chunk streaming - instead, buffer the full transcript and send it all at once:
-
-- Remove the chunk-by-chunk SSE emission during AI generation
-- Collect the full transcript first, then send as a single event
-- Keep the flash summary generation as-is
-- Remove the `splitIntoChunks` function and chunk-related logic
-
----
-
-### 2. Simplify `useStreamingContent` Hook
-
-**File**: `src/hooks/useStreamingContent.ts`
-
-Simplify to generate a single audio blob for the complete transcript:
-
-- Remove chunk-by-chunk audio generation
-- Wait for full transcript from edge function
-- Generate one TTS request for the complete transcript
-- Return a single audio blob URL instead of an array
-
-New interface:
-```typescript
-interface UseStreamingContentReturn {
-  isGenerating: boolean;          // True while transcript is being generated
-  isAudioGenerating: boolean;     // True while TTS is running
-  transcriptReady: boolean;       // True when transcript is complete
-  audioReady: boolean;            // True when audio is ready to play
-  audioBlobUrl: string | null;    // Single audio URL
-  fullTranscript: string;
-  flashSummary: FlashSummary | null;
-  error: string | null;
-  audioDurationMs: number;        // Actual audio duration
-  startGeneration: (params) => void;
-  cancel: () => void;
-  regenerateAudioWithVoice: (voiceId, speakingRate, currentTimeMs?) => Promise<void>;
-}
-```
-
----
-
-### 3. Update `DailyDownloadPlayer` Component
-
 **File**: `src/components/DailyDownloadPlayer.tsx`
 
-Major simplifications:
+### Fix 1: Don't clear tracking until player closes
 
-#### A. Remove Streaming Chunk Management
-- Remove `streamingAudioQueueRef`, `currentStreamingChunkRef`, `currentStreamingChunkIndex`
-- Remove `playNextStreamingChunk` callback
-- Remove `isWaitingForNextChunk` state
-- Simplify to a single `audioRef` for the complete audio
+Change the tracking clear logic to only reset when the topic changes or player closes, not when audio becomes ready:
 
-#### B. Show Player Only When Ready
-- Update the `GeneratingOverlay` to show until both transcript AND audio are fully ready
-- The play button only appears when `audioReady === true`
-
-#### C. Fix Voice Change with Resume
 ```typescript
-const handleVoiceChange = useCallback(async (newVoiceId: string) => {
-  setVoiceId(newVoiceId);
+// Remove this problematic effect entirely:
+// useEffect(() => {
+//   if (streamingContent.error || streamingContent.audioReady) {
+//     generatingForTopicId.current = null;
+//   }
+// }, [streamingContent.error, streamingContent.audioReady]);
+```
+
+### Fix 2: Update the auto-generation condition
+
+Add `audioReady` to the skip conditions to prevent re-triggering when content is already generated:
+
+```typescript
+useEffect(() => {
+  // Skip if audio is already ready (generation complete)
+  if (streamingContent.audioReady || streamingContent.transcriptReady) return;
   
-  // Save current playback position
-  const savedTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
-  const wasPlaying = audioRef.current && !audioRef.current.paused;
-  
-  // Pause current audio
-  if (audioRef.current) {
-    audioRef.current.pause();
+  if (isOpen && topic && !streamingContent.isGenerating && !streamingContent.isAudioGenerating) {
+    if (generatingForTopicId.current === topic.id) return;
+    
+    console.log('[Player] Starting generation for:', topic.title);
+    generatingForTopicId.current = topic.id;
+    
+    streamingContent.startGeneration({...});
   }
-  
-  // Regenerate audio with new voice
-  await streamingContent.regenerateAudioWithVoice(newVoiceId, 1.0, savedTimeMs);
-  
-  // When new audio is ready, seek to saved position and resume if was playing
-  // (handled in the audio ready callback)
-}, [...]);
+}, [isOpen, topic?.id, streamingContent.audioReady, streamingContent.transcriptReady, 
+    streamingContent.isGenerating, streamingContent.isAudioGenerating, subjectName, voiceId]);
 ```
 
-#### D. Accurate Transcript Highlighting
-Use actual audio element timing instead of estimated chunk-based progress:
+### Fix 3: Only reset tracking when topic changes
+
+Move the tracking reset to the topic change effect only:
 
 ```typescript
-// In timeupdate handler:
-const currentTimeMs = audio.currentTime * 1000;
-const totalDurationMs = audio.duration * 1000;
-const progress = (currentTimeMs / totalDurationMs) * 100;
-
-// Character index based on proportional time
-const charIndex = Math.floor((progress / 100) * fullTranscriptText.length);
-setCurrentCharIndex(charIndex);
+useEffect(() => {
+  if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
+    console.log('[Player] Topic changed, resetting');
+    streamingContent.cancel();
+    generatingForTopicId.current = null;  // Only reset here
+    // ... rest of reset logic
+  }
+  previousTopicId.current = topic?.id ?? null;
+}, [topic?.id, streamingContent, getProgress]);
 ```
-
-This provides accurate sync because:
-- Uses real audio timing, not estimates
-- Works correctly with pauses (SSML breaks)
-- Single audio means no inter-chunk calculation errors
-
----
-
-### 4. Update `google-tts` Edge Function
-
-**File**: `supabase/functions/google-tts/index.ts`
-
-Add support for returning actual audio duration:
-
-- After concatenating audio chunks, return the estimated total duration
-- The TTS function already handles long text by chunking internally for the API, then concatenates
-
----
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/generate-content-stream/index.ts` | Remove chunk-by-chunk streaming, send full transcript in one event |
-| `src/hooks/useStreamingContent.ts` | Remove chunk management, generate single audio blob, add `regenerateAudioWithVoice` with resume position support |
-| `src/components/DailyDownloadPlayer.tsx` | Remove chunk queue logic, simplify audio playback to single element, fix voice change to preserve position, show player only when audio ready |
+| File | Change |
+|------|--------|
+| `src/components/DailyDownloadPlayer.tsx` | Remove the problematic `audioReady` tracking clear effect, update auto-generation conditions to include `audioReady` check, ensure tracking only resets on topic change |
 
----
+## Expected Behavior After Fix
 
-## Expected Behavior After Changes
-
-1. **Generation Flow**:
-   - User opens topic → "Generating" overlay appears
-   - Full transcript generates → Audio generates
-   - Overlay disappears, Play button becomes active
-   
-2. **Voice Change**:
-   - User changes voice mid-playback (e.g., at 2:30)
-   - Loading indicator briefly appears
-   - Audio resumes at 2:30 with new voice
-   
-3. **Transcript Highlighting**:
-   - Active paragraph is highlighted
-   - Within active paragraph, current word is highlighted
-   - Highlighting moves smoothly and accurately with audio
-
----
-
-## Benefits of This Approach
-
-| Before (Chunked) | After (Single Audio) |
-|------------------|----------------------|
-| Complex chunk queue management | Single audio element |
-| Estimated character progress | Accurate time-based progress |
-| "Loading next segment" buffering | No buffering between segments |
-| Voice change restarts from chunk 0 | Voice change preserves position |
-| Highlighting often out of sync | Highlighting synced with actual audio time |
+1. User opens topic → Generation starts once
+2. Transcript completes → Audio generation starts
+3. Audio completes → Player shows with audio ready
+4. No restart loop occurs
+5. Only changing topics or closing/reopening triggers new generation
 
