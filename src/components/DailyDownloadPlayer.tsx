@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
-} from 'lucide-react';
+import { X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useVoicePreference } from '@/hooks/useVoicePreference';
@@ -17,6 +15,25 @@ import { GeneratingOverlay } from './GeneratingOverlay';
 import { SwipeHintHandle } from './SwipeHintHandle';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
+// ============================================================================
+// Configuration Constants
+// ============================================================================
+const HIGHLIGHT_LEAD_MS = 180;
+const PARAGRAPH_MIN_LENGTH = 500;
+const SENTENCE_CHUNK_SIZE = 400;
+const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
+const WAVEFORM_BAR_COUNT = 40;
+const PROGRESS_SAVE_INTERVAL_MS = 5000;
+
+// Stable waveform bars (deterministic, no random on remount)
+const WAVEFORM_BARS = Array.from({ length: WAVEFORM_BAR_COUNT }, (_, i) => ({
+  height: 20 + (Math.sin(i * 0.7) + 1) * 30 + (Math.cos(i * 1.3) + 1) * 15,
+  delay: i * 0.02
+}));
+
+// ============================================================================
+// Component
+// ============================================================================
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;
   subjectName: string;
@@ -79,7 +96,6 @@ export const DailyDownloadPlayer = ({
   }, [stopTimeSync]);
   
   // Playback rate
-  const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   
   // Saved position for voice change resume
@@ -105,18 +121,11 @@ export const DailyDownloadPlayer = ({
   // Helper to strip stage directions/tags from transcript text
   const stripTags = useCallback((text: string): string => {
     return text
-      // Remove XML-style transcript wrapper tags
       .replace(/<\/?transcript>/gi, '')
-      // Remove pause/direction bracketed tags
-      .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
-      .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
-      // Preserve paragraph breaks: temporarily replace \n\n with placeholder
-      .replace(/\n\n+/g, '{{PARA}}')
-      // Convert single newlines to spaces (they're just line wraps)
+      .replace(/\[(?:PAUSE|PROMPT|NOTE|DIRECTION)[^\]]*\]/gi, '')
+      .replace(/\n\n+/g, '\u0000')
       .replace(/\n/g, ' ')
-      // Restore paragraph breaks
-      .replace(/\{\{PARA\}\}/g, '\n\n')
-      // Collapse multiple spaces into single space
+      .replace(/\u0000/g, '\n\n')
       .replace(/ {2,}/g, ' ')
       .trim();
   }, []);
@@ -134,18 +143,18 @@ export const DailyDownloadPlayer = ({
     let parts = fullTranscriptText.split(/\n\n+/).filter(p => p.trim());
     
     // Fallback: if only 1 paragraph and text is long, try single newlines
-    if (parts.length === 1 && fullTranscriptText.length > 500) {
+    if (parts.length === 1 && fullTranscriptText.length > PARAGRAPH_MIN_LENGTH) {
       parts = fullTranscriptText.split(/\n/).filter(p => p.trim());
     }
     
     // Final fallback: split long text into chunks by sentences
-    if (parts.length === 1 && fullTranscriptText.length > 500) {
+    if (parts.length === 1 && fullTranscriptText.length > PARAGRAPH_MIN_LENGTH) {
       const sentences = fullTranscriptText.match(/[^.!?]+[.!?]+\s*/g) || [fullTranscriptText];
       parts = [];
       let currentParagraph = '';
       
       for (const sentence of sentences) {
-        if ((currentParagraph + sentence).length > 400) {
+        if ((currentParagraph + sentence).length > SENTENCE_CHUNK_SIZE) {
           if (currentParagraph.trim()) parts.push(currentParagraph.trim());
           currentParagraph = sentence;
         } else {
@@ -158,58 +167,52 @@ export const DailyDownloadPlayer = ({
     return parts;
   }, [fullTranscriptText]);
 
-  // Apply a slight lead (anticipation) for better perceived sync
-  const HIGHLIGHT_LEAD_MS = 180;
+  // Precompute paragraph character offsets for O(1) lookup
+  const paragraphOffsets = useMemo(() => {
+    let offset = 0;
+    return paragraphs.map((p) => {
+      const start = offset;
+      offset += p.length + 2; // +2 for paragraph break (\n\n)
+      return { start, end: offset };
+    });
+  }, [paragraphs]);
 
   // Calculate character index from current audio time
   const currentCharIndex = useMemo(() => {
     if (!durationMs || !fullTranscriptText.length) return 0;
-    // Add lead time for better perceived synchronization
     const adjustedTimeMs = Math.min(currentTimeMs + HIGHLIGHT_LEAD_MS, durationMs);
     const progress = adjustedTimeMs / durationMs;
     return Math.floor(progress * fullTranscriptText.length);
   }, [currentTimeMs, durationMs, fullTranscriptText.length]);
 
-  // Find active paragraph index based on character position
-  const activeSegmentIndex = useMemo(() => {
-    if (!hasStarted || !fullTranscriptText) return -1;
-    
-    let charCount = 0;
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraphLength = paragraphs[i].length + 2; // +2 for paragraph break
-      if (currentCharIndex < charCount + paragraphLength) {
-        return i;
-      }
-      charCount += paragraphLength;
+  // Consolidated: find active segment, word index, and char position in one pass
+  const { activeSegmentIndex, activeWordIndex } = useMemo(() => {
+    if (!hasStarted || !fullTranscriptText || paragraphOffsets.length === 0) {
+      return { activeSegmentIndex: -1, activeWordIndex: -1 };
     }
-    return paragraphs.length - 1;
-  }, [paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
-
-  // Calculate word-level progress within active paragraph
-  const activeWordIndex = useMemo(() => {
-    if (activeSegmentIndex < 0) return -1;
-    const paragraph = paragraphs[activeSegmentIndex];
-    if (!paragraph) return -1;
     
-    // Calculate character offset within this paragraph
-    let prevCharsCount = 0;
-    for (let i = 0; i < activeSegmentIndex; i++) {
-      prevCharsCount += paragraphs[i].length + 2;
-    }
-    const charInParagraph = currentCharIndex - prevCharsCount;
+    // Find which paragraph contains current char
+    let segIdx = paragraphOffsets.findIndex(
+      ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
+    );
+    if (segIdx === -1) segIdx = paragraphs.length - 1;
     
-    // Find which word we're on
-    const words = paragraph.split(/\s+/);
+    const charInParagraph = currentCharIndex - paragraphOffsets[segIdx].start;
+    
+    // Find word index within paragraph
+    const words = paragraphs[segIdx]?.split(/\s+/) || [];
     let charCount = 0;
+    let wordIdx = words.length - 1;
     for (let i = 0; i < words.length; i++) {
-      const wordLength = words[i].length + 1;
-      if (charInParagraph < charCount + wordLength) {
-        return i;
+      charCount += words[i].length + 1;
+      if (charInParagraph < charCount) {
+        wordIdx = i;
+        break;
       }
-      charCount += wordLength;
     }
-    return words.length - 1;
-  }, [activeSegmentIndex, paragraphs, currentCharIndex]);
+    
+    return { activeSegmentIndex: segIdx, activeWordIndex: wordIdx };
+  }, [paragraphOffsets, paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
 
   // Progress percentage for progress bar
   const progress = useMemo(() => {
@@ -258,7 +261,6 @@ export const DailyDownloadPlayer = ({
     const handlePause = () => {
       setIsPlaying(false);
       stopTimeSync();
-      // Keep UI accurate immediately on pause
       setCurrentTimeMs(audio.currentTime * 1000);
     };
 
@@ -278,15 +280,12 @@ export const DailyDownloadPlayer = ({
     audio.addEventListener('seeked', handleSeek);
     audio.addEventListener('ended', handleEnded);
     
-    // Apply current playback rate
     audio.playbackRate = playbackRate;
     
-    // If we have a saved position (from voice change), seek to it
     if (savedPositionRef.current > 0) {
       audio.currentTime = savedPositionRef.current / 1000;
       savedPositionRef.current = 0;
       
-      // Resume playing if it was playing before voice change
       if (wasPlayingRef.current) {
         wasPlayingRef.current = false;
         audio.play().catch(console.error);
@@ -313,7 +312,6 @@ export const DailyDownloadPlayer = ({
     setVoiceId(newVoiceId);
     setIsChangingVoice(true);
     
-    // Save current position and playing state
     if (audioRef.current) {
       savedPositionRef.current = audioRef.current.currentTime * 1000;
       wasPlayingRef.current = !audioRef.current.paused;
@@ -394,14 +392,10 @@ export const DailyDownloadPlayer = ({
 
   // Auto-generate content when topic is opened
   useEffect(() => {
-    // Skip if audio or transcript is already ready (generation complete)
     if (streamingContent.audioReady || streamingContent.transcriptReady) return;
-    
-    // Skip if already generating
     if (streamingContent.isGenerating || streamingContent.isAudioGenerating) return;
     
     if (isOpen && topic) {
-      // Skip if we're already generating for this topic
       if (generatingForTopicId.current === topic.id) return;
       
       console.log('[Player] Starting generation for:', topic.title);
@@ -417,8 +411,6 @@ export const DailyDownloadPlayer = ({
     }
   }, [isOpen, topic?.id, streamingContent.audioReady, streamingContent.transcriptReady, 
       streamingContent.isGenerating, streamingContent.isAudioGenerating, subjectName, voiceId]);
-
-  // NOTE: generatingForTopicId is only reset in the topic change effect below
 
   // Destructure cancel for stable dependency
   const cancelGeneration = streamingContent.cancel;
@@ -453,17 +445,17 @@ export const DailyDownloadPlayer = ({
     }
   }, [topic?.id, cancelGeneration, getProgress]);
 
-  // Auto-save progress every 5 seconds while playing
+  // Auto-save progress periodically while playing
   useEffect(() => {
     if (!isPlaying || !topic) return;
     
     const interval = setInterval(() => {
       const now = Date.now();
-      if (now - lastSaveTime.current > 5000) {
+      if (now - lastSaveTime.current > PROGRESS_SAVE_INTERVAL_MS) {
         saveProgress(topic.id, currentCharIndex);
         lastSaveTime.current = now;
       }
-    }, 5000);
+    }, PROGRESS_SAVE_INTERVAL_MS);
     
     return () => clearInterval(interval);
   }, [isPlaying, topic, currentCharIndex, saveProgress]);
@@ -543,13 +535,6 @@ export const DailyDownloadPlayer = ({
     }
   }, [topic, onPinCard, clearProgress, onClose, successNotification]);
 
-  // Generate waveform bars
-  const waveformBars = useMemo(() => 
-    Array.from({ length: 40 }, (_, i) => ({
-      height: Math.random() * 60 + 20,
-      delay: i * 0.02
-    })), []);
-
   const { dragProps: swipeDragProps, backdropOpacity } = useSwipeToDismiss({
     onDismiss: onClose,
     threshold: 120,
@@ -557,7 +542,6 @@ export const DailyDownloadPlayer = ({
 
   if (!topic || !isOpen) return null;
 
-  // Show generating overlay until audio is ready
   const showGeneratingOverlay = streamingContent.isGenerating || streamingContent.isAudioGenerating || isChangingVoice;
 
   return (
@@ -630,7 +614,7 @@ export const DailyDownloadPlayer = ({
           {/* Waveform visualization */}
           <div className="flex items-center justify-center gap-0.5 h-10 mb-3 relative">
             {hasStarted ? (
-              waveformBars.map((bar, i) => (
+              WAVEFORM_BARS.map((bar, i) => (
                 <motion.div
                   key={i}
                   className="w-1 rounded-full bg-primary/60"
@@ -646,7 +630,7 @@ export const DailyDownloadPlayer = ({
                 />
               ))
             ) : (
-              waveformBars.map((bar, i) => (
+              WAVEFORM_BARS.map((bar, i) => (
                 <div
                   key={i}
                   className="w-1 bg-muted-foreground/20 rounded-full"
@@ -794,41 +778,39 @@ export const DailyDownloadPlayer = ({
             <div className="space-y-6">
               {paragraphs.map((paragraph, index) => {
                 const isActive = index === activeSegmentIndex;
-                // Only split words for the active paragraph (keeps 60fps updates lightweight)
                 const words = isActive ? paragraph.split(/\s+/) : [];
                 
                 return (
-                  <div key={index}>
-                    <p
-                      ref={isActive ? activeSegmentRef : null}
-                      className={`text-sm leading-relaxed transition-all duration-300 ${
-                        isActive 
-                          ? 'text-foreground' 
-                          : hasStarted && index < activeSegmentIndex
-                            ? 'text-muted-foreground/60'
-                            : 'text-muted-foreground'
-                      }`}
-                    >
-                      {isActive ? (() => {
-                        const splitIndex = Math.max(0, activeWordIndex + 1);
-                        const completed = words.slice(0, splitIndex).join(' ');
-                        const remaining = words.slice(splitIndex).join(' ');
+                  <p
+                    key={index}
+                    ref={isActive ? activeSegmentRef : null}
+                    className={`text-sm leading-relaxed transition-all duration-300 ${
+                      isActive 
+                        ? 'text-foreground' 
+                        : hasStarted && index < activeSegmentIndex
+                          ? 'text-muted-foreground/60'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {isActive ? (() => {
+                      const splitIndex = Math.max(0, activeWordIndex + 1);
+                      const completed = words.slice(0, splitIndex).join(' ');
+                      const remaining = words.slice(splitIndex).join(' ');
 
-                        return (
-                          <>
-                            {completed ? (
-                              <span className="text-primary font-medium">
-                                {completed}{remaining ? ' ' : ''}
-                              </span>
-                            ) : null}
-                            {remaining ? (
-                              <span className="text-foreground">{remaining}</span>
-                            ) : null}
-                          </>
-                        );
-                      })() : paragraph}
-                    </p>
-                  </div>
+                      return (
+                        <>
+                          {completed && (
+                            <span className="text-primary font-medium">
+                              {completed}{remaining ? ' ' : ''}
+                            </span>
+                          )}
+                          {remaining && (
+                            <span className="text-foreground">{remaining}</span>
+                          )}
+                        </>
+                      );
+                    })() : paragraph}
+                  </p>
                 );
               })}
             </div>
