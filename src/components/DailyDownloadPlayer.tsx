@@ -105,9 +105,15 @@ export const DailyDownloadPlayer = ({
   // Helper to strip stage directions/tags from transcript text
   const stripTags = useCallback((text: string): string => {
     return text
+      // Remove XML-style transcript wrapper tags
+      .replace(/<\/?transcript>/gi, '')
+      // Remove pause/direction bracketed tags
       .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
       .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
-      .replace(/\s{2,}/g, ' ')
+      // Collapse multiple spaces (but NOT newlines) into single space
+      .replace(/[ \t]+/g, ' ')
+      // Normalize multiple newlines to exactly two (paragraph break)
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
   }, []);
 
@@ -148,10 +154,15 @@ export const DailyDownloadPlayer = ({
     return parts;
   }, [fullTranscriptText]);
 
+  // Apply a slight lead (anticipation) for better perceived sync
+  const HIGHLIGHT_LEAD_MS = 180;
+
   // Calculate character index from current audio time
   const currentCharIndex = useMemo(() => {
     if (!durationMs || !fullTranscriptText.length) return 0;
-    const progress = currentTimeMs / durationMs;
+    // Add lead time for better perceived synchronization
+    const adjustedTimeMs = Math.min(currentTimeMs + HIGHLIGHT_LEAD_MS, durationMs);
+    const progress = adjustedTimeMs / durationMs;
     return Math.floor(progress * fullTranscriptText.length);
   }, [currentTimeMs, durationMs, fullTranscriptText.length]);
 
