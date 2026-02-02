@@ -48,13 +48,50 @@ function estimateDuration(text: string, speakingRate: number = 1.0): number {
   return Math.round(actualMinutes * 60 * 1000);
 }
 
-// Call Google Cloud TTS API for a single chunk
+// Preprocess text to SSML with pause handling
+function preprocessTextForSSML(text: string): string {
+  // Split by paragraphs (double newlines)
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  
+  // Track if previous paragraph ended with a long pause (5+ seconds)
+  let prevEndsWithLongPause = false;
+  
+  const processedParagraphs = paragraphs.map((paragraph, index) => {
+    let processed = paragraph;
+    
+    // Convert [PAUSE: X Seconds] to SSML breaks
+    processed = processed.replace(
+      /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi,
+      (_, seconds) => `<break time="${seconds}s"/>`
+    );
+    
+    // Add 2s break at paragraph start (if not first paragraph)
+    // Only add if the previous paragraph didn't end with a 5s+ break
+    if (index > 0 && !prevEndsWithLongPause) {
+      processed = `<break time="2s"/>${processed}`;
+    }
+    
+    // Check if this paragraph ends with a long pause for next iteration
+    prevEndsWithLongPause = /\[PAUSE:\s*[5-9]\d*\s*(?:Seconds?|s)\]\s*$/i.test(paragraph);
+    
+    return processed;
+  });
+  
+  return `<speak>${processedParagraphs.join(' ')}</speak>`;
+}
+
+// Call Google Cloud TTS API for a single chunk using SSML
 async function synthesizeChunk(
   text: string,
   voiceId: string,
   speakingRate: number,
   apiKey: string
 ): Promise<string> {
+  // Preprocess text to SSML with pause handling
+  const ssmlText = preprocessTextForSSML(text);
+  
+  console.log(`[TTS] Processing chunk with SSML, length: ${ssmlText.length}`);
+  
   const response = await fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
     {
@@ -63,7 +100,7 @@ async function synthesizeChunk(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        input: { text },
+        input: { ssml: ssmlText },
         voice: {
           languageCode: 'en-US',
           name: voiceId,
