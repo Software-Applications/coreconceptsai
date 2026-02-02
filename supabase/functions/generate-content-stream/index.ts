@@ -451,48 +451,12 @@ IMPORTANT: Return ONLY a valid JSON object.`
             }
           }
 
-          // Generate topic summary for description
-          let topicSummary = "";
-          try {
-            const descResponse = await fetch(
-              "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
-              {
-                method: "POST",
-                headers: {
-                  "x-goog-api-key": GOOGLE_API_KEY,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  contents: [{
-                    parts: [{ 
-                      text: `Generate a concise 1-2 sentence summary (under 150 characters) of what students will learn about "${topicTitle}". Based on: ${fullTranscript.slice(0, 1500)}. Return ONLY the summary text.` 
-                    }]
-                  }],
-                  generationConfig: { temperature: 0.3, maxOutputTokens: 100 }
-                })
-              }
-            );
-
-            if (descResponse.ok) {
-              const descData = await descResponse.json();
-              topicSummary = descData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-              if (topicSummary.length > 150) topicSummary = topicSummary.slice(0, 147) + "...";
-            }
-          } catch (e) {
-            console.warn("[Stream] Topic summary generation failed:", e);
-          }
-
-          // Always save transcript for all topics (enables caching)
+          // Save transcript only - NEVER overwrite curated descriptions
           console.log("[Stream] Saving transcript to database for caching");
-
-          const updateData: { transcript: string; description?: string } = { 
-            transcript: fullTranscript.trim() 
-          };
-          if (topicSummary) updateData.description = topicSummary;
 
           const { error: topicError } = await supabase
             .from("topics")
-            .update(updateData)
+            .update({ transcript: fullTranscript.trim() })
             .eq("id", topicId);
 
           if (topicError) {
