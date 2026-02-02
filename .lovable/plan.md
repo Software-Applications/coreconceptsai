@@ -1,73 +1,189 @@
 
-# Fix: Prevent Description Overwriting During Transcript Generation
+# Streaming Audio Generation Without Auto-Play
 
 ## Problem Summary
-When users open a topic in the "Core Concepts" audio view, the system generates a transcript and **incorrectly overwrites the curated topic description** with an AI-generated summary. This has corrupted descriptions for topics like:
-- "Homeostatic Feedback" → now shows "Students" instead of the original
-- "Signal Transduction" → now shows "Learn how" instead of the original
+Currently, when a user clicks on a topic in the Core Concepts drawer:
+1. The system generates transcript and audio in parallel (correct ✓)
+2. Audio auto-plays immediately when the first chunk is ready (incorrect ✗)
+3. Clicking play requests TTS generation again instead of using pre-generated audio (incorrect ✗)
 
-## Root Cause
-The `generate-content-stream` edge function unconditionally overwrites the `description` field whenever it generates a new transcript (lines 488-496). The AI summary generation can also fail silently, resulting in truncated/partial text.
+## Solution Overview
 
-## Solution: Preserve Original Descriptions
+Modify the audio player to:
+1. Generate transcript + audio in bite-sized paragraph chunks (already working)
+2. Show the player view when first chunk is ready (already working)
+3. **Remove auto-play** - audio waits for user interaction
+4. **Use pre-generated audio** - clicking play uses the queued audio chunks, not new TTS requests
 
-The fix ensures that **topic descriptions are never overwritten during transcript generation**, since they are curated content that should remain stable.
+## Technical Changes
 
-### Changes Required
+### 1. DailyDownloadPlayer.tsx - Remove Auto-Play Behavior
 
-**1. Edge Function: `supabase/functions/generate-content-stream/index.ts`**
+**Location**: `onFirstChunkAudioReady` callback (lines 161-190)
 
-Remove the description update logic entirely. The transcript should be saved, but the description should never be touched:
+**Current behavior**: 
+- Creates audio element and calls `audio.play()` automatically
+- Sets `hasStarted` and `isStreamingPlayback` to true
 
-- **Remove lines 454-483**: Delete the entire "Generate topic summary for description" block
-- **Simplify lines 488-491**: Change from:
-  ```typescript
-  const updateData: { transcript: string; description?: string } = { 
-    transcript: fullTranscript.trim() 
-  };
-  if (topicSummary) updateData.description = topicSummary;
-  ```
-  To:
-  ```typescript
-  const updateData = { transcript: fullTranscript.trim() };
-  ```
+**New behavior**:
+- Store the first chunk's blob URL in the queue
+- Set `firstChunkReady` state (for UI to know content is ready)
+- Do NOT call `audio.play()` or set `hasStarted`
+- Audio remains paused until user interaction
 
-**2. Database: Fix Corrupted Descriptions**
+```typescript
+// Before:
+onFirstChunkAudioReady: (blobUrl) => {
+  ...
+  setHasStarted(true);
+  setIsStreamingPlayback(true);
+  audio.play().catch(console.error);  // ← Remove this
+}
 
-Run a one-time SQL update to restore the corrupted descriptions for affected topics:
-
-```sql
-UPDATE topics SET description = 'The mechanisms that maintain stable internal conditions through feedback loops involving sensors, control centers, and effectors.' WHERE id = '8a7a6405-bc64-43cf-89db-3b1d7094a7cb';
-
-UPDATE topics SET description = 'The process by which cells receive and respond to external signals through receptor proteins and intracellular signaling cascades.' WHERE id = 'f7007245-7d25-4c9c-9a80-3264f5de289a';
+// After:
+onFirstChunkAudioReady: (blobUrl) => {
+  streamingAudioQueueRef.current[0] = blobUrl;
+  currentStreamingChunkRef.current = 0;
+  setCurrentStreamingChunkIndex(0);
+  setIsWaitingForNextChunk(false);
+  // Audio is ready but NOT playing - wait for user interaction
+}
 ```
 
-**3. Optional Cleanup: `supabase/functions/regenerate-summaries/index.ts`**
+### 2. DailyDownloadPlayer.tsx - Modify Play/Pause Handler
 
-This function was created as a workaround to fix corrupted descriptions. After applying the main fix, this function can be deprecated or removed since it will no longer be needed.
+**Location**: `handlePlayPause` function (lines 624-639)
 
----
+**Current behavior**: 
+- Calls `speak(fullTranscriptText, voiceId)` which requests new TTS
 
-## Technical Details
+**New behavior**:
+- Check if streaming audio chunks are available
+- If available, create Audio element from queued blob URLs and play
+- Fall back to TTS only if no streaming audio exists
 
-### Current Flow (Problematic)
+```typescript
+const handlePlayPause = () => {
+  mediumTap();
+  
+  // Check if we have pre-generated streaming audio
+  const hasStreamingAudio = streamingAudioQueueRef.current.length > 0 && 
+                            streamingAudioQueueRef.current[0];
+  
+  if (!hasStarted) {
+    setHasStarted(true);
+    setShowResumePrompt(false);
+    
+    if (hasStreamingAudio) {
+      // Use pre-generated streaming audio
+      setIsStreamingPlayback(true);
+      const audio = new Audio(streamingAudioQueueRef.current[0]);
+      audio.playbackRate = streamingPlaybackRate;
+      streamingAudioRef.current = audio;
+      
+      audio.addEventListener('ended', () => {
+        if (streamingAudioQueueRef.current[1]) {
+          playNextStreamingChunk();
+        } else {
+          setIsWaitingForNextChunk(true);
+        }
+      });
+      
+      audio.play().catch(console.error);
+    } else {
+      // Fallback to TTS generation (for non-streaming content)
+      speak(fullTranscriptText, voiceId);
+    }
+  } else if (isStreamingPlayback) {
+    // Handle streaming playback pause/resume
+    if (streamingAudioRef.current) {
+      if (streamingAudioRef.current.paused) {
+        streamingAudioRef.current.play().catch(console.error);
+      } else {
+        streamingAudioRef.current.pause();
+      }
+    }
+  } else if (isPlaying) {
+    pause();
+  } else if (isPaused) {
+    resume();
+  } else {
+    speak(fullTranscriptText, voiceId);
+  }
+};
+```
+
+### 3. DailyDownloadPlayer.tsx - Track Streaming Playback State
+
+Add state to track when streaming audio is playing vs paused:
+
+```typescript
+const [isStreamingPlaying, setIsStreamingPlaying] = useState(false);
+```
+
+Update the audio event listeners to sync this state:
+- `audio.onplay` → `setIsStreamingPlaying(true)`
+- `audio.onpause` → `setIsStreamingPlaying(false)`
+- `audio.onended` → `setIsStreamingPlaying(false)`
+
+### 4. Update UI to Reflect Ready State
+
+The GeneratingOverlay should hide when first chunk audio is ready (currently works via `firstChunkReady` flag). The play button should be enabled and show the play icon.
+
+Update the waveform animation condition:
+```typescript
+const waveformShouldAnimate = isPlaying || (isStreamingPlayback && isStreamingPlaying);
+```
+
+Update the play button icon logic:
+```typescript
+const showPauseIcon = isPlaying || (isStreamingPlayback && isStreamingPlaying);
+```
+
+## Flow Diagram
+
 ```text
-User opens topic → Transcript generated → Description OVERWRITTEN → Corrupted UI
+User clicks topic
+        ↓
+TopicSelectionSheet.handleSelectTopic()
+        ↓
+DailyDownloadPlayer opens
+        ↓
+Auto-triggers streamingContent.startStreaming()
+        ↓
+┌─────────────────────────────────────────┐
+│ Parallel Processing (per chunk):       │
+│   1. Transcript chunk arrives (SSE)    │
+│   2. TTS audio generated immediately   │
+│   3. Audio blob stored in queue        │
+└─────────────────────────────────────────┘
+        ↓
+First chunk ready → Show player (no auto-play)
+        ↓
+User clicks PLAY
+        ↓
+Use queued audio blob → Start playback
+        ↓
+On chunk end → Play next queued chunk
+        ↓
+If next chunk not ready → Show buffering
+        ↓
+All chunks complete → Show flash summary
 ```
 
-### Fixed Flow
-```text
-User opens topic → Transcript generated → Only transcript saved → Description preserved
-```
+## Files to Modify
 
-### Files Modified
-| File | Change |
-|------|--------|
-| `supabase/functions/generate-content-stream/index.ts` | Remove description update logic (~35 lines removed) |
-| Database | One-time fix for 2 corrupted topics |
+| File | Changes |
+|------|---------|
+| `src/components/DailyDownloadPlayer.tsx` | Remove auto-play, update handlePlayPause to use streaming queue, add streaming play state |
 
-### Testing Plan
-1. Open a topic that hasn't been played before
-2. Verify transcript generates correctly
-3. Verify the original description remains unchanged in the UI
-4. Verify the "Homeostatic Feedback" and "Signal Transduction" topics show proper descriptions after the database fix
+## Testing Plan
+
+1. Open Core Concepts drawer and select a topic
+2. Verify the player shows loading overlay while generating
+3. Verify player view appears when content is ready (audio NOT playing)
+4. Click play - verify audio starts immediately without loading spinner
+5. Pause and resume - verify streaming audio respects pause/resume
+6. Change voice during playback - verify voice change works
+7. Test with a new topic that requires generation
+8. Test with a cached topic that has pre-existing transcript
