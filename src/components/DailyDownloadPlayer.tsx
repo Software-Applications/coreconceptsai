@@ -104,7 +104,9 @@ export const DailyDownloadPlayer = ({
   const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
   const [currentStreamingChunkIndex, setCurrentStreamingChunkIndex] = useState(0); // For UI updates
   const [playbackProgress, setPlaybackProgress] = useState(0); // Track streaming playback progress (0-100)
+  const [streamingCharIndex, setStreamingCharIndex] = useState(0); // Track character-level progress for streaming mode
   const streamingProgressIntervalRef = useRef<number | null>(null);
+  const fullTranscriptTextRef = useRef<string>(''); // Ref for use in callbacks
   
   // Available playback rates
   const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
@@ -124,6 +126,13 @@ export const DailyDownloadPlayer = ({
       // Calculate total progress: completed chunks + progress in current chunk
       const totalProgress = ((currentChunk + chunkProgress) / totalChunks) * 100;
       setPlaybackProgress(Math.min(99, totalProgress));
+      
+      // Calculate character index for streaming mode (for timer and word highlighting)
+      const totalChars = fullTranscriptTextRef.current.length;
+      if (totalChars > 0) {
+        const charIndex = Math.floor((totalProgress / 100) * totalChars);
+        setStreamingCharIndex(charIndex);
+      }
     } else {
       // Fallback: just use chunk-based progress
       const totalProgress = (currentChunk / totalChunks) * 100;
@@ -162,6 +171,7 @@ export const DailyDownloadPlayer = ({
   const handleSpeechEnd = useCallback(() => {
     stopProgressTracking();
     setPlaybackProgress(100);
+    setStreamingCharIndex(0); // Reset streaming char index on end
     if (topic) {
       setShowCelebration(true);
       // Show celebration briefly, then flash card
@@ -348,6 +358,11 @@ export const DailyDownloadPlayer = ({
   const fullTranscriptText = useMemo(() => {
     return transcript.map(seg => seg.text).join(' ');
   }, [transcript]);
+  
+  // Keep ref in sync for use in callbacks
+  useEffect(() => {
+    fullTranscriptTextRef.current = fullTranscriptText;
+  }, [fullTranscriptText]);
 
   // For streaming playback, track which segment is currently playing based on chunk index
   const streamingActiveSegmentIndex = isStreamingPlayback ? currentStreamingChunkRef.current : -1;
@@ -490,8 +505,10 @@ export const DailyDownloadPlayer = ({
   // Calculate current time in seconds based on character progress
   const currentSeconds = useMemo(() => {
     if (fullTranscriptText.length === 0) return 0;
-    return (currentCharIndex / fullTranscriptText.length) * estimatedDuration;
-  }, [currentCharIndex, fullTranscriptText.length, estimatedDuration]);
+    // Use streaming char index when in streaming mode, otherwise use TTS char index
+    const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
+    return (effectiveCharIndex / fullTranscriptText.length) * estimatedDuration;
+  }, [currentCharIndex, streamingCharIndex, fullTranscriptText.length, estimatedDuration, isStreamingPlayback]);
 
   // Find active transcript segment based on playback mode
   const activeSegmentIndex = useMemo(() => {
@@ -520,12 +537,15 @@ export const DailyDownloadPlayer = ({
     const segment = transcript[activeSegmentIndex];
     if (!segment) return -1;
     
+    // Use streaming char index when in streaming mode, otherwise use TTS char index
+    const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
+    
     // Calculate character offset within this segment
     let prevCharsCount = 0;
     for (let i = 0; i < activeSegmentIndex; i++) {
       prevCharsCount += transcript[i].text.length + 1;
     }
-    const charInSegment = currentCharIndex - prevCharsCount;
+    const charInSegment = effectiveCharIndex - prevCharsCount;
     
     // Find which word we're on
     let charCount = 0;
@@ -537,7 +557,7 @@ export const DailyDownloadPlayer = ({
       charCount += wordLength;
     }
     return segment.words.length - 1;
-  }, [activeSegmentIndex, currentCharIndex, transcript]);
+  }, [activeSegmentIndex, currentCharIndex, streamingCharIndex, transcript, isStreamingPlayback]);
 
   // Auto-scroll to active segment
   useEffect(() => {
