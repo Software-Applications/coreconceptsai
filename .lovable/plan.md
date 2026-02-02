@@ -1,98 +1,107 @@
 
 
-# Remove Separator Lines & Fix Slow Transcript Highlighting
+# Fix Transcript Formatting & Highlighting Sync
 
-## Issues to Address
+## Root Cause Analysis
 
-1. **Separator lines** - The subtle `h-px bg-border/50` dividers between paragraphs need to be removed
-2. **Slow transcript highlighting** - The highlighting lags behind audio because the browser's native `timeupdate` event only fires ~4 times/second (every ~250ms)
+### Issue 1: Missing Paragraphs
 
-## Root Cause of Slow Highlighting
+The transcript returned from the API is wrapped in `<transcript>` tags:
+```
+<transcript>
+Think about the last time...
 
-The current implementation at line 211 relies on the browser's `timeupdate` event:
-```js
-audio.addEventListener('timeupdate', () => {
-  setCurrentTimeMs(audio.currentTime * 1000);
-});
+An action potential is...
+</transcript>
 ```
 
-This event fires infrequently (~4Hz), causing noticeable lag between audio playback and text highlighting.
+The `stripTags` function (lines 106-112) only removes `[PAUSE]` and `[DIRECTION]` style bracketed tags - it does NOT strip the XML-style `<transcript>` tags. As a result:
+
+1. The text still contains `<transcript>` at the start and `</transcript>` at the end
+2. More critically, line 110 replaces all sequences of 2+ spaces with a single space: `.replace(/\s{2,}/g, ' ')` 
+3. **This also replaces `\n\n` (which regex treats as 2 whitespace chars) with a single space**, destroying all paragraph breaks
+
+### Issue 2: Slow Transcript Highlighting
+
+The current sync relies on **linear interpolation** (line 154):
+```js
+const progress = currentTimeMs / durationMs;
+return Math.floor(progress * fullTranscriptText.length);
+```
+
+This assumes every character takes the same time to speak, but:
+- Speech naturally varies in pace (pauses between sentences, emphasis, etc.)
+- The actual TTS audio may not perfectly match this linear model
+- The audio `durationMs` may not exactly correspond to the visual text length
+
+The `requestAnimationFrame` loop IS running at 60fps, but the calculated position is inherently lagging because linear interpolation underestimates the current position when speech is naturally front-loaded or has variations.
 
 ## Solution
 
-### 1. Remove Separator Lines
+### Fix 1: Update `stripTags` to Remove XML Tags and Preserve Newlines
 
-Remove the separator `div` from the paragraph rendering (lines 736-739).
+1. Strip `<transcript>` and `</transcript>` XML tags
+2. Preserve paragraph breaks by NOT collapsing `\n\n` into a single space
+3. Only collapse multiple spaces on the same line
 
-### 2. Use `requestAnimationFrame` for Real-Time Sync
+### Fix 2: Improve Sync Accuracy with Slight Lead
 
-Replace the `timeupdate` event listener with a `requestAnimationFrame` loop that updates at 60fps when audio is playing. This provides smooth, real-time synchronization between audio and highlighting.
+Apply a small time offset (e.g., 150-200ms ahead) to the `currentTimeMs` used for character calculation. This compensates for:
+- Natural human perception delay
+- Slight audio buffering latency
+- The fact that we want highlighting to feel "in sync" which often means slightly anticipating
 
-**Technical approach:**
-- Add an `animationFrameRef` to track the animation frame ID
-- Create a `syncTime` function that reads `audio.currentTime` and schedules the next frame
-- Start the loop when audio plays, stop when paused or ended
-- Clean up properly on unmount
+This is a common technique in karaoke/lyrics sync apps.
 
-## Changes Summary
+## Implementation
 
-| File | Change |
-|------|--------|
-| `src/components/DailyDownloadPlayer.tsx` | Remove separator div (line 736-739), replace `timeupdate` listener with `requestAnimationFrame` loop |
+| File | Changes |
+|------|---------|
+| `src/components/DailyDownloadPlayer.tsx` | Update `stripTags` to remove `<transcript>` tags and preserve `\n\n`; add time offset to character calculation |
 
-## Technical Details
+### Code Changes
 
-### New Animation Frame Loop
+**Fix stripTags (around line 106):**
 
 ```typescript
-// Add ref for animation frame
-const animationFrameRef = useRef<number | null>(null);
-
-// Time sync function
-const syncTime = useCallback(() => {
-  if (audioRef.current && isPlaying) {
-    setCurrentTimeMs(audioRef.current.currentTime * 1000);
-    animationFrameRef.current = requestAnimationFrame(syncTime);
-  }
-}, [isPlaying]);
-
-// Start/stop loop based on playing state
-useEffect(() => {
-  if (isPlaying) {
-    animationFrameRef.current = requestAnimationFrame(syncTime);
-  } else {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-  }
-  
-  return () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-  };
-}, [isPlaying, syncTime]);
+const stripTags = useCallback((text: string): string => {
+  return text
+    // Remove XML-style transcript wrapper tags
+    .replace(/<\/?transcript>/gi, '')
+    // Remove pause/direction bracketed tags
+    .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
+    .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
+    // Collapse multiple spaces (but NOT newlines) into single space
+    .replace(/[ \t]+/g, ' ')
+    // Normalize multiple newlines to exactly two (paragraph break)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}, []);
 ```
 
-### Remove Separator (lines 735-739)
+**Fix character calculation with time offset (around line 152):**
 
-Change from:
-```jsx
-<div key={index}>
-  {index > 0 && (
-    <div className="h-px bg-border/50 mb-6" />
-  )}
-  <p ...>
+```typescript
+// Apply a slight lead (anticipation) for better perceived sync
+const HIGHLIGHT_LEAD_MS = 180;
+
+const currentCharIndex = useMemo(() => {
+  if (!durationMs || !fullTranscriptText.length) return 0;
+  // Add lead time for better perceived synchronization
+  const adjustedTimeMs = Math.min(currentTimeMs + HIGHLIGHT_LEAD_MS, durationMs);
+  const progress = adjustedTimeMs / durationMs;
+  return Math.floor(progress * fullTranscriptText.length);
+}, [currentTimeMs, durationMs, fullTranscriptText.length]);
 ```
 
-To:
-```jsx
-<div key={index}>
-  <p ...>
-```
+## Expected Results
 
-## Expected Result
+1. **Paragraphs visible**: The transcript will properly split on `\n\n` and display with `space-y-6` spacing
+2. **Faster highlighting**: The 180ms lead will make highlighting feel more "in sync" or even slightly ahead of the audio, which feels more natural to users
 
-- **No separator lines** between paragraphs (clean look)
-- **Smooth 60fps highlighting** that precisely matches audio playback with no perceptible lag
+## Technical Notes
+
+- The 180ms offset is configurable; common values in karaoke apps range from 100-300ms
+- The `\n\n` preservation is critical because the AI prompt explicitly asks for paragraph breaks with double newlines
+- This fix works for both cached and freshly generated transcripts
 
