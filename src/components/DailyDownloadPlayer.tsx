@@ -110,10 +110,14 @@ export const DailyDownloadPlayer = ({
       // Remove pause/direction bracketed tags
       .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
       .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
-      // Collapse multiple spaces (but NOT newlines) into single space
-      .replace(/[ \t]+/g, ' ')
-      // Normalize multiple newlines to exactly two (paragraph break)
-      .replace(/\n{3,}/g, '\n\n')
+      // Preserve paragraph breaks: temporarily replace \n\n with placeholder
+      .replace(/\n\n+/g, '{{PARA}}')
+      // Convert single newlines to spaces (they're just line wraps)
+      .replace(/\n/g, ' ')
+      // Restore paragraph breaks
+      .replace(/\{\{PARA\}\}/g, '\n\n')
+      // Collapse multiple spaces into single space
+      .replace(/ {2,}/g, ' ')
       .trim();
   }, []);
 
