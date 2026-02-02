@@ -329,11 +329,14 @@ export const DailyDownloadPlayer = ({
 
   // NOTE: generatingForTopicId is only reset in the topic change effect below
 
+  // Destructure cancel for stable dependency
+  const cancelGeneration = streamingContent.cancel;
+
   // Reset state when topic changes
   useEffect(() => {
     if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
       console.log('[Player] Topic changed, resetting');
-      streamingContent.cancel();
+      cancelGeneration();
       generatingForTopicId.current = null;
       setShowFlashCard(false);
       setHasStarted(false);
@@ -357,7 +360,7 @@ export const DailyDownloadPlayer = ({
         setShowResumePrompt(true);
       }
     }
-  }, [topic?.id, streamingContent, getProgress]);
+  }, [topic?.id, cancelGeneration, getProgress]);
 
   // Auto-save progress every 5 seconds while playing
   useEffect(() => {

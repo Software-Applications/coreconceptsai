@@ -52,6 +52,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   const isMountedRef = useRef(true);
+  const audioBlobUrlRef = useRef<string | null>(null);
   
   // Track saved position for voice change resume
   const savedPositionMsRef = useRef<number>(0);
@@ -67,6 +68,11 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
+
+  // Keep ref in sync with state for stable cleanup
+  useEffect(() => {
+    audioBlobUrlRef.current = audioBlobUrl;
+  }, [audioBlobUrl]);
 
   // Convert base64 to blob URL
   const base64ToBlobUrl = useCallback((base64: string): string => {
@@ -302,9 +308,10 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     abortControllerRef.current?.abort();
     ttsAbortControllerRef.current?.abort();
     
-    // Revoke blob URL
-    if (audioBlobUrl) {
-      URL.revokeObjectURL(audioBlobUrl);
+    // Revoke blob URL using ref for stable function
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current);
+      audioBlobUrlRef.current = null;
     }
     
     if (isMountedRef.current) {
@@ -315,7 +322,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       setAudioBlobUrl(null);
       setFullTranscript('');
     }
-  }, [audioBlobUrl]);
+  }, []);
 
   // Regenerate audio with a new voice, optionally resuming from a position
   const regenerateAudioWithVoice = useCallback(async (
@@ -380,12 +387,17 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     }
   }, [fullTranscript, audioBlobUrl, generateAudio]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount only (stable effect)
   useEffect(() => {
     return () => {
-      cancel();
+      // Direct cleanup without calling cancel to avoid dependency issues
+      abortControllerRef.current?.abort();
+      ttsAbortControllerRef.current?.abort();
+      if (audioBlobUrlRef.current) {
+        URL.revokeObjectURL(audioBlobUrlRef.current);
+      }
     };
-  }, [cancel]);
+  }, []);
 
   return {
     // States
