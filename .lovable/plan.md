@@ -1,100 +1,76 @@
 
-# Alternative Toast Design Options
+# Fix Orange Hover Color in Subject Chips and Topic Cards
 
-Based on the app's design language (navy theme, soft backgrounds, semantic colors), here are **4 design alternatives** for the destructive/error toast:
+## Problem
+
+The app's `accent` color is defined as orange/amber (`38 92% 50%`), which is the same as the `warning` color. This creates jarring orange hover states on:
+
+- **Subject chips** (`SubjectChipWithProgress.tsx`) - uses `hover:bg-accent`
+- **Chapter drawer items** (`ChapterDrawer.tsx`) - uses `hover:bg-accent`
+
+This orange color clashes with the navy-blue primary color scheme of the app.
 
 ---
 
-## Option A: Navy Card with Red Accent Strip
+## Solution
 
-A clean card-like design with a small colored accent on the left edge:
+Update the affected components to use navy-aligned hover colors instead of `hover:bg-accent`. This keeps the orange `accent` color available for intentional accent use cases while fixing the hover state mismatch.
 
-```text
-┌──────────────────────────────┐
-│▌ Invalid topic              ×│
-│▌ Please enter a valid topic  │
-└──────────────────────────────┘
- ↑ 3px red accent strip
+---
+
+## Implementation
+
+### 1. Update Subject Chip Hover (SubjectChipWithProgress.tsx)
+
+Change from:
+```typescript
+'border border-border bg-card hover:bg-accent'
 ```
 
-**Styling:**
-- Background: `bg-card` (white)
-- Left border: `border-l-4 border-destructive`
-- Text: `text-foreground`
-- Shadow: `shadow-lg`
-
----
-
-## Option B: Glassmorphism with Icon
-
-Modern frosted glass effect with a prominent warning icon:
-
-```text
-┌──────────────────────────────┐
-│ ⚠️  Invalid topic           ×│
-│     Please enter valid topic │
-└──────────────────────────────┘
+To:
+```typescript
+'border border-border bg-card hover:bg-primary/5 hover:border-primary/30'
 ```
 
-**Styling:**
-- Background: `bg-background/95 backdrop-blur-md`
-- Border: `border border-border`
-- Icon: Red `AlertTriangle` icon
-- Text: `text-foreground`
+This creates a subtle blue-tinted hover that matches the primary color scheme.
 
 ---
 
-## Option C: Subtle Warm Tint (Similar to FlashSummaryCard)
+### 2. Update Chapter Drawer Hover (ChapterDrawer.tsx)
 
-Following the pattern used in `FlashSummaryCard` for difficulty indicators:
-
-```text
-┌──────────────────────────────┐
-│ Invalid topic               ×│
-│ Please enter a valid topic   │
-└──────────────────────────────┘
+Change from:
+```typescript
+'bg-card border border-border hover:bg-accent hover:border-primary/20'
 ```
 
-**Styling:**
-- Background: `bg-destructive/15` (warm rose tint, slightly more visible)
-- Border: `border border-destructive/20`
-- Text: `text-foreground`
-- Title: Add `text-destructive` to the title only
-
----
-
-## Option D: Dark Navy Toast (Bold & Premium)
-
-Inverted style for high visibility:
-
-```text
-┌──────────────────────────────┐
-│ Invalid topic               ×│
-│ Please enter a valid topic   │
-└──────────────────────────────┘
+To:
+```typescript
+'bg-card border border-border hover:bg-primary/5 hover:border-primary/30'
 ```
 
-**Styling:**
-- Background: `bg-navy-900` (dark navy)
-- Border: `border border-destructive/50`
-- Text: `text-white`
-- Icon: Red accent icon
+---
+
+## Visual Comparison
+
+| Element | Before (Orange) | After (Navy-aligned) |
+|---------|-----------------|----------------------|
+| Subject Chip Hover | Orange background flash | Subtle blue tint with blue border |
+| Chapter Item Hover | Orange background flash | Subtle blue tint with blue border |
 
 ---
 
-## My Recommendation: **Option A (Accent Strip)**
+## Why This Approach
 
-This design:
-- Follows common UI patterns (like Stripe, Linear)
-- Provides clear visual distinction without being overwhelming
-- Works well with the existing light card backgrounds in the app
-- Is subtle yet clearly indicates an error state
+- **Consistent with existing patterns**: `TopicCard`, `AddSubjectSheet`, and `DailyDownloadCard` already use `primary`-based hover effects
+- **Preserves accent color**: The orange `accent` remains available for intentional use (e.g., CTAs that need to stand out)
+- **Minimal changes**: Only 2 files need updating
+- **Better UX**: The hover state now provides visual feedback aligned with the selection state (both use primary/navy blue)
 
 ---
 
-## Technical Notes
+## Files to Modify
 
-- All options use the existing color tokens from the design system
-- The close button styling will be updated to match each option
-- For Option B, I would add an `AlertTriangle` icon from lucide-react
-- Implementation affects only `src/components/ui/toast.tsx`
+| File | Change |
+|------|--------|
+| `src/components/SubjectChipWithProgress.tsx` | Update hover class on line 67 |
+| `src/components/ChapterDrawer.tsx` | Update hover class on line 88 |
