@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2, FastForward
+  X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
 } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 import { useHaptics } from '@/hooks/useHaptics';
-import { useGoogleTTS } from '@/hooks/useGoogleTTS';
 import { useVoicePreference } from '@/hooks/useVoicePreference';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useStreamingContent } from '@/hooks/useStreamingContent';
@@ -17,49 +16,6 @@ import { AIBadge } from './AIBadge';
 import { GeneratingOverlay } from './GeneratingOverlay';
 import { SwipeHintHandle } from './SwipeHintHandle';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
-
-// Helper to generate mock transcript (moved from dailyDownloadData.ts)
-const generateMockTranscript = (topic: DailyDownloadTopic) => {
-  const durationParts = topic.duration.split(':');
-  const totalSeconds = parseInt(durationParts[0]) * 60 + parseInt(durationParts[1]);
-  
-  const segments: { id: string; startTime: number; endTime: number; text: string; words: { word: string; startTime: number; endTime: number }[] }[] = [];
-  const segmentDuration = 15;
-  
-  const generateWordsWithTiming = (text: string, startTime: number, endTime: number) => {
-    const words = text.split(/\s+/).filter(w => w.length > 0);
-    const duration = endTime - startTime;
-    const wordDuration = duration / words.length;
-    return words.map((word, index) => ({
-      word,
-      startTime: startTime + (index * wordDuration),
-      endTime: startTime + ((index + 1) * wordDuration)
-    }));
-  };
-  
-  const createSegment = (id: string, startTime: number, endTime: number, text: string) => ({
-    id, startTime, endTime, text,
-    words: generateWordsWithTiming(text, startTime, endTime)
-  });
-  
-  // Introduction
-  segments.push(createSegment(`${topic.id}-0`, 0, 15, `Welcome to Core Concepts AI. We're going to explore ${topic.title}. ${topic.description}`));
-  
-  // Content based on flash summary bullet points
-  const bulletPoints = topic.flashSummary.bulletPoints;
-  bulletPoints.forEach((point, index) => {
-    const startTime = 15 + (index * segmentDuration * 3);
-    segments.push(createSegment(`${topic.id}-${index + 1}a`, startTime, startTime + segmentDuration, `Let's talk about our ${index === 0 ? 'first' : index === 1 ? 'second' : 'third'} key concept. ${point}`));
-    segments.push(createSegment(`${topic.id}-${index + 1}b`, startTime + segmentDuration, startTime + segmentDuration * 2, `This is really important to understand because it forms the foundation of how we approach this topic in practice.`));
-    segments.push(createSegment(`${topic.id}-${index + 1}c`, startTime + segmentDuration * 2, startTime + segmentDuration * 3, `Take a moment to think about how this concept connects to what you already know about the subject.`));
-  });
-  
-  // Conclusion
-  segments.push(createSegment(`${topic.id}-end`, totalSeconds - 30, totalSeconds - 15, `To summarize what we've learned: ${topic.flashSummary.bulletPoints[0].split(' - ')[0]}, and the key principles we discussed.`));
-  segments.push(createSegment(`${topic.id}-outro`, totalSeconds - 15, totalSeconds, `That's all for Core Concepts AI on ${topic.title}. Great job! Don't forget to review the flash card summary.`));
-  
-  return segments.sort((a, b) => a.startTime - b.startTime).filter((seg, index, arr) => index === 0 || seg.startTime !== arr[index - 1].startTime);
-};
 
 interface DailyDownloadPlayerProps {
   topic: DailyDownloadTopic | null;
@@ -88,93 +44,124 @@ export const DailyDownloadPlayer = ({
   // Voice preference hook
   const { voiceId, setVoiceId } = useVoicePreference();
   
+  // Audio state
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const [durationMs, setDurationMs] = useState(0);
+  const [isChangingVoice, setIsChangingVoice] = useState(false);
+  
+  // Playback rate
+  const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+  
+  // Saved position for voice change resume
+  const savedPositionRef = useRef<number>(0);
+  const wasPlayingRef = useRef<boolean>(false);
+  
   // Transcript scroll refs
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLParagraphElement | null>(null);
   const dragState = useRef({ isDown: false, startY: 0, scrollTop: 0, didDrag: false });
   const lastSaveTime = useRef<number>(0);
   
-  // Audio element ref for streaming playback
-  const streamingAudioRef = useRef<HTMLAudioElement | null>(null);
-  const streamingAudioQueueRef = useRef<string[]>([]);
-  const currentStreamingChunkRef = useRef<number>(0);
-  const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
-  const [isStreamingPlaying, setIsStreamingPlaying] = useState(false); // Track streaming audio play/pause state
-  const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
-  const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
-  const [currentStreamingChunkIndex, setCurrentStreamingChunkIndex] = useState(0); // For UI updates
-  const [playbackProgress, setPlaybackProgress] = useState(0); // Track streaming playback progress (0-100)
-  const [streamingCharIndex, setStreamingCharIndex] = useState(0); // Track character-level progress for streaming mode
-  const streamingProgressIntervalRef = useRef<number | null>(null);
-  const fullTranscriptTextRef = useRef<string>(''); // Ref for use in callbacks
-  
-  // Available playback rates
-  const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
-  
-  // Ref to track total chunks for progress calculation
-  const totalChunksRef = useRef<number>(1);
-  
-  // Helper to update streaming playback progress based on current audio position
-  const updateStreamingProgress = useCallback(() => {
-    const audio = streamingAudioRef.current;
-    const totalChunks = totalChunksRef.current || 1;
-    const currentChunk = currentStreamingChunkRef.current;
+  // Streaming content hook
+  const streamingContent = useStreamingContent({
+    onError: (error) => {
+      sonnerToast.error("Generation Issue", {
+        description: error || "Try again later.",
+        duration: 3000,
+      });
+    },
+  });
+
+  // Helper to strip stage directions/tags from transcript text
+  const stripTags = useCallback((text: string): string => {
+    return text
+      .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
+      .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }, []);
+
+  // Full transcript text (cleaned)
+  const fullTranscriptText = useMemo(() => {
+    return stripTags(streamingContent.fullTranscript);
+  }, [streamingContent.fullTranscript, stripTags]);
+
+  // Parse transcript into paragraphs for display
+  const paragraphs = useMemo(() => {
+    if (!fullTranscriptText) return [];
+    return fullTranscriptText.split(/\n\n+/).filter(p => p.trim());
+  }, [fullTranscriptText]);
+
+  // Calculate character index from current audio time
+  const currentCharIndex = useMemo(() => {
+    if (!durationMs || !fullTranscriptText.length) return 0;
+    const progress = currentTimeMs / durationMs;
+    return Math.floor(progress * fullTranscriptText.length);
+  }, [currentTimeMs, durationMs, fullTranscriptText.length]);
+
+  // Find active paragraph index based on character position
+  const activeSegmentIndex = useMemo(() => {
+    if (!hasStarted || !fullTranscriptText) return -1;
     
-    if (audio && audio.duration && !isNaN(audio.duration)) {
-      // Calculate progress within current chunk
-      const chunkProgress = (audio.currentTime / audio.duration);
-      // Calculate total progress: completed chunks + progress in current chunk
-      const totalProgress = ((currentChunk + chunkProgress) / totalChunks) * 100;
-      setPlaybackProgress(Math.min(99, totalProgress));
-      
-      // Calculate character index for streaming mode (for timer and word highlighting)
-      const totalChars = fullTranscriptTextRef.current.length;
-      if (totalChars > 0) {
-        const charIndex = Math.floor((totalProgress / 100) * totalChars);
-        setStreamingCharIndex(charIndex);
+    let charCount = 0;
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraphLength = paragraphs[i].length + 2; // +2 for paragraph break
+      if (currentCharIndex < charCount + paragraphLength) {
+        return i;
       }
-    } else {
-      // Fallback: just use chunk-based progress
-      const totalProgress = (currentChunk / totalChunks) * 100;
-      setPlaybackProgress(Math.min(99, totalProgress));
+      charCount += paragraphLength;
     }
-  }, []);
-  
-  // Start progress tracking interval
-  const startProgressTracking = useCallback(() => {
-    if (streamingProgressIntervalRef.current) {
-      clearInterval(streamingProgressIntervalRef.current);
+    return paragraphs.length - 1;
+  }, [paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
+
+  // Calculate word-level progress within active paragraph
+  const activeWordIndex = useMemo(() => {
+    if (activeSegmentIndex < 0) return -1;
+    const paragraph = paragraphs[activeSegmentIndex];
+    if (!paragraph) return -1;
+    
+    // Calculate character offset within this paragraph
+    let prevCharsCount = 0;
+    for (let i = 0; i < activeSegmentIndex; i++) {
+      prevCharsCount += paragraphs[i].length + 2;
     }
-    streamingProgressIntervalRef.current = window.setInterval(() => {
-      updateStreamingProgress();
-    }, 100); // Update every 100ms
-  }, [updateStreamingProgress]);
-  
-  // Stop progress tracking interval
-  const stopProgressTracking = useCallback(() => {
-    if (streamingProgressIntervalRef.current) {
-      clearInterval(streamingProgressIntervalRef.current);
-      streamingProgressIntervalRef.current = null;
-    }
-  }, []);
-  
-  // Cleanup progress tracking on unmount
-  useEffect(() => {
-    return () => {
-      if (streamingProgressIntervalRef.current) {
-        clearInterval(streamingProgressIntervalRef.current);
+    const charInParagraph = currentCharIndex - prevCharsCount;
+    
+    // Find which word we're on
+    const words = paragraph.split(/\s+/);
+    let charCount = 0;
+    for (let i = 0; i < words.length; i++) {
+      const wordLength = words[i].length + 1;
+      if (charInParagraph < charCount + wordLength) {
+        return i;
       }
-    };
+      charCount += wordLength;
+    }
+    return words.length - 1;
+  }, [activeSegmentIndex, paragraphs, currentCharIndex]);
+
+  // Progress percentage for progress bar
+  const progress = useMemo(() => {
+    if (!durationMs) return 0;
+    return (currentTimeMs / durationMs) * 100;
+  }, [currentTimeMs, durationMs]);
+
+  // Format time helper
+  const formatTime = useCallback((ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
-  
-  // Define handleSpeechEnd first (used by multiple callbacks)
-  const handleSpeechEnd = useCallback(() => {
-    stopProgressTracking();
-    setPlaybackProgress(100);
-    setStreamingCharIndex(0); // Reset streaming char index on end
+
+  // Handle audio end
+  const handleAudioEnd = useCallback(() => {
+    setIsPlaying(false);
     if (topic) {
       setShowCelebration(true);
-      // Show celebration briefly, then flash card
       setTimeout(() => {
         setShowCelebration(false);
         setShowFlashCard(true);
@@ -182,382 +169,123 @@ export const DailyDownloadPlayer = ({
       onTopicListened?.(topic.id);
       clearProgress(topic.id);
     }
-  }, [topic, onTopicListened, clearProgress, stopProgressTracking]);
-  
-  // Play next chunk in streaming queue
-  const playNextStreamingChunk = useCallback(() => {
-    const queue = streamingAudioQueueRef.current;
-    const nextIndex = currentStreamingChunkRef.current + 1;
+  }, [topic, onTopicListened, clearProgress]);
+
+  // Setup audio element when blob URL is available
+  useEffect(() => {
+    if (!streamingContent.audioBlobUrl) return;
     
-    if (nextIndex < queue.length && queue[nextIndex]) {
-      setIsWaitingForNextChunk(false);
-      currentStreamingChunkRef.current = nextIndex;
-      setCurrentStreamingChunkIndex(nextIndex); // Update state for UI
-      const audio = new Audio(queue[nextIndex]);
-      audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
-      streamingAudioRef.current = audio;
+    const audio = new Audio(streamingContent.audioBlobUrl);
+    audioRef.current = audio;
+    
+    audio.addEventListener('loadedmetadata', () => {
+      setDurationMs(audio.duration * 1000);
+    });
+    
+    audio.addEventListener('timeupdate', () => {
+      setCurrentTimeMs(audio.currentTime * 1000);
+    });
+    
+    audio.addEventListener('play', () => setIsPlaying(true));
+    audio.addEventListener('pause', () => setIsPlaying(false));
+    audio.addEventListener('ended', handleAudioEnd);
+    
+    // Apply current playback rate
+    audio.playbackRate = playbackRate;
+    
+    // If we have a saved position (from voice change), seek to it
+    if (savedPositionRef.current > 0) {
+      audio.currentTime = savedPositionRef.current / 1000;
+      savedPositionRef.current = 0;
       
-      // Sync play/pause state with audio events
-      audio.addEventListener('play', () => {
-        setIsStreamingPlaying(true);
-        startProgressTracking();
-      });
-      audio.addEventListener('pause', () => {
-        setIsStreamingPlaying(false);
-        stopProgressTracking();
-      });
-      audio.addEventListener('ended', () => {
-        setIsStreamingPlaying(false);
-        stopProgressTracking();
-        const nextNextIndex = currentStreamingChunkRef.current + 1;
-        if (nextNextIndex < queue.length && queue[nextNextIndex]) {
-          playNextStreamingChunk();
-        } else if (nextNextIndex < queue.length) {
-          // Next chunk exists but audio not ready yet - show buffering
-          console.log('[Player] Waiting for next chunk audio...');
-          setIsWaitingForNextChunk(true);
-        } else {
-          // All chunks played
-          setIsStreamingPlayback(false);
-          setIsWaitingForNextChunk(false);
-          handleSpeechEnd();
-        }
-      });
-      
-      setIsStreamingPlaying(true);
-      startProgressTracking();
-      audio.play().catch(console.error);
-    } else if (nextIndex < queue.length) {
-      // Chunk exists but audio not ready - show buffering
-      setIsWaitingForNextChunk(true);
-    }
-  }, [handleSpeechEnd, streamingPlaybackRate, startProgressTracking, stopProgressTracking]);
-  
-  // Streaming content hook for parallel transcript + audio generation
-  const streamingContent = useStreamingContent({
-    onFirstChunkAudioReady: (blobUrl) => {
-      // Store first chunk audio - DO NOT auto-play, wait for user interaction
-      console.log('[Player] First chunk audio ready (paused, waiting for play)');
-      streamingAudioQueueRef.current[0] = blobUrl;
-      currentStreamingChunkRef.current = 0;
-      setCurrentStreamingChunkIndex(0);
-      setIsWaitingForNextChunk(false);
-      // Audio is ready but NOT playing - wait for user to click play
-    },
-    onChunkAudioReady: (chunkIndex, blobUrl) => {
-      console.log(`[Player] Chunk ${chunkIndex} audio ready`);
-      streamingAudioQueueRef.current[chunkIndex] = blobUrl;
-      
-      // If we were waiting for this chunk and already playing, play it now
-      if (isWaitingForNextChunk && isStreamingPlaying && currentStreamingChunkRef.current + 1 === chunkIndex) {
-        console.log('[Player] Resuming playback with newly ready chunk');
-        playNextStreamingChunk();
+      // Resume playing if it was playing before voice change
+      if (wasPlayingRef.current) {
+        wasPlayingRef.current = false;
+        audio.play().catch(console.error);
       }
-    },
-    onError: (error) => {
-      sonnerToast.error("Generation Issue", {
-        description: error || "Using fallback content. Try again later.",
-        duration: 3000,
-      });
-      setIsStreamingPlayback(false);
-      setIsStreamingPlaying(false);
-    },
-    onComplete: () => {
-      console.log('[Player] Streaming generation complete');
-    },
-  });
-  
-  const isStreaming = streamingContent.isStreaming;
-  const streamingProgress = streamingContent.progress;
-  const chunksReady = streamingContent.chunks.filter(c => c.audioReady).length;
-  const totalChunks = streamingContent.chunks.length;
-  
-  // Sync total chunks ref for progress calculation
-  useEffect(() => {
-    if (totalChunks > 0) {
-      totalChunksRef.current = totalChunks;
-    }
-  }, [totalChunks]);
-
-  const {
-    isPlaying,
-    isPaused,
-    isSpeaking,
-    isLoading: isTTSLoading,
-    isBuffering,
-    currentCharIndex,
-    progress,
-    playbackRate,
-    duration,
-    useFallback,
-    speak,
-    pause,
-    resume,
-    stop,
-    cyclePlaybackRate,
-    seekToChar,
-    clearCache,
-  } = useGoogleTTS({
-    onEnd: handleSpeechEnd
-  });
-
-  // Waveform animation should follow playing state for both streaming and TTS modes
-  const waveformShouldAnimate = isPlaying || (isStreamingPlayback && isStreamingPlaying);
-  
-  // Combined progress: use streaming progress when in streaming mode, TTS progress otherwise
-  const combinedProgress = isStreamingPlayback ? playbackProgress : progress;
-
-  // Helper to strip stage directions/tags from transcript text (pure function)
-  const stripTags = (text: string): string => {
-    // Remove [PAUSE: X Seconds], [PROMPT], and similar bracketed tags
-    return text
-      .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
-      .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
-      .replace(/\s{2,}/g, ' ') // Clean up extra spaces
-      .trim();
-  };
-
-  // Generate transcript for current topic - use streaming chunks if available
-  const transcript = useMemo(() => {
-    if (!topic) return [];
-    
-    // If we have streaming chunks with text, use those instead of mock
-    const streamingChunks = streamingContent.chunks.filter(c => c.text);
-    if (streamingChunks.length > 0) {
-      // Convert streaming chunks to transcript segment format
-      const segmentDuration = 30; // Each chunk is ~30 seconds
-      return streamingChunks.map((chunk, index) => {
-        const startTime = index * segmentDuration;
-        const endTime = startTime + segmentDuration;
-        // Strip tags from the text
-        const cleanText = stripTags(chunk.text);
-        
-        // Generate word timings
-        const words = cleanText.split(/\s+/).filter(w => w.length > 0);
-        const wordDuration = words.length > 0 ? segmentDuration / words.length : 0;
-        
-        return {
-          id: `${topic.id}-streaming-${index}`,
-          startTime,
-          endTime,
-          text: cleanText,
-          words: words.map((word, wordIndex) => ({
-            word,
-            startTime: startTime + (wordIndex * wordDuration),
-            endTime: startTime + ((wordIndex + 1) * wordDuration),
-          })),
-        };
-      });
     }
     
-    // Fallback to mock transcript if no streaming content
-    return generateMockTranscript(topic);
-  }, [topic, streamingContent.chunks]);
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', () => {});
+      audio.removeEventListener('timeupdate', () => {});
+      audio.removeEventListener('play', () => {});
+      audio.removeEventListener('pause', () => {});
+      audio.removeEventListener('ended', handleAudioEnd);
+    };
+  }, [streamingContent.audioBlobUrl, handleAudioEnd, playbackRate]);
 
-  // Get full transcript text for speech (also stripped of tags)
-  const fullTranscriptText = useMemo(() => {
-    return transcript.map(seg => seg.text).join(' ');
-  }, [transcript]);
-  
-  // Keep ref in sync for use in callbacks
-  useEffect(() => {
-    fullTranscriptTextRef.current = fullTranscriptText;
-  }, [fullTranscriptText]);
-
-  // For streaming playback, track which segment is currently playing based on chunk index
-  const streamingActiveSegmentIndex = isStreamingPlayback ? currentStreamingChunkRef.current : -1;
-
-  // Handle voice change - works for both streaming and non-streaming playback
-  const handleVoiceChange = useCallback((newVoiceId: string) => {
+  // Handle voice change - regenerate audio and resume from current position
+  const handleVoiceChange = useCallback(async (newVoiceId: string) => {
+    if (!streamingContent.transcriptReady) return;
+    
     setVoiceId(newVoiceId);
+    setIsChangingVoice(true);
     
-    // Check if we're in streaming playback mode
-    if (isStreamingPlayback && streamingContent.chunks.length > 0) {
-      console.log('[Player] Voice change during streaming - regenerating audio');
-      
-      // Stop current streaming audio
-      if (streamingAudioRef.current) {
-        streamingAudioRef.current.pause();
-        streamingAudioRef.current = null;
-      }
-      
-      // Save current position (chunk index)
-      const savedChunkIndex = currentStreamingChunkRef.current;
-      
-      // Clear audio queue
-      streamingAudioQueueRef.current = [];
-      currentStreamingChunkRef.current = 0;
-      setIsWaitingForNextChunk(true);
-      
-      // Regenerate audio with new voice
-      streamingContent.regenerateAudioWithVoice(
-        newVoiceId,
-        1.0,
-        // onFirstChunkReady - resume from saved position or start
-        (blobUrl) => {
-          console.log('[Player] First chunk regenerated, resuming...');
-          streamingAudioQueueRef.current[0] = blobUrl;
-          
-          // If saved position was 0, play immediately
-          if (savedChunkIndex === 0) {
-            currentStreamingChunkRef.current = 0;
-            setIsWaitingForNextChunk(false);
-            
-            const audio = new Audio(blobUrl);
-            streamingAudioRef.current = audio;
-            
-            audio.addEventListener('ended', () => {
-              if (streamingAudioQueueRef.current[1]) {
-                playNextStreamingChunk();
-              } else {
-                setIsWaitingForNextChunk(true);
-              }
-            });
-            
-            audio.play().catch(console.error);
-          }
-        },
-        // onChunkReady
-        (chunkIndex, blobUrl) => {
-          streamingAudioQueueRef.current[chunkIndex] = blobUrl;
-          
-          // If this is the chunk we need to resume from, play it
-          if (chunkIndex === savedChunkIndex && !streamingAudioRef.current) {
-            currentStreamingChunkRef.current = chunkIndex;
-            setIsWaitingForNextChunk(false);
-            
-            const audio = new Audio(blobUrl);
-            streamingAudioRef.current = audio;
-            
-            audio.addEventListener('ended', () => {
-              const nextIndex = currentStreamingChunkRef.current + 1;
-              if (streamingAudioQueueRef.current[nextIndex]) {
-                playNextStreamingChunk();
-              } else {
-                setIsWaitingForNextChunk(true);
-              }
-            });
-            
-            audio.play().catch(console.error);
-          }
-          // If we're waiting and this is the next chunk, play it
-          else if (isWaitingForNextChunk && currentStreamingChunkRef.current + 1 === chunkIndex) {
-            playNextStreamingChunk();
-          }
-        }
-      );
-    } else {
-      // Non-streaming playback - use existing TTS logic
-      const wasPlaying = isPlaying || isPaused;
-      clearCache(undefined, true); // Save position before clearing
-      
-      if (wasPlaying && hasStarted) {
-        setTimeout(() => {
-          speak(fullTranscriptText, newVoiceId);
-        }, 50);
-      }
+    // Save current position and playing state
+    if (audioRef.current) {
+      savedPositionRef.current = audioRef.current.currentTime * 1000;
+      wasPlayingRef.current = !audioRef.current.paused;
+      audioRef.current.pause();
     }
-  }, [
-    setVoiceId, isStreamingPlayback, streamingContent, playNextStreamingChunk,
-    isWaitingForNextChunk, isPlaying, isPaused, hasStarted, clearCache, speak, fullTranscriptText
-  ]);
+    
+    console.log(`[Player] Changing voice to ${newVoiceId}, resume from ${savedPositionRef.current}ms`);
+    
+    try {
+      await streamingContent.regenerateAudioWithVoice(newVoiceId, 1.0, savedPositionRef.current);
+    } finally {
+      setIsChangingVoice(false);
+    }
+  }, [setVoiceId, streamingContent]);
 
-  // Cycle playback rate for streaming audio
-  const cycleStreamingPlaybackRate = useCallback(() => {
-    setStreamingPlaybackRate(currentRate => {
+  // Cycle playback rate
+  const cyclePlaybackRate = useCallback(() => {
+    lightTap();
+    setPlaybackRate(currentRate => {
       const currentIndex = PLAYBACK_RATES.indexOf(currentRate as typeof PLAYBACK_RATES[number]);
       const nextIndex = (currentIndex + 1) % PLAYBACK_RATES.length;
       const newRate = PLAYBACK_RATES[nextIndex];
       
-      // Apply to current audio element immediately
-      if (streamingAudioRef.current) {
-        streamingAudioRef.current.playbackRate = newRate;
+      if (audioRef.current) {
+        audioRef.current.playbackRate = newRate;
       }
       
       return newRate;
     });
-  }, []);
+  }, [lightTap]);
 
-  // Combined playback rate handler that works for both modes
-  const handleCyclePlaybackRate = useCallback(() => {
-    lightTap();
-    if (isStreamingPlayback) {
-      cycleStreamingPlaybackRate();
+  // Play/Pause handler
+  const handlePlayPause = useCallback(() => {
+    mediumTap();
+    
+    if (!audioRef.current) return;
+    
+    if (!hasStarted) {
+      setHasStarted(true);
+      setShowResumePrompt(false);
+    }
+    
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(console.error);
     } else {
-      cyclePlaybackRate();
+      audioRef.current.pause();
     }
-  }, [isStreamingPlayback, cycleStreamingPlaybackRate, cyclePlaybackRate, lightTap]);
+  }, [hasStarted, mediumTap]);
 
-  // Get current playback rate for display
-  const currentPlaybackRate = isStreamingPlayback ? streamingPlaybackRate : playbackRate;
+  // Seek to position
+  const seekTo = useCallback((percentage: number) => {
+    if (!audioRef.current || !durationMs) return;
+    const targetMs = (percentage / 100) * durationMs;
+    audioRef.current.currentTime = targetMs / 1000;
+  }, [durationMs]);
 
-  // Estimate total duration based on text length and speaking rate (~150 words/min)
-  const estimatedDuration = useMemo(() => {
-    // If we have real duration from TTS, use it (convert from ms to seconds)
-    if (duration > 0) {
-      return duration / 1000;
-    }
-    // Otherwise estimate based on word count
-    const wordCount = fullTranscriptText.split(/\s+/).length;
-    return Math.max((wordCount / 150) * 60, 60); // At least 60 seconds
-  }, [fullTranscriptText, duration]);
-
-  // Calculate current time in seconds based on character progress
-  const currentSeconds = useMemo(() => {
-    if (fullTranscriptText.length === 0) return 0;
-    // Use streaming char index when in streaming mode, otherwise use TTS char index
-    const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
-    return (effectiveCharIndex / fullTranscriptText.length) * estimatedDuration;
-  }, [currentCharIndex, streamingCharIndex, fullTranscriptText.length, estimatedDuration, isStreamingPlayback]);
-
-  // Find active transcript segment based on playback mode
-  const activeSegmentIndex = useMemo(() => {
-    // For streaming playback, use the current chunk index
-    if (isStreamingPlayback) {
-      return currentStreamingChunkIndex;
-    }
-    
-    // For TTS playback, use character index
-    if (!isSpeaking && !hasStarted) return -1;
-    
-    let charCount = 0;
-    for (let i = 0; i < transcript.length; i++) {
-      const segmentLength = transcript[i].text.length + 1; // +1 for space
-      if (currentCharIndex < charCount + segmentLength) {
-        return i;
-      }
-      charCount += segmentLength;
-    }
-    return transcript.length - 1;
-  }, [transcript, currentCharIndex, isSpeaking, hasStarted, isStreamingPlayback, currentStreamingChunkIndex]);
-
-  // Calculate word-level progress within active segment
-  const activeWordIndex = useMemo(() => {
-    if (activeSegmentIndex < 0) return -1;
-    const segment = transcript[activeSegmentIndex];
-    if (!segment) return -1;
-    
-    // Use streaming char index when in streaming mode, otherwise use TTS char index
-    const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
-    
-    // Calculate character offset within this segment
-    let prevCharsCount = 0;
-    for (let i = 0; i < activeSegmentIndex; i++) {
-      prevCharsCount += transcript[i].text.length + 1;
-    }
-    const charInSegment = effectiveCharIndex - prevCharsCount;
-    
-    // Find which word we're on
-    let charCount = 0;
-    for (let i = 0; i < segment.words.length; i++) {
-      const wordLength = segment.words[i].word.length + 1;
-      if (charInSegment < charCount + wordLength) {
-        return i;
-      }
-      charCount += wordLength;
-    }
-    return segment.words.length - 1;
-  }, [activeSegmentIndex, currentCharIndex, streamingCharIndex, transcript, isStreamingPlayback]);
+  // Skip forward/back
+  const skip = useCallback((seconds: number) => {
+    if (!audioRef.current) return;
+    lightTap();
+    const newTime = Math.max(0, Math.min(audioRef.current.duration, audioRef.current.currentTime + seconds));
+    audioRef.current.currentTime = newTime;
+  }, [lightTap]);
 
   // Auto-scroll to active segment
   useEffect(() => {
@@ -569,33 +297,19 @@ export const DailyDownloadPlayer = ({
     }
   }, [activeSegmentIndex]);
 
-  // Always trigger streaming flow - edge function handles transcript caching internally
-  // This allows the edge function to check for cached transcripts and return them without AI call
-  const needsAIContent = useMemo(() => {
-    if (!topic) return false;
-    // Always go through streaming flow - edge function handles caching
-    return true;
-  }, [topic]);
-
-  // Track which topic we're generating for to prevent duplicate requests
+  // Track which topic we're generating for
   const generatingForTopicId = useRef<string | null>(null);
   const previousTopicId = useRef<string | null>(null);
 
-  // Auto-generate content when topic is opened and needs AI content
+  // Auto-generate content when topic is opened
   useEffect(() => {
-    if (isOpen && topic && needsAIContent && !isStreaming && !streamingContent.firstChunkReady) {
-      // Prevent re-entrant generation for the same topic
-      if (generatingForTopicId.current === topic.id) {
-        return;
-      }
+    if (isOpen && topic && !streamingContent.transcriptReady && !streamingContent.isGenerating) {
+      if (generatingForTopicId.current === topic.id) return;
       
-      console.log('Auto-generating streaming AI content for topic:', topic.title);
-      
-      // Track that we're generating for this topic
+      console.log('[Player] Starting generation for:', topic.title);
       generatingForTopicId.current = topic.id;
       
-      // Start streaming generation with voice preference
-      streamingContent.startStreaming({
+      streamingContent.startGeneration({
         topicId: topic.id,
         topicTitle: topic.title,
         topicDescription: topic.description,
@@ -603,42 +317,44 @@ export const DailyDownloadPlayer = ({
         voiceId,
       });
     }
-  }, [isOpen, topic?.id, needsAIContent, isStreaming, streamingContent.firstChunkReady, subjectName, voiceId]);
+  }, [isOpen, topic?.id, streamingContent.transcriptReady, streamingContent.isGenerating, subjectName, voiceId]);
 
-  // Clear generation tracking when streaming completes or errors
+  // Clear generation tracking when complete
   useEffect(() => {
-    if (streamingContent.error) {
-      generatingForTopicId.current = null;
-    } else if (streamingContent.fullTranscript) {
+    if (streamingContent.error || streamingContent.audioReady) {
       generatingForTopicId.current = null;
     }
-  }, [streamingContent.error, streamingContent.fullTranscript]);
+  }, [streamingContent.error, streamingContent.audioReady]);
 
-  // Reset state when topic changes to a DIFFERENT topic
+  // Reset state when topic changes
   useEffect(() => {
-    // Only cancel and reset if switching to a different topic
     if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
-      console.log('[Player] Topic changed, cancelling previous streaming');
-      stop();
+      console.log('[Player] Topic changed, resetting');
       streamingContent.cancel();
       generatingForTopicId.current = null;
       setShowFlashCard(false);
       setHasStarted(false);
       setShowResumePrompt(false);
+      setIsPlaying(false);
+      setCurrentTimeMs(0);
+      savedPositionRef.current = 0;
+      wasPlayingRef.current = false;
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     }
     
-    // Update previous topic ID
     previousTopicId.current = topic?.id ?? null;
     
-    // Check if there's saved progress for this topic
     if (topic) {
       const savedProgress = getProgress(topic.id);
       if (savedProgress !== null && savedProgress > 0) {
         setShowResumePrompt(true);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic?.id]);
+  }, [topic?.id, streamingContent, getProgress]);
 
   // Auto-save progress every 5 seconds while playing
   useEffect(() => {
@@ -654,13 +370,6 @@ export const DailyDownloadPlayer = ({
     
     return () => clearInterval(interval);
   }, [isPlaying, topic, currentCharIndex, saveProgress]);
-
-  // Format time helper
-  const formatTime = useCallback((seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }, []);
 
   // Transcript drag handlers
   const handleTranscriptMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -685,127 +394,49 @@ export const DailyDownloadPlayer = ({
   const handleTranscriptMouseUp = () => {
     const el = transcriptRef.current;
     if (el) el.style.cursor = 'grab';
-    
-    const hadDrag = dragState.current.didDrag;
     dragState.current.isDown = false;
-    
-    if (hadDrag) {
-      window.setTimeout(() => {
-        dragState.current.didDrag = false;
-      }, 0);
-    }
   };
 
-  const handlePlayPause = () => {
-    mediumTap();
-    
-    // Check if we have pre-generated streaming audio
-    const hasStreamingAudio = streamingAudioQueueRef.current.length > 0 && 
-                              streamingAudioQueueRef.current[0];
-    
-    if (!hasStarted) {
-      // First time playing
-      setHasStarted(true);
-      setShowResumePrompt(false);
-      
-      if (hasStreamingAudio) {
-        // Use pre-generated streaming audio - instant playback!
-        console.log('[Player] Starting playback from pre-generated audio queue');
-        setIsStreamingPlayback(true);
-        setIsStreamingPlaying(true);
-        
-        const audio = new Audio(streamingAudioQueueRef.current[0]);
-        audio.playbackRate = streamingPlaybackRate;
-        streamingAudioRef.current = audio;
-        
-        // Sync play/pause state with audio events
-        audio.addEventListener('play', () => {
-          setIsStreamingPlaying(true);
-          startProgressTracking();
-        });
-        audio.addEventListener('pause', () => {
-          setIsStreamingPlaying(false);
-          stopProgressTracking();
-        });
-        audio.addEventListener('ended', () => {
-          setIsStreamingPlaying(false);
-          stopProgressTracking();
-          // Check if next chunk is ready
-          if (streamingAudioQueueRef.current[1]) {
-            playNextStreamingChunk();
-          } else if (streamingContent.chunks.length > 1) {
-            // More chunks expected but not ready yet
-            console.log('[Player] Waiting for next chunk...');
-            setIsWaitingForNextChunk(true);
-          } else {
-            // Only one chunk - playback complete
-            setIsStreamingPlayback(false);
-            handleSpeechEnd();
-          }
-        });
-        
-        startProgressTracking();
-        audio.play().catch(console.error);
-      } else {
-        // Fallback to TTS generation (for non-streaming content)
-        speak(fullTranscriptText, voiceId);
-      }
-    } else if (isStreamingPlayback) {
-      // Handle streaming playback pause/resume
-      if (streamingAudioRef.current) {
-        if (streamingAudioRef.current.paused) {
-          streamingAudioRef.current.play().catch(console.error);
-        } else {
-          streamingAudioRef.current.pause();
-        }
-      }
-    } else if (isPlaying) {
-      pause();
-    } else if (isPaused) {
-      resume();
-    } else {
-      // Restart from beginning with selected voice
-      speak(fullTranscriptText, voiceId);
-    }
-  };
-
-  const handleResume = () => {
+  // Handle resume from saved position
+  const handleResume = useCallback(() => {
     mediumTap();
     setHasStarted(true);
     setShowResumePrompt(false);
     
-    if (topic) {
+    if (topic && audioRef.current) {
       const savedCharIndex = getProgress(topic.id);
-      speak(fullTranscriptText, voiceId);
-      if (savedCharIndex !== null && savedCharIndex > 0) {
-        // Small delay to let speech start before seeking
-        setTimeout(() => {
-          seekToChar(savedCharIndex);
-        }, 100);
+      if (savedCharIndex !== null && savedCharIndex > 0 && fullTranscriptText.length > 0) {
+        const percentage = (savedCharIndex / fullTranscriptText.length) * 100;
+        seekTo(percentage);
       }
+      audioRef.current.play().catch(console.error);
     }
-  };
+  }, [topic, getProgress, fullTranscriptText.length, seekTo, mediumTap]);
 
-  const handleStartFresh = () => {
+  // Handle start fresh
+  const handleStartFresh = useCallback(() => {
     mediumTap();
     setHasStarted(true);
     setShowResumePrompt(false);
     if (topic) {
       clearProgress(topic.id);
     }
-    speak(fullTranscriptText, voiceId);
-  };
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(console.error);
+    }
+  }, [topic, clearProgress, mediumTap]);
 
-  const handleDismissFlashCard = () => {
+  const handleDismissFlashCard = useCallback(() => {
     successNotification();
     setShowFlashCard(false);
     if (topic) {
       clearProgress(topic.id);
     }
     onClose();
-  };
+  }, [topic, clearProgress, onClose, successNotification]);
 
-  const handlePinFlashCard = () => {
+  const handlePinFlashCard = useCallback(() => {
     if (topic) {
       successNotification();
       onPinCard(topic);
@@ -813,9 +444,9 @@ export const DailyDownloadPlayer = ({
       clearProgress(topic.id);
       onClose();
     }
-  };
+  }, [topic, onPinCard, clearProgress, onClose, successNotification]);
 
-  // Generate waveform bars - memoized to prevent re-renders
+  // Generate waveform bars
   const waveformBars = useMemo(() => 
     Array.from({ length: 40 }, (_, i) => ({
       height: Math.random() * 60 + 20,
@@ -829,6 +460,9 @@ export const DailyDownloadPlayer = ({
 
   if (!topic || !isOpen) return null;
 
+  // Show generating overlay until audio is ready
+  const showGeneratingOverlay = streamingContent.isGenerating || streamingContent.isAudioGenerating || isChangingVoice;
+
   return (
     <motion.div
       className="absolute inset-0 z-50 bg-background flex flex-col"
@@ -838,427 +472,202 @@ export const DailyDownloadPlayer = ({
       transition={springTransition}
       {...swipeDragProps}
     >
-          {/* Drag Handle with swipe hint */}
-          <SwipeHintHandle direction="down" />
+      {/* Drag Handle */}
+      <SwipeHintHandle direction="down" />
 
-          {/* Header */}
-          <header className="flex items-center justify-between p-4 pt-8 sm:pt-8">
-            <button
-              onClick={() => { lightTap(); onClose(); }}
-              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 pt-8 sm:pt-8">
+        <button
+          onClick={() => { lightTap(); onClose(); }}
+          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+        >
+          <X className="w-6 h-6 text-foreground" />
+        </button>
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center justify-center gap-1.5">
+            Core Concepts <AIBadge size="sm" />
+          </p>
+          <p className="text-sm text-primary font-medium">{subjectName}</p>
+        </div>
+        <div className="w-10" />
+      </header>
+
+      {/* Generating overlay */}
+      <GeneratingOverlay 
+        isGenerating={streamingContent.isGenerating} 
+        isGeneratingAudio={streamingContent.isAudioGenerating || isChangingVoice}
+        topicTitle={topic.title} 
+        onCancel={() => {
+          streamingContent.cancel();
+          onClose();
+        }}
+      />
+
+      {/* Main content - only show when audio is ready */}
+      {streamingContent.audioReady && !showGeneratingOverlay && (
+        <div className="flex-1 flex flex-col px-6 overflow-hidden">
+          {/* Compact player section */}
+          <div className="flex items-center gap-4 py-4">
+            <motion.div
+              className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center ${
+                showResumePrompt 
+                  ? 'bg-gradient-to-br from-warning/20 to-warning/5' 
+                  : 'bg-gradient-to-br from-primary/20 to-primary/5'
+              }`}
+              animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 2, repeat: Infinity }}
             >
-              <X className="w-6 h-6 text-foreground" />
-            </button>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center justify-center gap-1.5">
-                Core Concepts <AIBadge size="sm" />
+              <Headphones className={`w-8 h-8 ${showResumePrompt ? 'text-warning' : 'text-primary'}`} />
+            </motion.div>
+
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base font-bold text-foreground truncate">
+                {topic.title}
+              </h1>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {topic.description}
               </p>
-              <p className="text-sm text-primary font-medium">{subjectName}</p>
             </div>
-            {/* Empty div to balance header */}
-            <div className="w-10" />
-          </header>
+          </div>
 
-          {/* TTS Loading overlay */}
-          <AnimatePresence>
-            {isTTSLoading && (
-              <motion.div
-                className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-30"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+          {/* Waveform visualization */}
+          <div className="flex items-center justify-center gap-0.5 h-10 mb-3 relative">
+            {hasStarted ? (
+              waveformBars.map((bar, i) => (
                 <motion.div
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
-                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                </motion.div>
-                <p className="text-lg font-semibold text-foreground mb-2">Generating Audio</p>
-                <p className="text-sm text-muted-foreground text-center px-8">
-                  Creating high-quality narration with Google Cloud TTS...
-                </p>
-              </motion.div>
+                  key={i}
+                  className="w-1 rounded-full bg-primary/60"
+                  animate={isPlaying ? {
+                    height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
+                  } : { height: bar.height * 0.3 }}
+                  transition={isPlaying ? {
+                    duration: 1,
+                    repeat: Infinity,
+                    delay: bar.delay,
+                    ease: "easeInOut"
+                  } : { duration: 0.2 }}
+                />
+              ))
+            ) : (
+              waveformBars.map((bar, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-muted-foreground/20 rounded-full"
+                  style={{ height: bar.height * 0.3 }}
+                />
+              ))
             )}
-          </AnimatePresence>
+          </div>
 
-          {/* Generating overlay - now uses streaming props */}
-          <GeneratingOverlay 
-            isGenerating={false} 
-            isStreaming={isStreaming && !streamingContent.firstChunkReady}
-            streamingProgress={streamingProgress}
-            chunksReady={chunksReady}
-            totalChunks={totalChunks}
-            topicTitle={topic.title} 
-            onCancel={() => {
-              streamingContent.cancel();
-              onClose();
-            }}
-          />
-
-          {/* Main content */}
-          <div className="flex-1 flex flex-col px-6 overflow-hidden">
-            {/* Compact player section */}
-            <div className="flex items-center gap-4 py-4">
-              {/* Topic icon - smaller */}
+          {/* Progress bar */}
+          <div className="w-full max-w-sm mx-auto mb-2">
+            <div 
+              className="h-2 bg-muted rounded-full overflow-visible relative cursor-pointer group"
+              onClick={(e) => {
+                if (!hasStarted) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const percentage = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                lightTap();
+                seekTo(percentage);
+              }}
+            >
+              <div className="absolute inset-y-0 -inset-x-0 py-2 -my-2" />
+              
+              <motion.div 
+                className="h-full bg-primary rounded-full pointer-events-none"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.1, ease: "linear" }}
+              />
+              
               <motion.div
-                className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center ${
-                  showResumePrompt 
-                    ? 'bg-gradient-to-br from-warning/20 to-warning/5' 
-                    : 'bg-gradient-to-br from-primary/20 to-primary/5'
-                }`}
-                animate={isPlaying ? { scale: [1, 1.05, 1] } : {}}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Headphones className={`w-8 h-8 ${showResumePrompt ? 'text-warning' : 'text-primary'}`} />
-              </motion.div>
-
-              {/* Title and description */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-base font-bold text-foreground truncate">
-                  {topic.title}
-                </h1>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {topic.description}
-                </p>
-                {useFallback && (
-                  <p className="text-[10px] text-warning mt-1">
-                    Using browser voice (fallback)
-                  </p>
-                )}
-              </div>
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background pointer-events-none group-hover:scale-125 transition-transform"
+                style={{ left: `calc(${Math.min(progress, 98)}% - 8px)` }}
+              />
             </div>
+          </div>
 
-            {/* Waveform visualization - only show when playing/paused */}
-            <div className="flex items-center justify-center gap-0.5 h-10 mb-3 relative">
-              {hasStarted ? (
-                waveformBars.map((bar, i) => (
-                  <motion.div
-                    key={i}
-                    className={`w-1 rounded-full ${isBuffering ? 'bg-primary/30' : 'bg-primary/60'}`}
-                    animate={waveformShouldAnimate && !isBuffering ? {
-                      height: [bar.height * 0.2, bar.height * 0.6, bar.height * 0.3, bar.height * 0.5, bar.height * 0.2],
-                    } : { height: bar.height * 0.3 }}
-                    transition={waveformShouldAnimate && !isBuffering ? {
-                      duration: 1,
-                      repeat: Infinity,
-                      delay: bar.delay,
-                      ease: "easeInOut"
-                    } : { duration: 0.2 }}
-                  />
-                ))
-              ) : (
-                // Static placeholder waveform before audio starts
-                waveformBars.map((bar, i) => (
-                  <div
-                    key={i}
-                    className="w-1 bg-muted-foreground/20 rounded-full"
-                    style={{ height: bar.height * 0.3 }}
-                  />
-                ))
-              )}
+          {/* Time display with controls */}
+          <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-4">
+            <span className="text-sm font-medium text-foreground tabular-nums">
+              {formatTime(currentTimeMs)}
+            </span>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={cyclePlaybackRate}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted hover:scale-105 transition-all text-[10px] font-medium text-foreground"
+              >
+                {playbackRate}x
+              </button>
+              
+              <div className="w-px h-3 bg-border/50" />
+              
+              <VoiceSelector
+                selectedVoiceId={voiceId}
+                onVoiceChange={handleVoiceChange}
+                disabled={isChangingVoice}
+              />
             </div>
             
-            {/* Buffering indicator - shows for TTS buffering OR waiting for next streaming chunk */}
-            <AnimatePresence>
-              {((isBuffering && hasStarted) || isWaitingForNextChunk) && (
-                <motion.div
-                  className="flex items-center justify-center gap-2 mb-2"
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                  <span className="text-xs text-muted-foreground">
-                    {isWaitingForNextChunk ? 'Loading next segment...' : 'Buffering...'}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {formatTime(durationMs)}
+            </span>
+          </div>
 
-            {/* Seekable Progress bar */}
-            <div className="w-full max-w-sm mx-auto mb-2">
-              <div 
-                className="h-2 bg-muted rounded-full overflow-visible relative cursor-pointer group"
-                onClick={(e) => {
-                  if (!hasStarted) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const clickX = e.clientX - rect.left;
-                  const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-                  const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
-                  lightTap();
-                  seekToChar(targetChar);
-                }}
-                onMouseDown={(e) => {
-                  if (!hasStarted) return;
-                  e.preventDefault();
-                  
-                  const progressBar = e.currentTarget;
-                  const rect = progressBar.getBoundingClientRect();
-                  
-                  const handleDrag = (moveEvent: globalThis.MouseEvent) => {
-                    const clickX = moveEvent.clientX - rect.left;
-                    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-                    const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
-                    seekToChar(targetChar);
-                  };
-                  
-                  const handleDragEnd = () => {
-                    document.removeEventListener('mousemove', handleDrag);
-                    document.removeEventListener('mouseup', handleDragEnd);
-                  };
-                  
-                  document.addEventListener('mousemove', handleDrag);
-                  document.addEventListener('mouseup', handleDragEnd);
-                }}
-                onTouchStart={(e) => {
-                  if (!hasStarted) return;
-                  
-                  const progressBar = e.currentTarget;
-                  const rect = progressBar.getBoundingClientRect();
-                  
-                  const handleTouchMove = (moveEvent: TouchEvent) => {
-                    const touch = moveEvent.touches[0];
-                    const clickX = touch.clientX - rect.left;
-                    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-                    const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
-                    seekToChar(targetChar);
-                  };
-                  
-                  const handleTouchEnd = () => {
-                    document.removeEventListener('touchmove', handleTouchMove);
-                    document.removeEventListener('touchend', handleTouchEnd);
-                  };
-                  
-                  document.addEventListener('touchmove', handleTouchMove, { passive: true });
-                  document.addEventListener('touchend', handleTouchEnd);
-                  
-                  // Handle initial touch position
-                  const touch = e.touches[0];
-                  const clickX = touch.clientX - rect.left;
-                  const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-                  const targetChar = Math.floor((percentage / 100) * fullTranscriptText.length);
-                  lightTap();
-                  seekToChar(targetChar);
-                }}
+          {/* Resume prompt or playback controls */}
+          {showResumePrompt ? (
+            <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto mb-4">
+              <p className="text-sm text-muted-foreground text-center">
+                You have saved progress for this topic
+              </p>
+              <div className="flex gap-3 w-full">
+                <motion.button
+                  onClick={handleStartFresh}
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Start Over
+                </motion.button>
+                <motion.button
+                  onClick={handleResume}
+                  className="flex-1 py-3 rounded-xl bg-warning text-warning-foreground font-medium"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Resume
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto mb-4">
+              {/* Skip back 15s */}
+              <motion.button
+                onClick={() => skip(-15)}
+                className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
+                whileTap={{ scale: 0.9 }}
+                aria-label="Skip back 15 seconds"
               >
-                {/* Track background with larger touch target */}
-                <div className="absolute inset-y-0 -inset-x-0 py-2 -my-2" />
-                
-                {/* Progress fill */}
-                <motion.div 
-                  className="h-full bg-primary rounded-full pointer-events-none"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${combinedProgress}%` }}
-                  transition={{ duration: 0.1, ease: "linear" }}
-                />
-                
-                {/* Progress knob - larger on hover/drag */}
-                <motion.div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background pointer-events-none group-hover:scale-125 transition-transform"
-                  style={{ left: `calc(${Math.min(combinedProgress, 98)}% - 8px)` }}
-                />
-              </div>
-            </div>
+                <SkipBack className="w-5 h-5" />
+                <span className="text-[10px] font-semibold -mt-0.5">15</span>
+              </motion.button>
 
-            {/* Time display with speed and voice controls */}
-            <div className="flex justify-between items-center w-full max-w-sm mx-auto mb-4">
-              <span className="text-sm font-medium text-foreground tabular-nums">
-                {formatTime(currentSeconds)}
-              </span>
-              
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleCyclePlaybackRate}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/60 hover:bg-muted hover:scale-105 transition-all text-[10px] font-medium text-foreground"
-                >
-                  {currentPlaybackRate}x
-                </button>
-                
-                <div className="w-px h-3 bg-border/50" />
-                
-                <VoiceSelector
-                  selectedVoiceId={voiceId}
-                  onVoiceChange={handleVoiceChange}
-                  disabled={isTTSLoading}
-                />
-              </div>
-              
-              <span className="text-sm text-muted-foreground tabular-nums">
-                {formatTime(estimatedDuration)}
-              </span>
-            </div>
-
-            {/* Resume prompt or playback controls */}
-            {showResumePrompt ? (
-              <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto mb-4">
-                <p className="text-sm text-muted-foreground text-center">
-                  You have saved progress for this topic
-                </p>
-                <div className="flex gap-3 w-full">
-                  <motion.button
-                    onClick={handleStartFresh}
-                    className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium"
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Start Over
-                  </motion.button>
-                  <motion.button
-                    onClick={handleResume}
-                    className="flex-1 py-3 rounded-xl bg-warning text-warning-foreground font-medium"
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Resume
-                  </motion.button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto mb-4">
-                {/* Skip back 15s */}
-                <motion.button
-                  onClick={() => {
-                    lightTap();
-                    if (!hasStarted) return;
-                    
-                    if (isStreamingPlayback) {
-                      // In streaming mode, go back one chunk
-                      const prevIndex = Math.max(0, currentStreamingChunkRef.current - 1);
-                      if (prevIndex !== currentStreamingChunkRef.current && streamingAudioQueueRef.current[prevIndex]) {
-                        if (streamingAudioRef.current) {
-                          streamingAudioRef.current.pause();
-                        }
-                        currentStreamingChunkRef.current = prevIndex;
-                        setCurrentStreamingChunkIndex(prevIndex);
-                        const audio = new Audio(streamingAudioQueueRef.current[prevIndex]);
-                        audio.playbackRate = streamingPlaybackRate;
-                        streamingAudioRef.current = audio;
-                        audio.addEventListener('play', () => {
-                          setIsStreamingPlaying(true);
-                          startProgressTracking();
-                        });
-                        audio.addEventListener('pause', () => {
-                          setIsStreamingPlaying(false);
-                          stopProgressTracking();
-                        });
-                        audio.addEventListener('ended', () => {
-                          setIsStreamingPlaying(false);
-                          stopProgressTracking();
-                          if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
-                            playNextStreamingChunk();
-                          } else {
-                            setIsWaitingForNextChunk(true);
-                          }
-                        });
-                        startProgressTracking();
-                        setIsStreamingPlaying(true);
-                        audio.play().catch(console.error);
-                      }
-                    } else {
-                      // TTS mode - use existing seek logic
-                      const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-                      const skipChars = Math.floor(charsPerSecond * 15);
-                      const newCharIndex = Math.max(0, currentCharIndex - skipChars);
-                      seekToChar(newCharIndex);
-                    }
-                  }}
-                  className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
-                  whileTap={{ scale: 0.9 }}
-                  aria-label="Skip back 15 seconds"
-                >
-                  <SkipBack className="w-5 h-5" />
-                  <span className="text-[10px] font-semibold -mt-0.5">15</span>
-                </motion.button>
-
-                {/* Play/Pause */}
-                <motion.button
-                  onClick={handlePlayPause}
-                  disabled={isTTSLoading}
-                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg disabled:opacity-50"
-                  whileTap={{ scale: 0.9 }}
-                >
-                  {isTTSLoading ? (
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                  ) : (isPlaying || (isStreamingPlayback && isStreamingPlaying)) ? (
-                    <Pause className="w-8 h-8" />
-                  ) : (
-                    <Play className="w-8 h-8 ml-1" />
-                  )}
-                </motion.button>
+              {/* Play/Pause */}
+              <motion.button
+                onClick={handlePlayPause}
+                disabled={!streamingContent.audioReady}
+                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg disabled:opacity-50"
+                whileTap={{ scale: 0.9 }}
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8" />
+                ) : (
+                  <Play className="w-8 h-8 ml-1" />
+                )}
+              </motion.button>
 
               {/* Skip forward 15s */}
               <motion.button
-                onClick={() => {
-                  lightTap();
-                  if (!hasStarted) return;
-                  
-                  if (isStreamingPlayback) {
-                    // In streaming mode, skip to next chunk
-                    const nextIndex = currentStreamingChunkRef.current + 1;
-                    if (streamingAudioQueueRef.current[nextIndex]) {
-                      if (streamingAudioRef.current) {
-                        streamingAudioRef.current.pause();
-                      }
-                      currentStreamingChunkRef.current = nextIndex;
-                      setCurrentStreamingChunkIndex(nextIndex);
-                      const audio = new Audio(streamingAudioQueueRef.current[nextIndex]);
-                      audio.playbackRate = streamingPlaybackRate;
-                      streamingAudioRef.current = audio;
-                      audio.addEventListener('play', () => {
-                        setIsStreamingPlaying(true);
-                        startProgressTracking();
-                      });
-                      audio.addEventListener('pause', () => {
-                        setIsStreamingPlaying(false);
-                        stopProgressTracking();
-                      });
-                      audio.addEventListener('ended', () => {
-                        setIsStreamingPlaying(false);
-                        stopProgressTracking();
-                        if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
-                          playNextStreamingChunk();
-                        } else {
-                          setIsWaitingForNextChunk(true);
-                        }
-                      });
-                      setIsStreamingPlaying(true);
-                      startProgressTracking();
-                      audio.play().catch(console.error);
-                    } else if (nextIndex >= streamingContent.chunks.length && !streamingContent.isStreaming) {
-                      // Skip past end - show flash card
-                      if (streamingAudioRef.current) {
-                        streamingAudioRef.current.pause();
-                      }
-                      setIsStreamingPlayback(false);
-                      setIsStreamingPlaying(false);
-                      if (topic) {
-                        setShowCelebration(true);
-                        setTimeout(() => {
-                          setShowCelebration(false);
-                          setShowFlashCard(true);
-                        }, 1500);
-                        onTopicListened?.(topic.id);
-                      }
-                    }
-                  } else {
-                    // TTS mode - use existing seek logic
-                    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-                    const skipChars = Math.floor(charsPerSecond * 15);
-                    const newCharIndex = currentCharIndex + skipChars;
-                    
-                    // If skipping past end, show flash card
-                    if (newCharIndex >= fullTranscriptText.length) {
-                      stop();
-                      if (topic) {
-                        setShowFlashCard(true);
-                        onTopicListened?.(topic.id);
-                      }
-                    } else {
-                      seekToChar(newCharIndex);
-                    }
-                  }
-                }}
+                onClick={() => skip(15)}
                 className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
                 whileTap={{ scale: 0.9 }}
                 aria-label="Skip forward 15 seconds"
@@ -1266,149 +675,142 @@ export const DailyDownloadPlayer = ({
                 <SkipForward className="w-5 h-5" />
                 <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
+            </div>
+          )}
 
-              </div>
-            )}
-
-            {/* Transcript section - flex-grow to fill remaining space */}
-            <div className="flex-1 flex flex-col min-h-0 pb-safe">
-              <p className="text-xs text-muted-foreground mb-2 text-center shrink-0">Transcript</p>
-              <div
-                ref={transcriptRef}
-                className="flex-1 overflow-y-auto scrollbar-none bg-muted/30 rounded-xl p-4 cursor-grab overscroll-contain"
-                style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
-                onMouseDown={handleTranscriptMouseDown}
-                onMouseMove={handleTranscriptMouseMove}
-                onMouseUp={handleTranscriptMouseUp}
-                onMouseLeave={handleTranscriptMouseUp}
-                onDragStart={(e) => e.preventDefault()}
-              >
-                <div className="space-y-3">
-                  {transcript.map((segment, index) => {
-                    const isActive = index === activeSegmentIndex;
-                    const isPast = index < activeSegmentIndex;
-                    
-                    // Calculate char index for this segment
-                    let segmentStartChar = 0;
-                    for (let i = 0; i < index; i++) {
-                      segmentStartChar += transcript[i].text.length + 1;
-                    }
-                    
-                    return (
-                      <p
-                        key={segment.id}
-                        ref={isActive ? activeSegmentRef : null}
-                        onClick={() => {
-                          if (hasStarted && !dragState.current.didDrag) {
-                            lightTap();
-                            seekToChar(segmentStartChar);
-                          }
-                        }}
-                        className={`text-sm leading-relaxed transition-all duration-300 cursor-pointer hover:bg-primary/5 rounded px-1 -mx-1 ${
-                          isActive 
-                            ? 'text-foreground' 
-                            : isPast 
-                              ? 'text-muted-foreground/60' 
-                              : 'text-muted-foreground/40'
-                        }`}
-                      >
-                        {isActive && (
-                          <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full mr-2 animate-pulse" />
-                        )}
-                        {isActive ? (
-                          segment.words.map((word, wordIndex) => {
-                            const isWordActive = wordIndex === activeWordIndex;
-                            const isWordPast = wordIndex < activeWordIndex;
-                            
-                            return (
-                              <span
-                                key={wordIndex}
-                                className={`transition-all duration-150 ${
-                                  isWordActive 
-                                    ? 'text-primary font-semibold' 
-                                    : isWordPast 
-                                      ? 'text-foreground font-medium' 
-                                      : 'text-muted-foreground/70'
-                                }`}
-                              >
-                                {word.word}{' '}
-                              </span>
-                            );
-                          })
-                        ) : (
-                          segment.text
-                        )}
-                      </p>
-                    );
-                  })}
-                </div>
-              </div>
+          {/* Transcript */}
+          <div 
+            ref={transcriptRef}
+            className="flex-1 overflow-y-auto pb-8 cursor-grab select-none"
+            onMouseDown={handleTranscriptMouseDown}
+            onMouseMove={handleTranscriptMouseMove}
+            onMouseUp={handleTranscriptMouseUp}
+            onMouseLeave={handleTranscriptMouseUp}
+          >
+            <div className="space-y-4">
+              {paragraphs.map((paragraph, index) => {
+                const isActive = index === activeSegmentIndex;
+                const words = paragraph.split(/\s+/);
+                
+                return (
+                  <p
+                    key={index}
+                    ref={isActive ? activeSegmentRef : null}
+                    className={`text-sm leading-relaxed transition-all duration-300 ${
+                      isActive 
+                        ? 'text-foreground' 
+                        : hasStarted && index < activeSegmentIndex
+                          ? 'text-muted-foreground/60'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {isActive ? (
+                      words.map((word, wordIndex) => (
+                        <span
+                          key={wordIndex}
+                          className={`transition-colors duration-150 ${
+                            wordIndex <= activeWordIndex
+                              ? 'text-primary font-medium'
+                              : 'text-foreground'
+                          }`}
+                        >
+                          {word}{wordIndex < words.length - 1 ? ' ' : ''}
+                        </span>
+                      ))
+                    ) : (
+                      paragraph
+                    )}
+                  </p>
+                );
+              })}
             </div>
           </div>
-
-          {/* Celebration animation */}
-          <AnimatePresence>
-            {showCelebration && (
-              <motion.div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0, rotate: 180 }}
-                  transition={{ type: "spring", damping: 12, stiffness: 200 }}
-                  className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center mb-4 shadow-lg shadow-green-500/30"
-                >
-                  <Sparkles className="w-12 h-12 text-white" />
-                </motion.div>
-                <motion.h2
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-2xl font-bold text-white mb-2"
-                >
-                  Great job!
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-white/80 text-sm"
-                >
-                  Topic completed
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Flash Summary Card overlay */}
-          <AnimatePresence>
-            {showFlashCard && (
-              <motion.div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <motion.div
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 50, opacity: 0 }}
-                  transition={springTransition}
-                >
-                  <FlashSummaryCard
-                    flashSummary={topic.flashSummary}
-                    topicTitle={topic.title}
-                    onDismiss={handleDismissFlashCard}
-                    onPin={handlePinFlashCard}
-                  />
-                </motion.div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
-  </motion.div>
-);
+
+      {/* Celebration overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center z-40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              className="text-6xl mb-4"
+            >
+              🎉
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl font-bold text-foreground"
+            >
+              Great job!
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-muted-foreground"
+            >
+              You completed this topic
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Flash card modal */}
+      <AnimatePresence>
+        {showFlashCard && streamingContent.flashSummary && (
+          <motion.div
+            className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col z-50"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+          >
+            <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="w-full max-w-sm">
+                <FlashSummaryCard
+                  flashSummary={{
+                    id: streamingContent.flashSummary.id,
+                    topicId: topic.id,
+                    visualType: streamingContent.flashSummary.visual_type as 'diagram' | 'formula' | 'analogy',
+                    visualContent: streamingContent.flashSummary.visual_content,
+                    bulletPoints: streamingContent.flashSummary.bullet_points as [string, string, string],
+                    difficulty: streamingContent.flashSummary.difficulty as 'easy' | 'medium' | 'hard',
+                  }}
+                  topicTitle={topic.title}
+                  onDismiss={handleDismissFlashCard}
+                  onPin={handlePinFlashCard}
+                />
+              </div>
+              
+              <div className="flex gap-3 mt-6 w-full max-w-sm">
+                <motion.button
+                  onClick={handleDismissFlashCard}
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Done
+                </motion.button>
+                <motion.button
+                  onClick={handlePinFlashCard}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Pin Card
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
 };
