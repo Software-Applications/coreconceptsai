@@ -48,6 +48,16 @@ function estimateDuration(text: string, speakingRate: number = 1.0): number {
   return Math.round(actualMinutes * 60 * 1000);
 }
 
+// Escape special XML characters for SSML
+function escapeXmlChars(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 // Preprocess text to SSML with pause handling
 function preprocessTextForSSML(text: string): string {
   // Split by paragraphs (double newlines)
@@ -57,13 +67,26 @@ function preprocessTextForSSML(text: string): string {
   let prevEndsWithLongPause = false;
   
   const processedParagraphs = paragraphs.map((paragraph, index) => {
-    let processed = paragraph;
+    // First, extract and preserve pause markers, then escape the rest
+    const pauseMarkerRegex = /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi;
+    const pauseMarkers: { index: number; seconds: string }[] = [];
+    let match;
     
-    // Convert [PAUSE: X Seconds] to SSML breaks
-    processed = processed.replace(
-      /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi,
-      (_, seconds) => `<break time="${seconds}s"/>`
-    );
+    // Find all pause markers and their positions
+    while ((match = pauseMarkerRegex.exec(paragraph)) !== null) {
+      pauseMarkers.push({ index: match.index, seconds: match[1] });
+    }
+    
+    // Remove pause markers, escape XML chars, then reinsert as SSML breaks
+    let processed = paragraph.replace(pauseMarkerRegex, '|||PAUSE_PLACEHOLDER|||');
+    processed = escapeXmlChars(processed);
+    
+    // Replace placeholders with actual SSML breaks
+    let placeholderIndex = 0;
+    processed = processed.replace(/\|\|\|PAUSE_PLACEHOLDER\|\|\|/g, () => {
+      const marker = pauseMarkers[placeholderIndex++];
+      return marker ? `<break time="${marker.seconds}s"/>` : '';
+    });
     
     // Add 2s break at paragraph start (if not first paragraph)
     // Only add if the previous paragraph didn't end with a 5s+ break
