@@ -1,54 +1,69 @@
 
+# Fix Audio Player Transcript Display
 
-# Fix: Move Close Icon to Top Right on Audio Screen
+## Issues Identified
 
-## Problem
+1. **Missing "Transcript" Header** - The transcript section has no label/header before the scrollable text area
+2. **Transcript Formatting** - The paragraphs may not be displaying with proper visual separation
 
-The audio screen (`DailyDownloadPlayer`) has its close button (X) positioned on the **top left**, while the topic selection sheet has it on the **top right**. This creates an inconsistent user experience.
+## Current Code (lines 687-696)
 
-## Current Layout Comparison
-
-| Screen | Close Position | Expected |
-|--------|---------------|----------|
-| TopicSelectionSheet | Top Right | Correct |
-| DailyDownloadPlayer | Top Left | Needs Fix |
-| VideoPlayerSheet | Top Left | Same pattern as audio |
+```jsx
+{/* Transcript */}
+<div 
+  ref={transcriptRef}
+  className="flex-1 overflow-y-auto pb-8 cursor-grab select-none"
+  ...
+>
+  <div className="space-y-4">
+    {paragraphs.map((paragraph, index) => { ... })}
+  </div>
+</div>
+```
 
 ## Solution
 
-Modify the header in `DailyDownloadPlayer.tsx` to move the close button from left to right, matching the topic selection sheet pattern.
+### 1. Add "Transcript" Section Header
 
-### Changes to `DailyDownloadPlayer.tsx`
+Add a styled section header above the transcript area, matching the design language used elsewhere in the app:
 
-**Current header structure (lines 485-499):**
 ```jsx
-<header className="flex items-center justify-between p-4 pt-8">
-  <button onClick={...}>           {/* Close on LEFT */}
-    <X />
-  </button>
-  <div className="text-center">    {/* Title in CENTER */}
-    ...
-  </div>
-  <div className="w-10" />          {/* Empty spacer on RIGHT */}
-</header>
+{/* Transcript Section */}
+<div className="flex items-center gap-2 mb-3 mt-2">
+  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    Transcript
+  </h3>
+  <div className="flex-1 h-px bg-border" />
+</div>
 ```
 
-**New header structure:**
-```jsx
-<header className="flex items-center justify-between p-4 pt-8">
-  <div className="w-10" />          {/* Empty spacer on LEFT */}
-  <div className="text-center">    {/* Title in CENTER */}
-    ...
-  </div>
-  <button onClick={...}>           {/* Close on RIGHT */}
-    <X />
-  </button>
-</header>
-```
+### 2. Improve Paragraph Formatting
+
+Increase the spacing between paragraphs for better visual separation and readability:
+
+- Change `space-y-4` to `space-y-6` for more breathing room between paragraphs
+- The existing paragraph styling with `text-sm leading-relaxed` is good
 
 ## File to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/DailyDownloadPlayer.tsx` | Swap close button and spacer div positions in header |
+| File | Changes |
+|------|---------|
+| `src/components/DailyDownloadPlayer.tsx` | Add "Transcript" header (line ~687), increase paragraph spacing (line 696) |
 
+## Visual Result
+
+Before:
+```
+[Controls]
+Lorem ipsum dolor sit amet...
+Consectetur adipiscing elit...
+```
+
+After:
+```
+[Controls]
+─────── TRANSCRIPT ───────
+Lorem ipsum dolor sit amet...
+
+Consectetur adipiscing elit...
+```
