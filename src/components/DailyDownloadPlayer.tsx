@@ -242,15 +242,15 @@ export const DailyDownloadPlayer = ({
   // so this stays accurate without extra polling.
   const waveformShouldAnimate = isPlaying;
 
-  // Helper to strip stage directions/tags from transcript text
-  const stripTags = useCallback((text: string): string => {
+  // Helper to strip stage directions/tags from transcript text (pure function)
+  const stripTags = (text: string): string => {
     // Remove [PAUSE: X Seconds], [PROMPT], and similar bracketed tags
     return text
       .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
       .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
       .replace(/\s{2,}/g, ' ') // Clean up extra spaces
       .trim();
-  }, []);
+  };
 
   // Generate transcript for current topic - use streaming chunks if available
   const transcript = useMemo(() => {
@@ -287,7 +287,7 @@ export const DailyDownloadPlayer = ({
     
     // Fallback to mock transcript if no streaming content
     return generateMockTranscript(topic);
-  }, [topic, streamingContent.chunks, stripTags]);
+  }, [topic, streamingContent.chunks]);
 
   // Get full transcript text for speech (also stripped of tags)
   const fullTranscriptText = useMemo(() => {
