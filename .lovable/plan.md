@@ -1,76 +1,58 @@
 
-# Fix Orange Hover Color in Subject Chips and Topic Cards
+# Bypass Cache for Fresh Transcript Generation
 
-## Problem
+## Current Situation
 
-The app's `accent` color is defined as orange/amber (`38 92% 50%`), which is the same as the `warning` color. This creates jarring orange hover states on:
+The database query confirms **no topics currently have cached transcripts** - all transcript fields are empty. This means:
+- The next time any topic is opened, it will generate fresh content using your updated prompt
+- The transcript will then be saved and cached for future requests
 
-- **Subject chips** (`SubjectChipWithProgress.tsx`) - uses `hover:bg-accent`
-- **Chapter drawer items** (`ChapterDrawer.tsx`) - uses `hover:bg-accent`
+## Why You Might Still Want a Force Regenerate Option
 
-This orange color clashes with the navy-blue primary color scheme of the app.
+Even though the cache is currently empty, transcripts get saved after first generation (lines 484-499). If you update the prompt again in the future, you'll need a way to regenerate without manually clearing the database each time.
 
----
+## Implementation Plan
 
-## Solution
+### 1. Add `forceRegenerate` Parameter to Edge Function
 
-Update the affected components to use navy-aligned hover colors instead of `hover:bg-accent`. This keeps the orange `accent` color available for intentional accent use cases while fixing the hover state mismatch.
+Update the edge function to accept an optional `forceRegenerate` parameter that bypasses the cache check:
 
----
+**File:** `supabase/functions/generate-content-stream/index.ts`
 
-## Implementation
-
-### 1. Update Subject Chip Hover (SubjectChipWithProgress.tsx)
-
-Change from:
 ```typescript
-'border border-border bg-card hover:bg-accent'
+// Line 174 - Add forceRegenerate to destructured params
+const { topicId, topicTitle, topicDescription, subjectName, forceRegenerate } = await req.json();
+
+// Lines 206-207 - Update cache check condition
+if (!forceRegenerate && existingTopic?.transcript && existingTopic.transcript.length > 500) {
+  // Use cached transcript...
+}
 ```
 
-To:
-```typescript
-'border border-border bg-card hover:bg-primary/5 hover:border-primary/30'
-```
+### 2. Update Frontend Streaming Hook
 
-This creates a subtle blue-tinted hover that matches the primary color scheme.
+Add an optional parameter to the streaming content hook so the UI can trigger regeneration:
 
----
+**File:** `src/hooks/useStreamingContent.ts`
 
-### 2. Update Chapter Drawer Hover (ChapterDrawer.tsx)
+Pass `forceRegenerate: true` when calling the edge function to skip cache.
 
-Change from:
-```typescript
-'bg-card border border-border hover:bg-accent hover:border-primary/20'
-```
+### 3. Optional: Clear Existing Transcripts via SQL
 
-To:
-```typescript
-'bg-card border border-border hover:bg-primary/5 hover:border-primary/30'
+If you want to ensure a completely fresh start, run this SQL to clear any existing transcripts:
+
+```sql
+UPDATE topics SET transcript = NULL WHERE transcript IS NOT NULL;
+NOTIFY pgrst, 'reload schema';
 ```
 
 ---
 
-## Visual Comparison
-
-| Element | Before (Orange) | After (Navy-aligned) |
-|---------|-----------------|----------------------|
-| Subject Chip Hover | Orange background flash | Subtle blue tint with blue border |
-| Chapter Item Hover | Orange background flash | Subtle blue tint with blue border |
-
----
-
-## Why This Approach
-
-- **Consistent with existing patterns**: `TopicCard`, `AddSubjectSheet`, and `DailyDownloadCard` already use `primary`-based hover effects
-- **Preserves accent color**: The orange `accent` remains available for intentional use (e.g., CTAs that need to stand out)
-- **Minimal changes**: Only 2 files need updating
-- **Better UX**: The hover state now provides visual feedback aligned with the selection state (both use primary/navy blue)
-
----
-
-## Files to Modify
+## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `src/components/SubjectChipWithProgress.tsx` | Update hover class on line 67 |
-| `src/components/ChapterDrawer.tsx` | Update hover class on line 88 |
+| `supabase/functions/generate-content-stream/index.ts` | Accept `forceRegenerate` param, bypass cache when true |
+| `src/hooks/useStreamingContent.ts` | Add option to pass `forceRegenerate` to edge function |
+
+This gives you the flexibility to regenerate content on demand whenever you update the prompt, without needing database access.
