@@ -239,11 +239,41 @@ export const DailyDownloadPlayer = ({
   // so this stays accurate without extra polling.
   const waveformShouldAnimate = isPlaying;
 
-  // Generate transcript for current topic
+  // Generate transcript for current topic - use streaming chunks if available
   const transcript = useMemo(() => {
     if (!topic) return [];
+    
+    // If we have streaming chunks with text, use those instead of mock
+    const streamingChunks = streamingContent.chunks.filter(c => c.text);
+    if (streamingChunks.length > 0) {
+      // Convert streaming chunks to transcript segment format
+      const segmentDuration = 30; // Each chunk is ~30 seconds
+      return streamingChunks.map((chunk, index) => {
+        const startTime = index * segmentDuration;
+        const endTime = startTime + segmentDuration;
+        const text = chunk.text;
+        
+        // Generate word timings
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        const wordDuration = segmentDuration / words.length;
+        
+        return {
+          id: `${topic.id}-streaming-${index}`,
+          startTime,
+          endTime,
+          text,
+          words: words.map((word, wordIndex) => ({
+            word,
+            startTime: startTime + (wordIndex * wordDuration),
+            endTime: startTime + ((wordIndex + 1) * wordDuration),
+          })),
+        };
+      });
+    }
+    
+    // Fallback to mock transcript if no streaming content
     return generateMockTranscript(topic);
-  }, [topic]);
+  }, [topic, streamingContent.chunks]);
 
   // Get full transcript text for speech
   const fullTranscriptText = useMemo(() => {
