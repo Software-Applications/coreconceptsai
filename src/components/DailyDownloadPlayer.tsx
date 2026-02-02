@@ -99,6 +99,7 @@ export const DailyDownloadPlayer = ({
   const streamingAudioQueueRef = useRef<string[]>([]);
   const currentStreamingChunkRef = useRef<number>(0);
   const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
+  const [isStreamingPlaying, setIsStreamingPlaying] = useState(false); // Track streaming audio play/pause state
   const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
   const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
   const [currentStreamingChunkIndex, setCurrentStreamingChunkIndex] = useState(0); // For UI updates
@@ -133,7 +134,11 @@ export const DailyDownloadPlayer = ({
       audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
       streamingAudioRef.current = audio;
       
+      // Sync play/pause state with audio events
+      audio.addEventListener('play', () => setIsStreamingPlaying(true));
+      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
       audio.addEventListener('ended', () => {
+        setIsStreamingPlaying(false);
         const nextNextIndex = currentStreamingChunkRef.current + 1;
         if (nextNextIndex < queue.length && queue[nextNextIndex]) {
           playNextStreamingChunk();
@@ -149,6 +154,7 @@ export const DailyDownloadPlayer = ({
         }
       });
       
+      setIsStreamingPlaying(true);
       audio.play().catch(console.error);
     } else if (nextIndex < queue.length) {
       // Chunk exists but audio not ready - show buffering
@@ -159,41 +165,20 @@ export const DailyDownloadPlayer = ({
   // Streaming content hook for parallel transcript + audio generation
   const streamingContent = useStreamingContent({
     onFirstChunkAudioReady: (blobUrl) => {
-      console.log('[Player] First chunk audio ready, auto-playing...');
+      // Store first chunk audio - DO NOT auto-play, wait for user interaction
+      console.log('[Player] First chunk audio ready (paused, waiting for play)');
       streamingAudioQueueRef.current[0] = blobUrl;
       currentStreamingChunkRef.current = 0;
-      setCurrentStreamingChunkIndex(0); // Update state for UI
+      setCurrentStreamingChunkIndex(0);
       setIsWaitingForNextChunk(false);
-      
-      // Create and play first audio chunk
-      const audio = new Audio(blobUrl);
-      audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
-      streamingAudioRef.current = audio;
-      
-      audio.addEventListener('ended', () => {
-        // Check if next chunk is ready
-        if (streamingAudioQueueRef.current[1]) {
-          playNextStreamingChunk();
-        } else {
-          // Wait for next chunk - show buffering
-          console.log('[Player] Waiting for next chunk...');
-          setIsWaitingForNextChunk(true);
-        }
-      });
-      
-      // Auto-start playback
-      setHasStarted(true);
-      setShowResumePrompt(false);
-      setIsStreamingPlayback(true);
-      
-      audio.play().catch(console.error);
+      // Audio is ready but NOT playing - wait for user to click play
     },
     onChunkAudioReady: (chunkIndex, blobUrl) => {
       console.log(`[Player] Chunk ${chunkIndex} audio ready`);
       streamingAudioQueueRef.current[chunkIndex] = blobUrl;
       
-      // If we were waiting for this chunk, play it now
-      if (isWaitingForNextChunk && currentStreamingChunkRef.current + 1 === chunkIndex) {
+      // If we were waiting for this chunk and already playing, play it now
+      if (isWaitingForNextChunk && isStreamingPlaying && currentStreamingChunkRef.current + 1 === chunkIndex) {
         console.log('[Player] Resuming playback with newly ready chunk');
         playNextStreamingChunk();
       }
@@ -204,6 +189,7 @@ export const DailyDownloadPlayer = ({
         duration: 3000,
       });
       setIsStreamingPlayback(false);
+      setIsStreamingPlaying(false);
     },
     onComplete: () => {
       console.log('[Player] Streaming generation complete');
@@ -237,10 +223,8 @@ export const DailyDownloadPlayer = ({
     onEnd: handleSpeechEnd
   });
 
-  // Waveform animation should follow the hook's playing state.
-  // The hook now syncs isPlaying via audio 'playing'/'pause' events,
-  // so this stays accurate without extra polling.
-  const waveformShouldAnimate = isPlaying;
+  // Waveform animation should follow playing state for both streaming and TTS modes
+  const waveformShouldAnimate = isPlaying || (isStreamingPlayback && isStreamingPlaying);
 
   // Helper to strip stage directions/tags from transcript text (pure function)
   const stripTags = (text: string): string => {
@@ -623,11 +607,59 @@ export const DailyDownloadPlayer = ({
 
   const handlePlayPause = () => {
     mediumTap();
+    
+    // Check if we have pre-generated streaming audio
+    const hasStreamingAudio = streamingAudioQueueRef.current.length > 0 && 
+                              streamingAudioQueueRef.current[0];
+    
     if (!hasStarted) {
-      // First time playing - start speech with selected voice
+      // First time playing
       setHasStarted(true);
       setShowResumePrompt(false);
-      speak(fullTranscriptText, voiceId);
+      
+      if (hasStreamingAudio) {
+        // Use pre-generated streaming audio - instant playback!
+        console.log('[Player] Starting playback from pre-generated audio queue');
+        setIsStreamingPlayback(true);
+        setIsStreamingPlaying(true);
+        
+        const audio = new Audio(streamingAudioQueueRef.current[0]);
+        audio.playbackRate = streamingPlaybackRate;
+        streamingAudioRef.current = audio;
+        
+        // Sync play/pause state with audio events
+        audio.addEventListener('play', () => setIsStreamingPlaying(true));
+        audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+        audio.addEventListener('ended', () => {
+          setIsStreamingPlaying(false);
+          // Check if next chunk is ready
+          if (streamingAudioQueueRef.current[1]) {
+            playNextStreamingChunk();
+          } else if (streamingContent.chunks.length > 1) {
+            // More chunks expected but not ready yet
+            console.log('[Player] Waiting for next chunk...');
+            setIsWaitingForNextChunk(true);
+          } else {
+            // Only one chunk - playback complete
+            setIsStreamingPlayback(false);
+            handleSpeechEnd();
+          }
+        });
+        
+        audio.play().catch(console.error);
+      } else {
+        // Fallback to TTS generation (for non-streaming content)
+        speak(fullTranscriptText, voiceId);
+      }
+    } else if (isStreamingPlayback) {
+      // Handle streaming playback pause/resume
+      if (streamingAudioRef.current) {
+        if (streamingAudioRef.current.paused) {
+          streamingAudioRef.current.play().catch(console.error);
+        } else {
+          streamingAudioRef.current.pause();
+        }
+      }
     } else if (isPlaying) {
       pause();
     } else if (isPaused) {
