@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -56,15 +56,8 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
   );
 };
 
-export const TopicSelectionSheet = ({
-  isOpen,
-  onClose,
-  topics,
-  onSelectTopic,
-  isListened,
-  hasProgress,
-  currentSubjectId
-}: TopicSelectionSheetProps) => {
+export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionSheetProps>(
+  function TopicSelectionSheet({ isOpen, onClose, topics, onSelectTopic, isListened, hasProgress, currentSubjectId }, ref) {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
   const topicRequest = useTopicRequest();
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,6 +220,7 @@ export const TopicSelectionSheet = ({
     <>
       {/* Backdrop */}
       <motion.div
+        ref={ref}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -555,4 +549,4 @@ export const TopicSelectionSheet = ({
       </motion.div>
     </>
   );
-};
+});

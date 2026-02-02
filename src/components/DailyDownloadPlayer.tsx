@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles, Loader2
@@ -26,14 +26,8 @@ interface DailyDownloadPlayerProps {
   onTopicListened?: (topicId: string) => void;
 }
 
-export const DailyDownloadPlayer = ({
-  topic,
-  subjectName,
-  isOpen,
-  onClose,
-  onPinCard,
-  onTopicListened
-}: DailyDownloadPlayerProps) => {
+export const DailyDownloadPlayer = forwardRef<HTMLDivElement, DailyDownloadPlayerProps>(
+  function DailyDownloadPlayer({ topic, subjectName, isOpen, onClose, onPinCard, onTopicListened }, ref) {
   const { lightTap, mediumTap, successNotification } = useHaptics();
   const [showFlashCard, setShowFlashCard] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -471,6 +465,7 @@ export const DailyDownloadPlayer = ({
 
   return (
     <motion.div
+      ref={ref}
       className="absolute inset-0 z-50 bg-background flex flex-col"
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: backdropOpacity, y: 0 }}
@@ -819,4 +814,4 @@ export const DailyDownloadPlayer = ({
       </AnimatePresence>
     </motion.div>
   );
-};
+});
