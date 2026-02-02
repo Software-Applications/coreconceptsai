@@ -483,19 +483,19 @@ export const DailyDownloadPlayer = ({
 
       {/* Header */}
       <header className="flex items-center justify-between p-4 pt-8 sm:pt-8">
-        <button
-          onClick={() => { lightTap(); onClose(); }}
-          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
-        >
-          <X className="w-6 h-6 text-foreground" />
-        </button>
+        <div className="w-10" />
         <div className="text-center">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center justify-center gap-1.5">
             Core Concepts <AIBadge size="sm" />
           </p>
           <p className="text-sm text-primary font-medium">{subjectName}</p>
         </div>
-        <div className="w-10" />
+        <button
+          onClick={() => { lightTap(); onClose(); }}
+          className="p-2 -mr-2 rounded-full hover:bg-muted transition-colors"
+        >
+          <X className="w-6 h-6 text-foreground" />
+        </button>
       </header>
 
       {/* Generating overlay */}
