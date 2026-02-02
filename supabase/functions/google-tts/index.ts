@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 interface TTSRequest {
   text: string;
   voiceId?: string;
@@ -114,38 +118,59 @@ async function synthesizeChunk(
   const ssmlText = preprocessTextForSSML(text);
   
   console.log(`[TTS] Processing chunk with SSML, length: ${ssmlText.length}`);
-  
-  const response = await fetch(
-    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: { ssml: ssmlText },
-        voice: {
-          languageCode: 'en-US',
-          name: voiceId,
-        },
-        audioConfig: {
-          audioEncoding: 'MP3',
-          speakingRate: speakingRate,
-          pitch: 0,
-          volumeGainDb: 0,
-        },
-      }),
-    }
-  );
 
-  if (!response.ok) {
+  const maxAttempts = 5;
+  const baseDelayMs = 250;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: { ssml: ssmlText },
+          voice: {
+            languageCode: 'en-US',
+            name: voiceId,
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: speakingRate,
+            pitch: 0,
+            volumeGainDb: 0,
+          },
+        }),
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.audioContent;
+    }
+
     const error = await response.text();
+    const retryable = response.status === 429 || response.status === 503;
+
     console.error('Google TTS API error:', error);
+
+    if (retryable && attempt < maxAttempts) {
+      const retryAfter = response.headers.get('retry-after');
+      const retryAfterMs = retryAfter ? Number(retryAfter) * 1000 : NaN;
+      const expoMs = baseDelayMs * Math.pow(2, attempt - 1);
+      const jitterMs = Math.floor(Math.random() * 150);
+      const delayMs = Number.isFinite(retryAfterMs) ? retryAfterMs : expoMs + jitterMs;
+      console.warn(`[TTS] Retryable error ${response.status}; retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`);
+      await sleep(delayMs);
+      continue;
+    }
+
     throw new Error(`Google TTS API error: ${response.status} - ${error}`);
   }
 
-  const data = await response.json();
-  return data.audioContent;
+  throw new Error('Google TTS API error: exhausted retries');
 }
 
 // Concatenate base64 MP3 chunks
@@ -199,6 +224,8 @@ async function handleStreamingTTS(
           console.log(`[Streaming TTS] Processing chunk ${i + 1}/${chunks.length}`);
           
           const audioContent = await synthesizeChunk(chunks[i], voiceId, speakingRate, apiKey);
+          // Small delay to reduce burstiness
+          await sleep(150);
           
           const chunkData = {
             type: 'audio',
@@ -289,6 +316,8 @@ serve(async (req) => {
         console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         const chunkAudio = await synthesizeChunk(chunks[i], voiceId, rate, apiKey);
         audioChunks.push(chunkAudio);
+        // Small delay to reduce burstiness
+        await sleep(150);
       }
 
       audioContent = concatenateAudioChunks(audioChunks);
@@ -308,9 +337,15 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('TTS error:', error);
+
+    // If we got rate-limited, propagate a 429 to clients (more accurate than 500)
+    const msg = error instanceof Error ? error.message : '';
+    const isRateLimit = typeof msg === 'string' && msg.startsWith('Google TTS API error: 429');
+    const status = isRateLimit ? 429 : 500;
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
