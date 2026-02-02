@@ -50,16 +50,16 @@ export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVi
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 pt-8 border-b border-border">
-        <button onClick={() => { lightTap(); onClose(); }} className="p-2 -ml-2 active:scale-95">
-          <X className="w-6 h-6 text-foreground" />
-        </button>
+        <div className="w-10" />
         <div className="flex-1 mx-4 text-center">
           <h2 className="font-semibold text-foreground text-sm truncate">
             {chapter?.title || "Video"}
           </h2>
           <p className="text-xs text-muted-foreground">Now Playing</p>
         </div>
-        <div className="w-10" />
+        <button onClick={() => { lightTap(); onClose(); }} className="p-2 -mr-2 active:scale-95">
+          <X className="w-6 h-6 text-foreground" />
+        </button>
       </div>
 
       {/* Scrollable Content */}
