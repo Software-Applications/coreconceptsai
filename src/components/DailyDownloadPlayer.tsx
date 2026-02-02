@@ -1022,11 +1022,39 @@ export const DailyDownloadPlayer = ({
                   onClick={() => {
                     lightTap();
                     if (!hasStarted) return;
-                    // Estimate chars for 15 seconds: ~150 words/min = 2.5 words/sec, ~5 chars/word = ~12.5 chars/sec
-                    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-                    const skipChars = Math.floor(charsPerSecond * 15);
-                    const newCharIndex = Math.max(0, currentCharIndex - skipChars);
-                    seekToChar(newCharIndex);
+                    
+                    if (isStreamingPlayback) {
+                      // In streaming mode, go back one chunk
+                      const prevIndex = Math.max(0, currentStreamingChunkRef.current - 1);
+                      if (prevIndex !== currentStreamingChunkRef.current && streamingAudioQueueRef.current[prevIndex]) {
+                        if (streamingAudioRef.current) {
+                          streamingAudioRef.current.pause();
+                        }
+                        currentStreamingChunkRef.current = prevIndex;
+                        setCurrentStreamingChunkIndex(prevIndex);
+                        const audio = new Audio(streamingAudioQueueRef.current[prevIndex]);
+                        audio.playbackRate = streamingPlaybackRate;
+                        streamingAudioRef.current = audio;
+                        audio.addEventListener('play', () => setIsStreamingPlaying(true));
+                        audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+                        audio.addEventListener('ended', () => {
+                          setIsStreamingPlaying(false);
+                          if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
+                            playNextStreamingChunk();
+                          } else {
+                            setIsWaitingForNextChunk(true);
+                          }
+                        });
+                        setIsStreamingPlaying(true);
+                        audio.play().catch(console.error);
+                      }
+                    } else {
+                      // TTS mode - use existing seek logic
+                      const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+                      const skipChars = Math.floor(charsPerSecond * 15);
+                      const newCharIndex = Math.max(0, currentCharIndex - skipChars);
+                      seekToChar(newCharIndex);
+                    }
                   }}
                   className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
                   whileTap={{ scale: 0.9 }}
@@ -1045,7 +1073,7 @@ export const DailyDownloadPlayer = ({
                 >
                   {isTTSLoading ? (
                     <Loader2 className="w-8 h-8 animate-spin" />
-                  ) : isPlaying ? (
+                  ) : (isPlaying || (isStreamingPlayback && isStreamingPlaying)) ? (
                     <Pause className="w-8 h-8" />
                   ) : (
                     <Play className="w-8 h-8 ml-1" />
@@ -1057,19 +1085,63 @@ export const DailyDownloadPlayer = ({
                 onClick={() => {
                   lightTap();
                   if (!hasStarted) return;
-                  const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-                  const skipChars = Math.floor(charsPerSecond * 15);
-                  const newCharIndex = currentCharIndex + skipChars;
                   
-                  // If skipping past end, show flash card
-                  if (newCharIndex >= fullTranscriptText.length) {
-                    stop();
-                    if (topic) {
-                      setShowFlashCard(true);
-                      onTopicListened?.(topic.id);
+                  if (isStreamingPlayback) {
+                    // In streaming mode, skip to next chunk
+                    const nextIndex = currentStreamingChunkRef.current + 1;
+                    if (streamingAudioQueueRef.current[nextIndex]) {
+                      if (streamingAudioRef.current) {
+                        streamingAudioRef.current.pause();
+                      }
+                      currentStreamingChunkRef.current = nextIndex;
+                      setCurrentStreamingChunkIndex(nextIndex);
+                      const audio = new Audio(streamingAudioQueueRef.current[nextIndex]);
+                      audio.playbackRate = streamingPlaybackRate;
+                      streamingAudioRef.current = audio;
+                      audio.addEventListener('play', () => setIsStreamingPlaying(true));
+                      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+                      audio.addEventListener('ended', () => {
+                        setIsStreamingPlaying(false);
+                        if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
+                          playNextStreamingChunk();
+                        } else {
+                          setIsWaitingForNextChunk(true);
+                        }
+                      });
+                      setIsStreamingPlaying(true);
+                      audio.play().catch(console.error);
+                    } else if (nextIndex >= streamingContent.chunks.length && !streamingContent.isStreaming) {
+                      // Skip past end - show flash card
+                      if (streamingAudioRef.current) {
+                        streamingAudioRef.current.pause();
+                      }
+                      setIsStreamingPlayback(false);
+                      setIsStreamingPlaying(false);
+                      if (topic) {
+                        setShowCelebration(true);
+                        setTimeout(() => {
+                          setShowCelebration(false);
+                          setShowFlashCard(true);
+                        }, 1500);
+                        onTopicListened?.(topic.id);
+                      }
                     }
                   } else {
-                    seekToChar(newCharIndex);
+                    // TTS mode - use existing seek logic
+                    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+                    const skipChars = Math.floor(charsPerSecond * 15);
+                    const newCharIndex = currentCharIndex + skipChars;
+                    
+                    // If skipping past end, show flash card
+                    if (newCharIndex >= fullTranscriptText.length) {
+                      stop();
+                      if (topic) {
+                        setShowFlashCard(true);
+                        onTopicListened?.(topic.id);
+                      }
+                    } else {
+                      seekToChar(newCharIndex);
+                    }
                   }
                 }}
                 className="w-12 h-12 rounded-full bg-muted text-foreground flex flex-col items-center justify-center relative"
@@ -1080,31 +1152,6 @@ export const DailyDownloadPlayer = ({
                 <span className="text-[10px] font-semibold -mt-0.5">15</span>
               </motion.button>
 
-              {/* Skip to Summary */}
-              {hasStarted && (
-                <motion.button
-                  onClick={() => {
-                    lightTap();
-                    stop();
-                    if (topic) {
-                      setShowCelebration(true);
-                      setTimeout(() => {
-                        setShowCelebration(false);
-                        setShowFlashCard(true);
-                      }, 1500);
-                      onTopicListened?.(topic.id);
-                      clearProgress(topic.id);
-                    }
-                  }}
-                  className="ml-4 px-3 py-2 rounded-lg bg-muted/60 text-foreground text-xs font-medium flex items-center gap-1.5 hover:bg-muted transition-colors"
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <FastForward className="w-3.5 h-3.5" />
-                  Summary
-                </motion.button>
-              )}
               </div>
             )}
 
