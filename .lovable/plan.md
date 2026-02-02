@@ -1,95 +1,130 @@
 
 
-# Fix: Infinite Audio Generation Loop
+# Fix: Audio Screen Not Opening
 
 ## Problem Identified
 
-The console logs show a repeating pattern:
-```
-[StreamContent] Audio ready: 580800ms
-[StreamContent] Generation complete
-[StreamContent] Cancelling...
-[Player] Starting generation for: Signal Transduction
-```
+The console shows `[StreamContent] Cancelling...` being called repeatedly. This prevents the audio screen from properly initializing because:
 
-**Root Cause**: There are two conflicting useEffects in `DailyDownloadPlayer.tsx`:
+1. **The `cancel` function in `useStreamingContent.ts` has `audioBlobUrl` as a dependency**
+2. **The cleanup `useEffect` that calls `cancel()` has `cancel` as a dependency**
+3. **When `cancel` changes (due to `audioBlobUrl` changing), the old cleanup effect runs, which calls `cancel()`**
+4. **This resets all states (`transcriptReady`, `audioReady`, etc.) to `false`**
+5. **The player component never sees the content as "ready" and may cancel/restart generation**
 
-1. **Auto-generation effect (lines 305-320)**: Starts generation when `isOpen && topic && !transcriptReady && !isGenerating`
-2. **Tracking clear effect (lines 323-327)**: Clears `generatingForTopicId.current = null` when `audioReady` becomes true
-
-The problem flow:
-1. Generation starts, `generatingForTopicId.current = topic.id`
-2. Transcript ready → Audio generation starts
-3. Audio ready → Second effect clears `generatingForTopicId.current = null`
-4. First effect re-runs (due to dependencies like `voiceId` or other state changes)
-5. Since `generatingForTopicId.current` is null and `transcriptReady` may have been reset, generation restarts
-6. Loop continues forever
+Additionally, in `DailyDownloadPlayer.tsx`:
+- Line 360 has `streamingContent` as a dependency, but `streamingContent` is a new object on every render
+- This causes the topic change effect to re-run unexpectedly
 
 ## Technical Solution
 
-**File**: `src/components/DailyDownloadPlayer.tsx`
+### Fix 1: Stable `cancel` function in `useStreamingContent.ts`
 
-### Fix 1: Don't clear tracking until player closes
-
-Change the tracking clear logic to only reset when the topic changes or player closes, not when audio becomes ready:
+The `cancel` function should NOT have `audioBlobUrl` as a dependency. Instead, use a ref to track the blob URL for cleanup:
 
 ```typescript
-// Remove this problematic effect entirely:
-// useEffect(() => {
-//   if (streamingContent.error || streamingContent.audioReady) {
-//     generatingForTopicId.current = null;
-//   }
-// }, [streamingContent.error, streamingContent.audioReady]);
-```
-
-### Fix 2: Update the auto-generation condition
-
-Add `audioReady` to the skip conditions to prevent re-triggering when content is already generated:
-
-```typescript
-useEffect(() => {
-  // Skip if audio is already ready (generation complete)
-  if (streamingContent.audioReady || streamingContent.transcriptReady) return;
-  
-  if (isOpen && topic && !streamingContent.isGenerating && !streamingContent.isAudioGenerating) {
-    if (generatingForTopicId.current === topic.id) return;
-    
-    console.log('[Player] Starting generation for:', topic.title);
-    generatingForTopicId.current = topic.id;
-    
-    streamingContent.startGeneration({...});
+// Change from:
+const cancel = useCallback(() => {
+  // ...
+  if (audioBlobUrl) {
+    URL.revokeObjectURL(audioBlobUrl);
   }
-}, [isOpen, topic?.id, streamingContent.audioReady, streamingContent.transcriptReady, 
-    streamingContent.isGenerating, streamingContent.isAudioGenerating, subjectName, voiceId]);
+  // ...
+}, [audioBlobUrl]);  // <-- This causes cancel to be recreated
+
+// Change to:
+const audioBlobUrlRef = useRef<string | null>(null);
+
+// Update ref when audioBlobUrl changes
+useEffect(() => {
+  audioBlobUrlRef.current = audioBlobUrl;
+}, [audioBlobUrl]);
+
+const cancel = useCallback(() => {
+  // ...
+  if (audioBlobUrlRef.current) {
+    URL.revokeObjectURL(audioBlobUrlRef.current);
+    audioBlobUrlRef.current = null;
+  }
+  // ...
+}, []);  // <-- Empty deps, stable function
 ```
 
-### Fix 3: Only reset tracking when topic changes
+### Fix 2: Stable cleanup effect
 
-Move the tracking reset to the topic change effect only:
+Change the cleanup effect to not depend on `cancel`:
 
 ```typescript
+// Change from:
+useEffect(() => {
+  return () => {
+    cancel();
+  };
+}, [cancel]);  // <-- Runs cleanup every time cancel changes
+
+// Change to:
+useEffect(() => {
+  return () => {
+    // Direct cleanup without calling cancel
+    abortControllerRef.current?.abort();
+    ttsAbortControllerRef.current?.abort();
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current);
+    }
+  };
+}, []);  // <-- Only runs on unmount
+```
+
+### Fix 3: Fix dependency in `DailyDownloadPlayer.tsx`
+
+The topic change effect should not include `streamingContent` directly:
+
+```typescript
+// Change from:
+}, [topic?.id, streamingContent, getProgress]);
+
+// Change to (use streamingContent.cancel specifically):
+const cancelGeneration = streamingContent.cancel;
+// ...
 useEffect(() => {
   if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
     console.log('[Player] Topic changed, resetting');
-    streamingContent.cancel();
-    generatingForTopicId.current = null;  // Only reset here
-    // ... rest of reset logic
+    cancelGeneration();
+    // ...
   }
-  previousTopicId.current = topic?.id ?? null;
-}, [topic?.id, streamingContent, getProgress]);
+  // ...
+}, [topic?.id, cancelGeneration, getProgress]);
+```
+
+Similarly for the auto-generation effect - use destructured properties:
+
+```typescript
+const { 
+  audioReady, 
+  transcriptReady, 
+  isGenerating, 
+  isAudioGenerating, 
+  startGeneration 
+} = streamingContent;
+
+useEffect(() => {
+  if (audioReady || transcriptReady) return;
+  if (isGenerating || isAudioGenerating) return;
+  // ...
+}, [isOpen, topic?.id, audioReady, transcriptReady, isGenerating, isAudioGenerating, subjectName, voiceId, startGeneration]);
 ```
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/DailyDownloadPlayer.tsx` | Remove the problematic `audioReady` tracking clear effect, update auto-generation conditions to include `audioReady` check, ensure tracking only resets on topic change |
+| File | Changes |
+|------|---------|
+| `src/hooks/useStreamingContent.ts` | Use ref for audioBlobUrl in cancel, remove audioBlobUrl from cancel dependencies, fix cleanup effect to only run on unmount |
+| `src/components/DailyDownloadPlayer.tsx` | Destructure streamingContent properties to avoid object reference issues in useEffect dependencies |
 
 ## Expected Behavior After Fix
 
-1. User opens topic → Generation starts once
-2. Transcript completes → Audio generation starts
-3. Audio completes → Player shows with audio ready
-4. No restart loop occurs
-5. Only changing topics or closing/reopening triggers new generation
+1. User opens a topic → Generation starts once
+2. `cancel()` is only called on actual topic change or unmount, not on state changes
+3. Audio screen shows generating overlay while transcript and audio generate
+4. When ready, the player UI appears with play button
 
