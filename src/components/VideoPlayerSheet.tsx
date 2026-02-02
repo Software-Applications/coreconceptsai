@@ -1,5 +1,5 @@
 import { X, Play, Pause, Expand, BookOpen } from "lucide-react";
-import { useState, forwardRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useDragScroll, useDragScrollHorizontal } from "@/hooks/useDragScroll";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
@@ -19,8 +19,7 @@ interface VideoPlayerSheetProps {
   onVideoWatched?: (videoId: number) => void;
 }
 
-export const VideoPlayerSheet = forwardRef<HTMLDivElement, VideoPlayerSheetProps>(
-  function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect, onVideoWatched }, ref) {
+export function VideoPlayerSheet({ video, videos, chapter, isOpen, onClose, onVideoSelect, onVideoWatched }: VideoPlayerSheetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isKeyPointsExpanded, setIsKeyPointsExpanded] = useState(false);
@@ -39,7 +38,6 @@ export const VideoPlayerSheet = forwardRef<HTMLDivElement, VideoPlayerSheetProps
 
   return (
     <motion.div 
-      ref={ref}
       className="absolute inset-0 z-50 flex flex-col bg-background"
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: backdropOpacity, y: 0 }}
@@ -216,4 +214,4 @@ export const VideoPlayerSheet = forwardRef<HTMLDivElement, VideoPlayerSheetProps
       </div>
     </motion.div>
   );
-});
+}
