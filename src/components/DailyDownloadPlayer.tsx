@@ -303,7 +303,14 @@ export const DailyDownloadPlayer = ({
 
   // Auto-generate content when topic is opened
   useEffect(() => {
-    if (isOpen && topic && !streamingContent.transcriptReady && !streamingContent.isGenerating) {
+    // Skip if audio or transcript is already ready (generation complete)
+    if (streamingContent.audioReady || streamingContent.transcriptReady) return;
+    
+    // Skip if already generating
+    if (streamingContent.isGenerating || streamingContent.isAudioGenerating) return;
+    
+    if (isOpen && topic) {
+      // Skip if we're already generating for this topic
       if (generatingForTopicId.current === topic.id) return;
       
       console.log('[Player] Starting generation for:', topic.title);
@@ -317,14 +324,10 @@ export const DailyDownloadPlayer = ({
         voiceId,
       });
     }
-  }, [isOpen, topic?.id, streamingContent.transcriptReady, streamingContent.isGenerating, subjectName, voiceId]);
+  }, [isOpen, topic?.id, streamingContent.audioReady, streamingContent.transcriptReady, 
+      streamingContent.isGenerating, streamingContent.isAudioGenerating, subjectName, voiceId]);
 
-  // Clear generation tracking when complete
-  useEffect(() => {
-    if (streamingContent.error || streamingContent.audioReady) {
-      generatingForTopicId.current = null;
-    }
-  }, [streamingContent.error, streamingContent.audioReady]);
+  // NOTE: generatingForTopicId is only reset in the topic change effect below
 
   // Reset state when topic changes
   useEffect(() => {
