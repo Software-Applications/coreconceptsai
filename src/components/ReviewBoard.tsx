@@ -1,5 +1,5 @@
-import { useState, forwardRef } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bookmark, Trash2, Clock } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useDragScroll } from '@/hooks/useDragScroll';
@@ -17,8 +17,13 @@ interface ReviewBoardProps {
   onClearAll: () => void;
 }
 
-export const ReviewBoard = forwardRef<HTMLDivElement, ReviewBoardProps>(
-  function ReviewBoard({ isOpen, onClose, pinnedCards, onUnpinCard, onClearAll }, ref) {
+export const ReviewBoard = ({
+  isOpen,
+  onClose,
+  pinnedCards,
+  onUnpinCard,
+  onClearAll
+}: ReviewBoardProps) => {
   const { lightTap, errorNotification } = useHaptics();
   const [expandedCard, setExpandedCard] = useState<PinnedCard | null>(null);
   const contentScrollRef = useDragScroll<HTMLDivElement>();
@@ -49,7 +54,6 @@ export const ReviewBoard = forwardRef<HTMLDivElement, ReviewBoardProps>(
 
   return (
     <motion.div
-      ref={ref}
       className="absolute inset-0 z-50 bg-background flex flex-col"
       initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: backdropOpacity, x: 0 }}
@@ -166,13 +170,17 @@ export const ReviewBoard = forwardRef<HTMLDivElement, ReviewBoardProps>(
       </div>
 
       {/* Expanded Card Modal */}
-      <ExpandedCardModal
-        card={expandedCard}
-        cards={pinnedCards}
-        onClose={() => setExpandedCard(null)}
-        onNavigate={setExpandedCard}
-        onRemove={onUnpinCard}
-      />
+      <AnimatePresence>
+        {expandedCard && (
+          <ExpandedCardModal
+            card={expandedCard}
+            cards={pinnedCards}
+            onClose={() => setExpandedCard(null)}
+            onNavigate={setExpandedCard}
+            onRemove={onUnpinCard}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
-});
+};

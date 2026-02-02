@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -56,8 +56,15 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
   );
 };
 
-export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionSheetProps>(
-  function TopicSelectionSheet({ isOpen, onClose, topics, onSelectTopic, isListened, hasProgress, currentSubjectId }, ref) {
+export const TopicSelectionSheet = ({
+  isOpen,
+  onClose,
+  topics,
+  onSelectTopic,
+  isListened,
+  hasProgress,
+  currentSubjectId
+}: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
   const topicRequest = useTopicRequest();
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,7 +224,7 @@ export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionShee
   if (!isOpen) return null;
 
   return (
-    <div ref={ref}>
+    <>
       {/* Backdrop */}
       <motion.div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
@@ -433,111 +440,75 @@ export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionShee
                           })}
                         </CommandGroup>
                       )}
-
-                      {/* Request Topic CTA - always at bottom after all results */}
-                      {searchQuery.trim().length >= 2 && (
-                        <div className="px-4 py-4 border-t border-border mt-2">
-                          <p className="text-xs text-muted-foreground text-center mb-2">
-                            Can't find what you're looking for?
-                          </p>
-                          <button
-                            onClick={() => handleRequestTopic(searchQuery)}
-                            disabled={topicRequest.isPending}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-primary/10 hover:bg-primary/20 rounded-lg text-sm text-primary font-medium transition-colors disabled:opacity-50"
-                          >
-                            {topicRequest.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Lightbulb className="w-4 h-4" />
-                            )}
-                            Request "{displayQuery}"
-                          </button>
-                        </div>
-                      )}
                     </>
                   ) : (
-                    // No results - show request option
-                    <CommandEmpty className="py-8">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                          <Headphones className="w-6 h-6 text-muted-foreground" />
+                    // No Results - Show Request Option
+                    <CommandEmpty className="py-6">
+                      <div className="flex flex-col items-center text-center px-6">
+                        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                          <Lightbulb className="w-7 h-7 text-primary" />
                         </div>
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">No topics found</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">
-                            Try a different search term
-                          </p>
-                        </div>
-                        
-                        {searchQuery.trim().length >= 2 && (
-                          <>
-                            <div className="flex items-center gap-3 w-full max-w-[160px] my-2">
-                              <div className="flex-1 h-px bg-border" />
-                              <span className="text-xs text-muted-foreground">or</span>
-                              <div className="flex-1 h-px bg-border" />
-                            </div>
-                            
-                            <button
-                              onClick={() => handleRequestTopic(searchQuery)}
-                              disabled={topicRequest.isPending}
-                              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg text-sm text-primary font-medium transition-colors disabled:opacity-50"
-                            >
-                              {topicRequest.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Lightbulb className="w-4 h-4" />
-                              )}
+                        <p className="font-medium text-foreground mb-1">
+                          No topics match "{displayQuery}"
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Request this topic and we'll add AI content for it
+                        </p>
+                        <button
+                          onClick={() => handleRequestTopic(searchQuery)}
+                          disabled={topicRequest.isPending}
+                          className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {topicRequest.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Submitting...
+                            </>
+                          ) : (
+                            <>
+                              <Lightbulb className="w-4 h-4" />
                               Request "{displayQuery}"
-                            </button>
-                          </>
-                        )}
+                            </>
+                          )}
+                        </button>
                       </div>
                     </CommandEmpty>
                   )}
                 </>
               ) : (
-                // Browse Mode - All topics
-                <CommandGroup heading="Listen to popular topics">
+                // Browse Mode - Show All Topics
+                <CommandGroup heading={`All Topics (${progressStats.listened}/${progressStats.total} completed)`}>
                   {topics.map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     return (
-                      <motion.div
+                      <CommandItem
                         key={topic.id}
-                        whileTap={{ scale: 0.98 }}
-                        transition={{ duration: 0.1 }}
+                        value={topic.id}
+                        onSelect={() => handleSelectTopic(topic)}
+                        className="flex items-center gap-3 p-3 cursor-pointer"
                       >
-                        <CommandItem
-                          value={topic.id}
-                          onSelect={() => handleSelectTopic(topic)}
-                          className="flex items-center gap-3 p-3 cursor-pointer"
-                        >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
-                          }`}>
-                            {listened ? (
-                              <CheckCircle className="w-4 h-4 text-primary" />
-                            ) : hasResume ? (
-                              <RotateCcw className="w-4 h-4 text-warning" />
-                            ) : (
-                              <Headphones className="w-4 h-4 text-primary" />
-                            )}
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
+                        }`}>
+                          {listened ? (
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                          ) : hasResume ? (
+                            <RotateCcw className="w-4 h-4 text-warning" />
+                          ) : (
+                            <Headphones className="w-4 h-4 text-primary" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
+                            {listened && <span className="text-xs text-primary font-medium">✓</span>}
+                            {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground text-sm truncate">
-                                {topic.title}
-                              </span>
-                              {listened && <span className="text-xs text-primary font-medium">✓</span>}
-                              {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                              {topic.description}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        </CommandItem>
-                      </motion.div>
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      </CommandItem>
                     );
                   })}
                 </CommandGroup>
@@ -546,6 +517,6 @@ export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionShee
           </CommandList>
         </Command>
       </motion.div>
-    </div>
+    </>
   );
-});
+};

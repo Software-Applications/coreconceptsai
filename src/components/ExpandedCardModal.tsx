@@ -1,4 +1,3 @@
-import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Clock, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -16,8 +15,13 @@ interface ExpandedCardModalProps {
 }
 
 
-export const ExpandedCardModal = forwardRef<HTMLDivElement, ExpandedCardModalProps>(
-  function ExpandedCardModal({ card, cards, onClose, onNavigate, onRemove }, ref) {
+export const ExpandedCardModal = ({
+  card,
+  cards,
+  onClose,
+  onNavigate,
+  onRemove
+}: ExpandedCardModalProps) => {
   const { lightTap } = useHaptics();
   const scrollRef = useDragScroll<HTMLDivElement>();
 
@@ -64,7 +68,6 @@ export const ExpandedCardModal = forwardRef<HTMLDivElement, ExpandedCardModalPro
 
   return (
     <motion.div
-      ref={ref}
       className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -162,4 +165,4 @@ export const ExpandedCardModal = forwardRef<HTMLDivElement, ExpandedCardModalPro
       </motion.div>
     </motion.div>
   );
-});
+};
