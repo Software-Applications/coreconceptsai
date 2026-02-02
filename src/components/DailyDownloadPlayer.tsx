@@ -702,7 +702,7 @@ export const DailyDownloadPlayer = ({
           {/* Generating overlay - now uses streaming props */}
           <GeneratingOverlay 
             isGenerating={false} 
-            isStreaming={isStreaming}
+            isStreaming={isStreaming && !streamingContent.firstChunkReady}
             streamingProgress={streamingProgress}
             chunksReady={chunksReady}
             totalChunks={totalChunks}
