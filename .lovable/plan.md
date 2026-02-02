@@ -1,176 +1,203 @@
 
-# Transcript and Audio Pause Rules Implementation
+# Audio Player Simplification and Fixes
 
 ## Overview
 
-You want to improve the transcript chunking and audio generation with better pacing:
+You want to make three key changes to the audio player:
 
-1. **Paragraph-based chunking**: Each text chunk should contain one or more complete paragraphs
-2. **5-second pauses**: Audio should pause for 5 seconds after reflective questions or `[PAUSE]` markers
-3. **2-second paragraph pauses**: Audio should pause for 2 seconds at the start of each new paragraph (superseded by the 5-second rule)
+1. **Resume on voice change**: When changing the audio speaker, resume from the current position instead of restarting from the beginning
+2. **Remove chunking**: Eliminate transcript and audio chunking - show the audio player only after the entire transcript and audio is fully generated
+3. **Fix transcript highlighting sync**: Ensure word highlighting is properly synchronized with audio playback
 
-## Current Behavior
+## Current Architecture Issues
 
-- Chunks are split by word count (~75 words) at sentence boundaries
-- `[PAUSE: 5 Seconds]` markers are in the transcript but TTS speaks them as text
-- No actual audio silence is inserted
+### 1. Voice Change Problem
+The current `handleVoiceChange` function in `DailyDownloadPlayer.tsx` (lines 371-463) regenerates audio with the new voice but doesn't properly track and restore the current playback position. It saves the chunk index but doesn't account for the position *within* the chunk being played.
+
+### 2. Chunking Complexity
+The current architecture has:
+- **Streaming content hook** (`useStreamingContent.ts`): Generates transcript in chunks and TTS for each chunk separately
+- **Edge function** (`generate-content-stream`): Streams transcript chunks via SSE
+- **Player component**: Manages a queue of audio blobs for each chunk, auto-plays next chunk when current ends
+
+This creates complexity in:
+- Progress tracking across multiple audio elements
+- Character index calculation for highlighting
+- Buffering states between chunks
+
+### 3. Highlighting Sync Problem
+The `streamingCharIndex` calculation in `updateStreamingProgress` (lines 118-141) estimates character position using:
+```
+charIndex = (totalProgress / 100) * totalChars
+```
+
+This is inaccurate because:
+- Audio duration per chunk varies based on content (pauses, speaking rate)
+- The calculation assumes linear character distribution across audio time
+- Word highlighting uses this flawed character index
 
 ## Technical Solution
 
-### 1. Modify Transcript Chunking (Edge Function)
+### Strategy: Simplify to Single Audio + Accurate Timing
+
+Instead of chunked streaming, we'll:
+1. Wait for **full transcript** to be generated
+2. Generate **one complete audio file** for the entire transcript
+3. Use **actual audio.currentTime** for progress tracking
+4. Calculate character index based on **proportion of audio played**
+
+---
+
+### 1. Update `generate-content-stream` Edge Function
 
 **File**: `supabase/functions/generate-content-stream/index.ts`
 
-Update the `splitIntoChunks` function to respect paragraph boundaries:
+Remove chunk streaming - instead, buffer the full transcript and send it all at once:
 
+- Remove the chunk-by-chunk SSE emission during AI generation
+- Collect the full transcript first, then send as a single event
+- Keep the flash summary generation as-is
+- Remove the `splitIntoChunks` function and chunk-related logic
+
+---
+
+### 2. Simplify `useStreamingContent` Hook
+
+**File**: `src/hooks/useStreamingContent.ts`
+
+Simplify to generate a single audio blob for the complete transcript:
+
+- Remove chunk-by-chunk audio generation
+- Wait for full transcript from edge function
+- Generate one TTS request for the complete transcript
+- Return a single audio blob URL instead of an array
+
+New interface:
 ```typescript
-function splitIntoChunks(text: string, maxWordsPerChunk: number = 150): string[] {
-  // Split by double newlines (paragraphs)
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
-  const chunks: string[] = [];
-  let currentChunk = '';
-  let currentWords = 0;
-  
-  for (const paragraph of paragraphs) {
-    const paragraphWords = countWords(paragraph);
-    
-    // If adding this paragraph exceeds limit and we have content, start new chunk
-    if (currentWords + paragraphWords > maxWordsPerChunk && currentChunk) {
-      chunks.push(currentChunk.trim());
-      currentChunk = paragraph;
-      currentWords = paragraphWords;
-    } else {
-      // Add paragraph to current chunk with double newline separator
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-      currentWords += paragraphWords;
-    }
-  }
-  
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  return chunks;
+interface UseStreamingContentReturn {
+  isGenerating: boolean;          // True while transcript is being generated
+  isAudioGenerating: boolean;     // True while TTS is running
+  transcriptReady: boolean;       // True when transcript is complete
+  audioReady: boolean;            // True when audio is ready to play
+  audioBlobUrl: string | null;    // Single audio URL
+  fullTranscript: string;
+  flashSummary: FlashSummary | null;
+  error: string | null;
+  audioDurationMs: number;        // Actual audio duration
+  startGeneration: (params) => void;
+  cancel: () => void;
+  regenerateAudioWithVoice: (voiceId, speakingRate, currentTimeMs?) => Promise<void>;
 }
 ```
 
-Also update the streaming generation logic to split at paragraph boundaries instead of sentence boundaries.
+---
 
-### 2. Convert Pause Markers to SSML (TTS Edge Function)
+### 3. Update `DailyDownloadPlayer` Component
+
+**File**: `src/components/DailyDownloadPlayer.tsx`
+
+Major simplifications:
+
+#### A. Remove Streaming Chunk Management
+- Remove `streamingAudioQueueRef`, `currentStreamingChunkRef`, `currentStreamingChunkIndex`
+- Remove `playNextStreamingChunk` callback
+- Remove `isWaitingForNextChunk` state
+- Simplify to a single `audioRef` for the complete audio
+
+#### B. Show Player Only When Ready
+- Update the `GeneratingOverlay` to show until both transcript AND audio are fully ready
+- The play button only appears when `audioReady === true`
+
+#### C. Fix Voice Change with Resume
+```typescript
+const handleVoiceChange = useCallback(async (newVoiceId: string) => {
+  setVoiceId(newVoiceId);
+  
+  // Save current playback position
+  const savedTimeMs = audioRef.current ? audioRef.current.currentTime * 1000 : 0;
+  const wasPlaying = audioRef.current && !audioRef.current.paused;
+  
+  // Pause current audio
+  if (audioRef.current) {
+    audioRef.current.pause();
+  }
+  
+  // Regenerate audio with new voice
+  await streamingContent.regenerateAudioWithVoice(newVoiceId, 1.0, savedTimeMs);
+  
+  // When new audio is ready, seek to saved position and resume if was playing
+  // (handled in the audio ready callback)
+}, [...]);
+```
+
+#### D. Accurate Transcript Highlighting
+Use actual audio element timing instead of estimated chunk-based progress:
+
+```typescript
+// In timeupdate handler:
+const currentTimeMs = audio.currentTime * 1000;
+const totalDurationMs = audio.duration * 1000;
+const progress = (currentTimeMs / totalDurationMs) * 100;
+
+// Character index based on proportional time
+const charIndex = Math.floor((progress / 100) * fullTranscriptText.length);
+setCurrentCharIndex(charIndex);
+```
+
+This provides accurate sync because:
+- Uses real audio timing, not estimates
+- Works correctly with pauses (SSML breaks)
+- Single audio means no inter-chunk calculation errors
+
+---
+
+### 4. Update `google-tts` Edge Function
 
 **File**: `supabase/functions/google-tts/index.ts`
 
-Add a text preprocessing function that:
-- Converts `[PAUSE: 5 Seconds]` markers to SSML `<break time="5s"/>`
-- Adds `<break time="2s"/>` at the start of each paragraph (unless preceded by 5s pause)
-- Wraps the text in SSML `<speak>` tags
+Add support for returning actual audio duration:
 
-```typescript
-function preprocessTextForSSML(text: string): string {
-  // Split by paragraphs (double newlines)
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
-  
-  const processedParagraphs = paragraphs.map((paragraph, index) => {
-    let processed = paragraph;
-    
-    // Convert [PAUSE: X Seconds] to SSML breaks
-    processed = processed.replace(
-      /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi,
-      (_, seconds) => `<break time="${seconds}s"/>`
-    );
-    
-    // Add 2s break at paragraph start (if not first paragraph)
-    // Only add if the previous paragraph didn't end with a 5s break
-    if (index > 0) {
-      const prevParagraph = paragraphs[index - 1];
-      const endsWithLongPause = /\[PAUSE:\s*[5-9]\d*\s*(?:Seconds?|s)\]\s*$/i.test(prevParagraph);
-      
-      if (!endsWithLongPause) {
-        processed = `<break time="2s"/>${processed}`;
-      }
-    }
-    
-    return processed;
-  });
-  
-  return `<speak>${processedParagraphs.join(' ')}</speak>`;
-}
-```
+- After concatenating audio chunks, return the estimated total duration
+- The TTS function already handles long text by chunking internally for the API, then concatenates
 
-Update the TTS API call to use SSML input:
-
-```typescript
-async function synthesizeChunk(
-  text: string,
-  voiceId: string,
-  speakingRate: number,
-  apiKey: string
-): Promise<string> {
-  // Preprocess text to SSML with pause handling
-  const ssmlText = preprocessTextForSSML(text);
-  
-  const response = await fetch(
-    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        input: { ssml: ssmlText }, // Use SSML instead of plain text
-        voice: {
-          languageCode: 'en-US',
-          name: voiceId,
-        },
-        audioConfig: {
-          audioEncoding: 'MP3',
-          speakingRate: speakingRate,
-          pitch: 0,
-          volumeGainDb: 0,
-        },
-      }),
-    }
-  );
-  // ... rest of function
-}
-```
-
-### 3. Update Prompt for Better Paragraph Structure
-
-**File**: `supabase/functions/generate-content-stream/index.ts`
-
-Add to the `TRANSCRIPT_SYSTEM_PROMPT`:
-
-```
-### PARAGRAPH STRUCTURE:
-- Use clear paragraph breaks (double newlines) between distinct ideas or sections
-- Each paragraph should contain a complete thought or concept
-- Reflective questions should end with the [PAUSE: 5 Seconds] tag
-- Keep paragraphs focused - aim for 2-4 sentences per paragraph
-```
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/generate-content-stream/index.ts` | Update `splitIntoChunks` to respect paragraph boundaries, update prompt for paragraph structure |
-| `supabase/functions/google-tts/index.ts` | Add `preprocessTextForSSML` function, convert pause markers to SSML breaks, add 2s breaks at paragraph starts |
+| `supabase/functions/generate-content-stream/index.ts` | Remove chunk-by-chunk streaming, send full transcript in one event |
+| `src/hooks/useStreamingContent.ts` | Remove chunk management, generate single audio blob, add `regenerateAudioWithVoice` with resume position support |
+| `src/components/DailyDownloadPlayer.tsx` | Remove chunk queue logic, simplify audio playback to single element, fix voice change to preserve position, show player only when audio ready |
 
-## Pause Logic Summary
+---
 
-```text
-Paragraph 1: "Let's start with the basics..."
-                                                  → [2s break]
-Paragraph 2: "Now, think about this..."
-             [PAUSE: 5 Seconds]                   → [5s break, no additional 2s]
-Paragraph 3: "The answer is..."                   
-                                                  → [2s break]
-Paragraph 4: "Before we move on... [PAUSE: 5 Seconds]"
-                                                  → [5s break, no additional 2s]
-Paragraph 5: "Great! Now let's..."
-```
+## Expected Behavior After Changes
 
-## Testing Considerations
+1. **Generation Flow**:
+   - User opens topic → "Generating" overlay appears
+   - Full transcript generates → Audio generates
+   - Overlay disappears, Play button becomes active
+   
+2. **Voice Change**:
+   - User changes voice mid-playback (e.g., at 2:30)
+   - Loading indicator briefly appears
+   - Audio resumes at 2:30 with new voice
+   
+3. **Transcript Highlighting**:
+   - Active paragraph is highlighted
+   - Within active paragraph, current word is highlighted
+   - Highlighting moves smoothly and accurately with audio
 
-- Test with topics that have multiple reflective questions
-- Verify audio pauses are audible at the right moments
-- Ensure paragraph boundaries are respected in chunking
-- Validate that cached transcripts still work correctly
+---
+
+## Benefits of This Approach
+
+| Before (Chunked) | After (Single Audio) |
+|------------------|----------------------|
+| Complex chunk queue management | Single audio element |
+| Estimated character progress | Accurate time-based progress |
+| "Loading next segment" buffering | No buffering between segments |
+| Voice change restarts from chunk 0 | Voice change preserves position |
+| Highlighting often out of sync | Highlighting synced with actual audio time |
+
