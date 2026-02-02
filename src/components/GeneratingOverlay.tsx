@@ -3,47 +3,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Volume2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
-const STREAMING_MESSAGES = [
+const TRANSCRIPT_MESSAGES = [
   "Writing your personalized brief...",
   "Crafting key concepts and explanations...",
-  "Preparing audio narration...",
+  "Building your learning experience...",
 ];
 
 const AUDIO_MESSAGES = [
   "Generating high-quality narration...",
+  "Creating audio with your selected voice...",
   "Almost ready to play...",
 ];
 
-const ROTATION_INTERVAL = 2000; // 2 seconds
+const ROTATION_INTERVAL = 2500;
 
 interface GeneratingOverlayProps {
   isGenerating: boolean;
+  isGeneratingAudio?: boolean;
   topicTitle?: string;
   onCancel?: () => void;
-  // New streaming props
-  isStreaming?: boolean;
-  streamingProgress?: number;
-  chunksReady?: number;
-  totalChunks?: number;
-  isGeneratingAudio?: boolean;
 }
 
 export const GeneratingOverlay = ({ 
   isGenerating, 
+  isGeneratingAudio = false,
   topicTitle, 
   onCancel,
-  isStreaming = false,
-  streamingProgress = 0,
-  chunksReady = 0,
-  totalChunks = 0,
-  isGeneratingAudio = false,
 }: GeneratingOverlayProps) => {
   const [messageIndex, setMessageIndex] = useState(0);
 
-  const messages = isGeneratingAudio ? AUDIO_MESSAGES : STREAMING_MESSAGES;
-  const showOverlay = isGenerating || isStreaming;
+  const messages = isGeneratingAudio ? AUDIO_MESSAGES : TRANSCRIPT_MESSAGES;
+  const showOverlay = isGenerating || isGeneratingAudio;
 
-  // Rotate messages while generating/streaming
+  // Rotate messages while generating
   useEffect(() => {
     if (!showOverlay) {
       setMessageIndex(0);
@@ -98,15 +90,10 @@ export const GeneratingOverlay = ({
             </p>
           )}
 
-          {/* Progress bar for streaming */}
-          {isStreaming && streamingProgress > 0 && (
+          {/* Progress indicator for audio generation */}
+          {isGeneratingAudio && (
             <div className="w-48 mb-4">
-              <Progress value={streamingProgress} className="h-1.5" />
-              {totalChunks > 0 && (
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Audio {chunksReady}/{totalChunks} ready
-                </p>
-              )}
+              <Progress value={undefined} className="h-1.5 animate-pulse" />
             </div>
           )}
           

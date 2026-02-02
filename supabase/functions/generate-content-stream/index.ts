@@ -95,48 +95,9 @@ Output your response as a JSON object with these exact fields:
 - bullet_points: an array of exactly 3 concise bullet points summarizing key concepts
 - difficulty: one of "easy", "medium", or "hard"`;
 
-// Estimate words for 30 seconds of audio at normal speaking rate (~150 words/min)
-const WORDS_PER_30_SEC = 75;
-
-// Count words in text
-function countWords(text: string): number {
-  return text.split(/\s+/).filter(w => w.length > 0).length;
-}
-
-// Split cached transcript into chunks for streaming - respects paragraph boundaries
-function splitIntoChunks(text: string, maxWordsPerChunk: number): string[] {
-  // Split by double newlines (paragraphs)
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
-  const chunks: string[] = [];
-  let currentChunk = '';
-  let currentWords = 0;
-  
-  for (const paragraph of paragraphs) {
-    const paragraphWords = countWords(paragraph);
-    
-    // If adding this paragraph exceeds limit and we have content, start new chunk
-    if (currentWords + paragraphWords > maxWordsPerChunk && currentChunk) {
-      chunks.push(currentChunk.trim());
-      currentChunk = paragraph;
-      currentWords = paragraphWords;
-    } else {
-      // Add paragraph to current chunk with double newline separator
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-      currentWords += paragraphWords;
-    }
-  }
-  
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  return chunks;
-}
-
 // Parse streaming response to extract text
 function extractTextFromStreamChunk(chunk: string): string {
   try {
-    // Handle multiple JSON objects in chunk
     const lines = chunk.split('\n').filter(line => line.trim());
     let text = '';
     
@@ -216,23 +177,16 @@ serve(async (req) => {
           // Check if we have a cached transcript (at least 500 chars = meaningful content)
           // Skip cache if forceRegenerate is true
           if (!forceRegenerate && existingTopic?.transcript && existingTopic.transcript.length > 500) {
-            console.log("[Stream] Found cached transcript, streaming from database");
-            
-            // Stream pre-existing transcript in chunks
-            const chunks = splitIntoChunks(existingTopic.transcript, WORDS_PER_30_SEC);
+            console.log("[Stream] Found cached transcript, sending full transcript");
             
             // Send metadata indicating cached content
             sendEvent("metadata", { status: "streaming", cached: true });
             
-            for (let i = 0; i < chunks.length; i++) {
-              console.log(`[Stream] Sending cached chunk ${i}: ${countWords(chunks[i])} words`);
-              sendEvent("chunk", { 
-                index: i, 
-                text: chunks[i], 
-                isLast: i === chunks.length - 1,
-                cached: true 
-              });
-            }
+            // Send full transcript in a single event
+            sendEvent("transcript", { 
+              text: existingTopic.transcript, 
+              cached: true 
+            });
             
             // Try to get existing flash summary
             const { data: existingSummary } = await supabase
@@ -247,8 +201,7 @@ serve(async (req) => {
             
             sendEvent("done", { 
               fullTranscript: existingTopic.transcript, 
-              fromCache: true,
-              totalChunks: chunks.length
+              fromCache: true
             });
             
             console.log("[Stream] Cached content streaming complete!");
@@ -257,9 +210,9 @@ serve(async (req) => {
           }
 
           // No cached transcript - generate via AI
-          console.log("[Stream] No cached transcript, starting Gemini streaming...");
+          console.log("[Stream] No cached transcript, starting Gemini generation...");
           
-          sendEvent("metadata", { status: "streaming", cached: false });
+          sendEvent("metadata", { status: "generating", cached: false });
           
           const streamResponse = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse",
@@ -294,7 +247,7 @@ Create an engaging, educational transcript that helps a student understand this 
           if (!streamResponse.ok) {
             const errorText = await streamResponse.text();
             console.error("[Stream] Gemini error:", streamResponse.status, errorText);
-            throw new Error(`Transcript streaming failed: ${streamResponse.status}`);
+            throw new Error(`Transcript generation failed: ${streamResponse.status}`);
           }
 
           const reader = streamResponse.body?.getReader();
@@ -302,26 +255,13 @@ Create an engaging, educational transcript that helps a student understand this 
 
           const decoder = new TextDecoder();
           let buffer = "";
-          let chunkBuffer = "";
-          let chunkIndex = 0;
           let fullTranscript = "";
 
+          // Collect full transcript from streaming response (do NOT emit chunks)
           while (true) {
             const { done, value } = await reader.read();
             
-            if (done) {
-              // Emit any remaining text as final chunk
-              if (chunkBuffer.trim()) {
-                console.log(`[Stream] Emitting final chunk ${chunkIndex}: ${countWords(chunkBuffer)} words`);
-                sendEvent("chunk", { 
-                  index: chunkIndex, 
-                  text: chunkBuffer.trim(), 
-                  isLast: true 
-                });
-                fullTranscript += chunkBuffer;
-              }
-              break;
-            }
+            if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
             
@@ -337,79 +277,25 @@ Create an engaging, educational transcript that helps a student understand this 
               
               const text = extractTextFromStreamChunk(jsonStr);
               if (text) {
-                chunkBuffer += text;
-                
-                // Check if we have enough words for a chunk (~30 sec audio)
-                const wordCount = countWords(chunkBuffer);
-                if (wordCount >= WORDS_PER_30_SEC) {
-                  // Find a paragraph boundary to split at (prefer double newlines)
-                  const paragraphs = chunkBuffer.split(/\n\n+/);
-                  
-                  if (paragraphs.length > 1) {
-                    // We have paragraph boundaries - use them
-                    let chunkText = "";
-                    let remaining = "";
-                    let currentWordCount = 0;
-                    
-                    for (let i = 0; i < paragraphs.length; i++) {
-                      const paragraphWords = countWords(paragraphs[i]);
-                      if (currentWordCount + paragraphWords <= WORDS_PER_30_SEC + 30 || currentWordCount === 0) {
-                        chunkText += (chunkText ? "\n\n" : "") + paragraphs[i];
-                        currentWordCount += paragraphWords;
-                      } else {
-                        remaining = paragraphs.slice(i).join("\n\n");
-                        break;
-                      }
-                    }
-                    
-                    if (chunkText.trim() && currentWordCount >= WORDS_PER_30_SEC * 0.5) {
-                      console.log(`[Stream] Emitting chunk ${chunkIndex}: ${countWords(chunkText)} words (paragraph boundary)`);
-                      sendEvent("chunk", { 
-                        index: chunkIndex, 
-                        text: chunkText.trim(), 
-                        isLast: false 
-                      });
-                      fullTranscript += chunkText + "\n\n";
-                      chunkIndex++;
-                      chunkBuffer = remaining;
-                    }
-                  } else {
-                    // No paragraph boundaries yet - fall back to sentence boundary
-                    const sentences = chunkBuffer.split(/(?<=[.!?])\s+/);
-                    let chunkText = "";
-                    let remaining = "";
-                    let currentWordCount = 0;
-                    
-                    for (let i = 0; i < sentences.length; i++) {
-                      const sentenceWords = countWords(sentences[i]);
-                      if (currentWordCount + sentenceWords <= WORDS_PER_30_SEC + 20) {
-                        chunkText += (chunkText ? " " : "") + sentences[i];
-                        currentWordCount += sentenceWords;
-                      } else {
-                        remaining = sentences.slice(i).join(" ");
-                        break;
-                      }
-                    }
-                    
-                    if (chunkText.trim()) {
-                      console.log(`[Stream] Emitting chunk ${chunkIndex}: ${countWords(chunkText)} words (sentence boundary)`);
-                      sendEvent("chunk", { 
-                        index: chunkIndex, 
-                        text: chunkText.trim(), 
-                        isLast: false 
-                      });
-                      fullTranscript += chunkText + " ";
-                      chunkIndex++;
-                    }
-                    
-                    chunkBuffer = remaining;
-                  }
-                }
+                fullTranscript += text;
               }
             }
           }
 
-          console.log(`[Stream] Transcript complete: ${countWords(fullTranscript)} words, ${chunkIndex + 1} chunks`);
+          // Clean up transcript - extract from <transcript> tags if present
+          let cleanTranscript = fullTranscript.trim();
+          const transcriptMatch = cleanTranscript.match(/<transcript>([\s\S]*?)<\/transcript>/);
+          if (transcriptMatch) {
+            cleanTranscript = transcriptMatch[1].trim();
+          }
+
+          console.log(`[Stream] Transcript complete: ${cleanTranscript.split(/\s+/).length} words`);
+
+          // Send full transcript in a single event
+          sendEvent("transcript", { 
+            text: cleanTranscript, 
+            cached: false 
+          });
 
           // Generate flash summary
           console.log("[Stream] Generating flash summary...");
@@ -435,7 +321,7 @@ Create an engaging, educational transcript that helps a student understand this 
 Topic: ${topicTitle}
 
 Transcript:
-${fullTranscript.slice(0, 4000)}
+${cleanTranscript.slice(0, 4000)}
 
 IMPORTANT: Return ONLY a valid JSON object.` 
                     }]
@@ -499,7 +385,7 @@ IMPORTANT: Return ONLY a valid JSON object.`
 
           const { error: topicError } = await supabase
             .from("topics")
-            .update({ transcript: fullTranscript.trim() })
+            .update({ transcript: cleanTranscript })
             .eq("id", topicId);
 
           if (topicError) {
@@ -565,8 +451,7 @@ IMPORTANT: Return ONLY a valid JSON object.`
 
           // Send done event
           sendEvent("done", { 
-            fullTranscript: fullTranscript.trim(),
-            totalChunks: chunkIndex + 1,
+            fullTranscript: cleanTranscript,
             fromCache: false
           });
 

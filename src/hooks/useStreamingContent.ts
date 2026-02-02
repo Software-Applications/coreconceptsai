@@ -1,17 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-interface StreamingChunk {
-  index: number;
-  text: string;
-  audioReady: boolean;
-  audioBlobUrl?: string;
-}
-
 interface FlashSummary {
   id: string;
   topic_id: string;
@@ -23,8 +12,8 @@ interface FlashSummary {
 }
 
 interface UseStreamingContentOptions {
-  onFirstChunkAudioReady?: (blobUrl: string) => void;
-  onChunkAudioReady?: (chunkIndex: number, blobUrl: string) => void;
+  onTranscriptReady?: (transcript: string) => void;
+  onAudioReady?: (blobUrl: string, durationMs: number) => void;
   onComplete?: (fullTranscript: string, flashSummary: FlashSummary | null) => void;
   onError?: (error: string) => void;
 }
@@ -44,22 +33,30 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const useStreamingContent = (options: UseStreamingContentOptions = {}) => {
   const queryClient = useQueryClient();
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [chunks, setChunks] = useState<StreamingChunk[]>([]);
-  const [firstChunkReady, setFirstChunkReady] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [flashSummary, setFlashSummary] = useState<FlashSummary | null>(null);
+  
+  // Generation states
+  const [isGenerating, setIsGenerating] = useState(false);      // True while transcript is being generated
+  const [isAudioGenerating, setIsAudioGenerating] = useState(false); // True while TTS is running
+  const [transcriptReady, setTranscriptReady] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  
+  // Content
   const [fullTranscript, setFullTranscript] = useState<string>('');
+  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+  const [audioDurationMs, setAudioDurationMs] = useState<number>(0);
+  const [flashSummary, setFlashSummary] = useState<FlashSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
+  const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
-  const pendingTTSRef = useRef<Map<number, AbortController>>(new Map());
-  const audioQueueRef = useRef<string[]>([]);
-  // Track mount state to prevent state updates after unmount
   const isMountedRef = useRef(true);
   
-  // Set mounted flag
+  // Track saved position for voice change resume
+  const savedPositionMsRef = useRef<number>(0);
+  const wasPlayingRef = useRef<boolean>(false);
+  
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -82,16 +79,15 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     return URL.createObjectURL(blob);
   }, []);
 
-  // Generate audio for a transcript chunk
-  const generateAudioForChunk = useCallback(async (
-    chunkIndex: number,
+  // Generate audio for full transcript
+  const generateAudio = useCallback(async (
     text: string,
     voiceId: string,
     speakingRate: number,
     signal: AbortSignal
-  ): Promise<string | null> => {
+  ): Promise<{ blobUrl: string; durationMs: number } | null> => {
     try {
-      console.log(`[StreamContent] Generating audio for chunk ${chunkIndex}`);
+      console.log(`[StreamContent] Generating audio for full transcript (${text.length} chars)`);
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/google-tts`,
@@ -105,7 +101,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
             text, 
             voiceId, 
             speakingRate,
-            streaming: false // Use non-streaming for individual chunks
+            streaming: false
           }),
           signal,
         }
@@ -118,45 +114,54 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       const data = await response.json();
       if (data.audioContent) {
         const blobUrl = base64ToBlobUrl(data.audioContent);
-        console.log(`[StreamContent] Audio ready for chunk ${chunkIndex}`);
-        return blobUrl;
+        const durationMs = data.durationMs || 0;
+        console.log(`[StreamContent] Audio ready: ${durationMs}ms`);
+        return { blobUrl, durationMs };
       }
       return null;
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return null;
       }
-      console.error(`[StreamContent] TTS error for chunk ${chunkIndex}:`, err);
+      console.error('[StreamContent] TTS error:', err);
       throw err;
     }
   }, [base64ToBlobUrl]);
 
-
-  const startStreaming = useCallback(async (params: StreamingContentParams) => {
-    // Cancel any existing streaming
+  const startGeneration = useCallback(async (params: StreamingContentParams) => {
+    // Cancel any existing generation
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    pendingTTSRef.current.forEach(controller => controller.abort());
-    pendingTTSRef.current.clear();
+    if (ttsAbortControllerRef.current) {
+      ttsAbortControllerRef.current.abort();
+    }
+    
+    // Revoke old blob URL
+    if (audioBlobUrl) {
+      URL.revokeObjectURL(audioBlobUrl);
+    }
     
     abortControllerRef.current = new AbortController();
     const mainSignal = abortControllerRef.current.signal;
 
     // Reset state
-    setIsStreaming(true);
-    setChunks([]);
-    setFirstChunkReady(false);
-    setProgress(0);
+    setIsGenerating(true);
+    setIsAudioGenerating(false);
+    setTranscriptReady(false);
+    setAudioReady(false);
     setError(null);
     setFlashSummary(null);
     setFullTranscript('');
-    audioQueueRef.current = [];
+    setAudioBlobUrl(null);
+    setAudioDurationMs(0);
+    savedPositionMsRef.current = 0;
+    wasPlayingRef.current = false;
 
     const { voiceId = 'en-US-Neural2-D', speakingRate = 1.0 } = params;
 
     try {
-      console.log('[StreamContent] Starting streaming generation...');
+      console.log('[StreamContent] Starting generation...');
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/generate-content-stream`,
@@ -186,8 +191,8 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let totalChunks = 0;
-      let completedAudioChunks = 0;
+      let transcript = '';
+      let summary: FlashSummary | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -203,93 +208,60 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
           try {
             const data = JSON.parse(line.slice(6));
             
-            if (data.type === 'chunk') {
-              const chunkIndex = data.index;
-              const chunkText = data.text;
-              const isLast = data.isLast;
-              const isCached = data.cached || false;
+            if (data.type === 'transcript') {
+              // Full transcript received
+              transcript = data.text;
+              console.log('[StreamContent] Received full transcript');
               
-              if (isCached) {
-                console.log(`[StreamContent] Using cached chunk ${chunkIndex}`);
+              if (isMountedRef.current) {
+                setFullTranscript(transcript);
+                setTranscriptReady(true);
+                setIsGenerating(false);
+                optionsRef.current.onTranscriptReady?.(transcript);
               }
               
-              console.log(`[StreamContent] Received transcript chunk ${chunkIndex}${isLast ? ' (last)' : ''}`);
-              
-              // Add chunk to state
-              setChunks(prev => {
-                const updated = [...prev];
-                updated[chunkIndex] = {
-                  index: chunkIndex,
-                  text: chunkText,
-                  audioReady: false,
-                };
-                return updated;
-              });
-
-              // Update expected total chunks
-              if (isLast) {
-                totalChunks = chunkIndex + 1;
-              }
-
-              // Start TTS generation for this chunk
-              const ttsController = new AbortController();
-              pendingTTSRef.current.set(chunkIndex, ttsController);
-
-              // Generate audio (with delay to prevent bursting)
-              (async () => {
-                // Stagger requests to avoid Google 429 errors
-                await sleep(chunkIndex * 250);
-                if (mainSignal.aborted || !isMountedRef.current) return;
+              // Start TTS generation immediately
+              if (isMountedRef.current && !mainSignal.aborted) {
+                setIsAudioGenerating(true);
+                
+                ttsAbortControllerRef.current = new AbortController();
                 
                 try {
-                  const blobUrl = await generateAudioForChunk(chunkIndex, chunkText, voiceId, speakingRate, ttsController.signal);
-                  if (!isMountedRef.current || mainSignal.aborted) return;
+                  const audioResult = await generateAudio(
+                    transcript,
+                    voiceId,
+                    speakingRate,
+                    ttsAbortControllerRef.current.signal
+                  );
                   
-                  if (blobUrl) {
-                    audioQueueRef.current[chunkIndex] = blobUrl;
-                    completedAudioChunks++;
-
-                    // Update chunk state with audio
-                    setChunks(prev => {
-                      const updated = [...prev];
-                      if (updated[chunkIndex]) {
-                        updated[chunkIndex] = {
-                          ...updated[chunkIndex],
-                          audioReady: true,
-                          audioBlobUrl: blobUrl,
-                        };
-                      }
-                      return updated;
-                    });
-
-                    // Update progress
-                    if (totalChunks > 0) {
-                      setProgress((completedAudioChunks / totalChunks) * 100);
-                    }
-
-                    // First chunk ready - trigger callback
-                    if (chunkIndex === 0) {
-                      setFirstChunkReady(true);
-                      optionsRef.current.onFirstChunkAudioReady?.(blobUrl);
-                    } else {
-                      optionsRef.current.onChunkAudioReady?.(chunkIndex, blobUrl);
-                    }
+                  if (audioResult && isMountedRef.current) {
+                    setAudioBlobUrl(audioResult.blobUrl);
+                    setAudioDurationMs(audioResult.durationMs);
+                    setAudioReady(true);
+                    optionsRef.current.onAudioReady?.(audioResult.blobUrl, audioResult.durationMs);
                   }
-                } catch (err) {
-                  if (err instanceof Error && err.name !== 'AbortError') {
-                    console.error(`[StreamContent] Audio generation failed for chunk ${chunkIndex}:`, err);
+                } catch (ttsErr) {
+                  if (ttsErr instanceof Error && ttsErr.name !== 'AbortError') {
+                    console.error('[StreamContent] TTS generation failed:', ttsErr);
+                    if (isMountedRef.current) {
+                      setError('Audio generation failed');
+                    }
                   }
                 } finally {
-                  pendingTTSRef.current.delete(chunkIndex);
+                  if (isMountedRef.current) {
+                    setIsAudioGenerating(false);
+                  }
                 }
-              })();
-
+              }
+              
             } else if (data.type === 'summary') {
               console.log('[StreamContent] Received flash summary');
-              setFlashSummary(data.flashSummary);
+              summary = data.flashSummary;
+              if (isMountedRef.current) {
+                setFlashSummary(summary);
+              }
             } else if (data.type === 'done') {
-              console.log('[StreamContent] Streaming complete');
-              setFullTranscript(data.fullTranscript);
+              console.log('[StreamContent] Generation complete');
               
               // Invalidate queries to refresh with new content
               queryClient.invalidateQueries({ queryKey: ['topics'] });
@@ -304,145 +276,109 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
           }
         }
       }
-
-      // Wait for all pending TTS to complete
-      await Promise.allSettled(
-        Array.from(pendingTTSRef.current.values()).map(
-          controller => new Promise(resolve => {
-            const checkInterval = setInterval(() => {
-              if (!pendingTTSRef.current.has(controller as unknown as number)) {
-                clearInterval(checkInterval);
-                resolve(undefined);
-              }
-            }, 100);
-          })
-        )
-      );
-
-      setIsStreaming(false);
-      setProgress(100);
       
       // Call completion callback
-      optionsRef.current.onComplete?.(fullTranscript, flashSummary);
+      optionsRef.current.onComplete?.(transcript, summary);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('[StreamContent] Streaming cancelled');
+        console.log('[StreamContent] Generation cancelled');
         return;
       }
       
       console.error('[StreamContent] Error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Streaming failed';
-      setError(errorMessage);
-      setIsStreaming(false);
+      const errorMessage = err instanceof Error ? err.message : 'Generation failed';
+      if (isMountedRef.current) {
+        setError(errorMessage);
+        setIsGenerating(false);
+        setIsAudioGenerating(false);
+      }
       optionsRef.current.onError?.(errorMessage);
     }
-  }, [generateAudioForChunk, queryClient]);
+  }, [generateAudio, queryClient, audioBlobUrl]);
 
   const cancel = useCallback(() => {
     console.log('[StreamContent] Cancelling...');
     abortControllerRef.current?.abort();
-    pendingTTSRef.current.forEach(controller => controller.abort());
-    pendingTTSRef.current.clear();
+    ttsAbortControllerRef.current?.abort();
     
-    // Revoke blob URLs
-    audioQueueRef.current.forEach(url => {
-      if (url) URL.revokeObjectURL(url);
-    });
-    audioQueueRef.current = [];
+    // Revoke blob URL
+    if (audioBlobUrl) {
+      URL.revokeObjectURL(audioBlobUrl);
+    }
     
     if (isMountedRef.current) {
-      setIsStreaming(false);
-      setFirstChunkReady(false);
-      setProgress(0);
-      setChunks([]);
+      setIsGenerating(false);
+      setIsAudioGenerating(false);
+      setTranscriptReady(false);
+      setAudioReady(false);
+      setAudioBlobUrl(null);
+      setFullTranscript('');
     }
-  }, []);
+  }, [audioBlobUrl]);
 
-  // Regenerate audio for all available chunks with a new voice
+  // Regenerate audio with a new voice, optionally resuming from a position
   const regenerateAudioWithVoice = useCallback(async (
     newVoiceId: string,
     speakingRate: number = 1.0,
-    onFirstChunkReady?: (blobUrl: string) => void,
-    onChunkReady?: (chunkIndex: number, blobUrl: string) => void
-  ) => {
-    // Cancel any pending TTS requests
-    pendingTTSRef.current.forEach(controller => controller.abort());
-    pendingTTSRef.current.clear();
-    
-    // Revoke old blob URLs
-    audioQueueRef.current.forEach(url => {
-      if (url) URL.revokeObjectURL(url);
-    });
-    audioQueueRef.current = [];
-    
-    // Get current chunks with text
-    const currentChunks = chunks.filter(c => c.text);
-    if (currentChunks.length === 0) {
-      console.log('[StreamContent] No chunks to regenerate');
-      return;
+    resumeFromMs: number = 0
+  ): Promise<{ blobUrl: string; durationMs: number } | null> => {
+    if (!fullTranscript) {
+      console.log('[StreamContent] No transcript to regenerate audio for');
+      return null;
     }
     
-    console.log(`[StreamContent] Regenerating audio for ${currentChunks.length} chunks with voice: ${newVoiceId}`);
+    // Save resume position
+    savedPositionMsRef.current = resumeFromMs;
     
-    // Reset audio ready state for all chunks
-    setChunks(prev => prev.map(c => ({ ...c, audioReady: false, audioBlobUrl: undefined })));
-    setFirstChunkReady(false);
-    setProgress(0);
+    // Cancel any pending TTS
+    if (ttsAbortControllerRef.current) {
+      ttsAbortControllerRef.current.abort();
+    }
     
-    let completedChunks = 0;
-    const totalChunks = currentChunks.length;
+    // Revoke old blob URL
+    if (audioBlobUrl) {
+      URL.revokeObjectURL(audioBlobUrl);
+    }
     
-    // Generate audio for each chunk
-    for (let i = 0; i < currentChunks.length; i++) {
-      const chunk = currentChunks[i];
-      const ttsController = new AbortController();
-      pendingTTSRef.current.set(i, ttsController);
+    console.log(`[StreamContent] Regenerating audio with voice: ${newVoiceId}, resume from: ${resumeFromMs}ms`);
+    
+    if (isMountedRef.current) {
+      setIsAudioGenerating(true);
+      setAudioReady(false);
+      setAudioBlobUrl(null);
+    }
+    
+    ttsAbortControllerRef.current = new AbortController();
+    
+    try {
+      const audioResult = await generateAudio(
+        fullTranscript,
+        newVoiceId,
+        speakingRate,
+        ttsAbortControllerRef.current.signal
+      );
       
-      try {
-        const blobUrl = await generateAudioForChunk(
-          i,
-          chunk.text,
-          newVoiceId,
-          speakingRate,
-          ttsController.signal
-        );
-        
-        if (blobUrl) {
-          audioQueueRef.current[i] = blobUrl;
-          completedChunks++;
-          
-          // Update chunk state
-          setChunks(prev => {
-            const updated = [...prev];
-            if (updated[i]) {
-              updated[i] = { ...updated[i], audioReady: true, audioBlobUrl: blobUrl };
-            }
-            return updated;
-          });
-          
-          // Update progress
-          setProgress((completedChunks / totalChunks) * 100);
-          
-          // First chunk callback
-          if (i === 0) {
-            setFirstChunkReady(true);
-            onFirstChunkReady?.(blobUrl);
-          } else {
-            onChunkReady?.(i, blobUrl);
-          }
-        }
-      } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error(`[StreamContent] Voice regeneration error for chunk ${i}:`, err);
-        }
-      } finally {
-        pendingTTSRef.current.delete(i);
+      if (audioResult && isMountedRef.current) {
+        setAudioBlobUrl(audioResult.blobUrl);
+        setAudioDurationMs(audioResult.durationMs);
+        setAudioReady(true);
+        setIsAudioGenerating(false);
+        optionsRef.current.onAudioReady?.(audioResult.blobUrl, audioResult.durationMs);
+        return audioResult;
       }
+      return null;
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('[StreamContent] Voice regeneration error:', err);
+        if (isMountedRef.current) {
+          setError('Audio generation failed');
+          setIsAudioGenerating(false);
+        }
+      }
+      return null;
     }
-    
-    console.log('[StreamContent] Voice regeneration complete');
-  }, [chunks, generateAudioForChunk]);
+  }, [fullTranscript, audioBlobUrl, generateAudio]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -452,15 +388,24 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   }, [cancel]);
 
   return {
-    isStreaming,
-    chunks,
-    firstChunkReady,
-    progress,
-    error,
-    flashSummary,
+    // States
+    isGenerating,
+    isAudioGenerating,
+    transcriptReady,
+    audioReady,
+    
+    // Content
     fullTranscript,
-    audioQueue: audioQueueRef.current,
-    startStreaming,
+    audioBlobUrl,
+    audioDurationMs,
+    flashSummary,
+    error,
+    
+    // Saved position for voice change resume
+    savedPositionMs: savedPositionMsRef.current,
+    
+    // Actions
+    startGeneration,
     cancel,
     regenerateAudioWithVoice,
   };
