@@ -217,10 +217,9 @@ export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionShee
   if (!isOpen) return null;
 
   return (
-    <>
+    <div ref={ref}>
       {/* Backdrop */}
       <motion.div
-        ref={ref}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -547,6 +546,6 @@ export const TopicSelectionSheet = forwardRef<HTMLDivElement, TopicSelectionShee
           </CommandList>
         </Command>
       </motion.div>
-    </>
+    </div>
   );
 });
