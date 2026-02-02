@@ -101,6 +101,7 @@ export const DailyDownloadPlayer = ({
   const [isStreamingPlayback, setIsStreamingPlayback] = useState(false);
   const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
   const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
+  const [currentStreamingChunkIndex, setCurrentStreamingChunkIndex] = useState(0); // For UI updates
   
   // Available playback rates
   const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
@@ -127,6 +128,7 @@ export const DailyDownloadPlayer = ({
     if (nextIndex < queue.length && queue[nextIndex]) {
       setIsWaitingForNextChunk(false);
       currentStreamingChunkRef.current = nextIndex;
+      setCurrentStreamingChunkIndex(nextIndex); // Update state for UI
       const audio = new Audio(queue[nextIndex]);
       audio.playbackRate = streamingPlaybackRate; // Apply current playback rate
       streamingAudioRef.current = audio;
@@ -160,6 +162,7 @@ export const DailyDownloadPlayer = ({
       console.log('[Player] First chunk audio ready, auto-playing...');
       streamingAudioQueueRef.current[0] = blobUrl;
       currentStreamingChunkRef.current = 0;
+      setCurrentStreamingChunkIndex(0); // Update state for UI
       setIsWaitingForNextChunk(false);
       
       // Create and play first audio chunk
@@ -239,6 +242,16 @@ export const DailyDownloadPlayer = ({
   // so this stays accurate without extra polling.
   const waveformShouldAnimate = isPlaying;
 
+  // Helper to strip stage directions/tags from transcript text
+  const stripTags = useCallback((text: string): string => {
+    // Remove [PAUSE: X Seconds], [PROMPT], and similar bracketed tags
+    return text
+      .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
+      .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
+      .replace(/\s{2,}/g, ' ') // Clean up extra spaces
+      .trim();
+  }, []);
+
   // Generate transcript for current topic - use streaming chunks if available
   const transcript = useMemo(() => {
     if (!topic) return [];
@@ -251,17 +264,18 @@ export const DailyDownloadPlayer = ({
       return streamingChunks.map((chunk, index) => {
         const startTime = index * segmentDuration;
         const endTime = startTime + segmentDuration;
-        const text = chunk.text;
+        // Strip tags from the text
+        const cleanText = stripTags(chunk.text);
         
         // Generate word timings
-        const words = text.split(/\s+/).filter(w => w.length > 0);
-        const wordDuration = segmentDuration / words.length;
+        const words = cleanText.split(/\s+/).filter(w => w.length > 0);
+        const wordDuration = words.length > 0 ? segmentDuration / words.length : 0;
         
         return {
           id: `${topic.id}-streaming-${index}`,
           startTime,
           endTime,
-          text,
+          text: cleanText,
           words: words.map((word, wordIndex) => ({
             word,
             startTime: startTime + (wordIndex * wordDuration),
@@ -273,12 +287,15 @@ export const DailyDownloadPlayer = ({
     
     // Fallback to mock transcript if no streaming content
     return generateMockTranscript(topic);
-  }, [topic, streamingContent.chunks]);
+  }, [topic, streamingContent.chunks, stripTags]);
 
-  // Get full transcript text for speech
+  // Get full transcript text for speech (also stripped of tags)
   const fullTranscriptText = useMemo(() => {
     return transcript.map(seg => seg.text).join(' ');
   }, [transcript]);
+
+  // For streaming playback, track which segment is currently playing based on chunk index
+  const streamingActiveSegmentIndex = isStreamingPlayback ? currentStreamingChunkRef.current : -1;
 
   // Handle voice change - works for both streaming and non-streaming playback
   const handleVoiceChange = useCallback((newVoiceId: string) => {
@@ -421,8 +438,14 @@ export const DailyDownloadPlayer = ({
     return (currentCharIndex / fullTranscriptText.length) * estimatedDuration;
   }, [currentCharIndex, fullTranscriptText.length, estimatedDuration]);
 
-  // Find active transcript segment based on character index
+  // Find active transcript segment based on playback mode
   const activeSegmentIndex = useMemo(() => {
+    // For streaming playback, use the current chunk index
+    if (isStreamingPlayback) {
+      return currentStreamingChunkIndex;
+    }
+    
+    // For TTS playback, use character index
     if (!isSpeaking && !hasStarted) return -1;
     
     let charCount = 0;
@@ -434,7 +457,7 @@ export const DailyDownloadPlayer = ({
       charCount += segmentLength;
     }
     return transcript.length - 1;
-  }, [transcript, currentCharIndex, isSpeaking, hasStarted]);
+  }, [transcript, currentCharIndex, isSpeaking, hasStarted, isStreamingPlayback, currentStreamingChunkIndex]);
 
   // Calculate word-level progress within active segment
   const activeWordIndex = useMemo(() => {
