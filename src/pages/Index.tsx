@@ -236,7 +236,7 @@ const Index = () => {
         {/* Compact Textbook Reference */}
         <div className="py-3">
           <div 
-            className="bg-card border border-border rounded-xl p-2 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
+            className="bg-card border border-border rounded-xl p-2 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:bg-primary/5 transition-all duration-200 active:scale-[0.98]"
             onClick={() => {
               lightTap();
               toast("Coming Soon", {
