@@ -1,58 +1,63 @@
 
-# Bypass Cache for Fresh Transcript Generation
+# Fix: Generating Overlay Persists After Audio Starts Playing
 
-## Current Situation
+## Problem Identified
 
-The database query confirms **no topics currently have cached transcripts** - all transcript fields are empty. This means:
-- The next time any topic is opened, it will generate fresh content using your updated prompt
-- The transcript will then be saved and cached for future requests
+The "Generating Your Brief" overlay remains visible even after the audio begins playing. This happens because:
 
-## Why You Might Still Want a Force Regenerate Option
+1. The `GeneratingOverlay` component displays when `isStreaming` is `true`
+2. `isStreaming` remains `true` until **all** transcript chunks are received **AND** all TTS audio chunks are generated
+3. However, audio playback starts as soon as the **first** chunk is ready (`firstChunkReady`)
+4. This creates a situation where audio is already playing but the overlay is still blocking the UI
 
-Even though the cache is currently empty, transcripts get saved after first generation (lines 484-499). If you update the prompt again in the future, you'll need a way to regenerate without manually clearing the database each time.
+## Root Cause
 
-## Implementation Plan
-
-### 1. Add `forceRegenerate` Parameter to Edge Function
-
-Update the edge function to accept an optional `forceRegenerate` parameter that bypasses the cache check:
-
-**File:** `supabase/functions/generate-content-stream/index.ts`
+In `DailyDownloadPlayer.tsx` (lines 703-714), the overlay is shown based solely on `isStreaming`:
 
 ```typescript
-// Line 174 - Add forceRegenerate to destructured params
-const { topicId, topicTitle, topicDescription, subjectName, forceRegenerate } = await req.json();
-
-// Lines 206-207 - Update cache check condition
-if (!forceRegenerate && existingTopic?.transcript && existingTopic.transcript.length > 500) {
-  // Use cached transcript...
-}
+<GeneratingOverlay 
+  isGenerating={false} 
+  isStreaming={isStreaming}  // <-- This stays true too long
+  ...
+/>
 ```
 
-### 2. Update Frontend Streaming Hook
+The overlay should hide once audio playback has started, which is indicated by `streamingContent.firstChunkReady` becoming `true`.
 
-Add an optional parameter to the streaming content hook so the UI can trigger regeneration:
+## Solution
 
-**File:** `src/hooks/useStreamingContent.ts`
+Update the `isStreaming` prop passed to `GeneratingOverlay` to account for when the first audio chunk is ready:
 
-Pass `forceRegenerate: true` when calling the edge function to skip cache.
-
-### 3. Optional: Clear Existing Transcripts via SQL
-
-If you want to ensure a completely fresh start, run this SQL to clear any existing transcripts:
-
-```sql
-UPDATE topics SET transcript = NULL WHERE transcript IS NOT NULL;
-NOTIFY pgrst, 'reload schema';
+```typescript
+<GeneratingOverlay 
+  isGenerating={false} 
+  isStreaming={isStreaming && !streamingContent.firstChunkReady}
+  ...
+/>
 ```
 
----
+This means:
+- Show overlay when streaming is in progress AND first audio chunk is NOT ready
+- Hide overlay as soon as the first audio chunk is ready (even if background generation continues)
 
-## Summary of Changes
+## File Changes
 
 | File | Change |
 |------|--------|
-| `supabase/functions/generate-content-stream/index.ts` | Accept `forceRegenerate` param, bypass cache when true |
-| `src/hooks/useStreamingContent.ts` | Add option to pass `forceRegenerate` to edge function |
+| `src/components/DailyDownloadPlayer.tsx` | Update line 705 to hide overlay once `firstChunkReady` is true |
 
-This gives you the flexibility to regenerate content on demand whenever you update the prompt, without needing database access.
+## Technical Details
+
+The change is minimal - a single line modification:
+
+**Before (line 705):**
+```typescript
+isStreaming={isStreaming}
+```
+
+**After:**
+```typescript
+isStreaming={isStreaming && !streamingContent.firstChunkReady}
+```
+
+This ensures the overlay only shows during the initial generation phase before any audio is ready to play. Once `onFirstChunkAudioReady` fires and audio starts, the overlay will fade out while remaining chunks continue generating in the background (which is the expected behavior per the architecture memory).
