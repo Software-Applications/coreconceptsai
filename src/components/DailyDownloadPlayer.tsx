@@ -451,6 +451,7 @@ export const DailyDownloadPlayer = ({
 
   // Track which topic we're generating for to prevent duplicate requests
   const generatingForTopicId = useRef<string | null>(null);
+  const previousTopicId = useRef<string | null>(null);
 
   // Auto-generate content when topic is opened and needs AI content
   useEffect(() => {
@@ -485,13 +486,21 @@ export const DailyDownloadPlayer = ({
     }
   }, [streamingContent.error, streamingContent.fullTranscript]);
 
-  // Reset state when topic changes
+  // Reset state when topic changes to a DIFFERENT topic
   useEffect(() => {
-    stop();
-    streamingContent.cancel();
-    setShowFlashCard(false);
-    setHasStarted(false);
-    setShowResumePrompt(false);
+    // Only cancel and reset if switching to a different topic
+    if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
+      console.log('[Player] Topic changed, cancelling previous streaming');
+      stop();
+      streamingContent.cancel();
+      generatingForTopicId.current = null;
+      setShowFlashCard(false);
+      setHasStarted(false);
+      setShowResumePrompt(false);
+    }
+    
+    // Update previous topic ID
+    previousTopicId.current = topic?.id ?? null;
     
     // Check if there's saved progress for this topic
     if (topic) {
