@@ -1,130 +1,94 @@
 
+# Fix: Preview Not Working Due to Missing forwardRef
 
-# Fix: Audio Screen Not Opening
+## Problem
 
-## Problem Identified
+The preview is inconsistent because several components wrapped in `AnimatePresence` don't use `forwardRef`. This causes:
 
-The console shows `[StreamContent] Cancelling...` being called repeatedly. This prevents the audio screen from properly initializing because:
+1. React warnings: "Function components cannot be given refs"
+2. Exit animations failing silently
+3. Potential rendering inconsistencies when components mount/unmount
 
-1. **The `cancel` function in `useStreamingContent.ts` has `audioBlobUrl` as a dependency**
-2. **The cleanup `useEffect` that calls `cancel()` has `cancel` as a dependency**
-3. **When `cancel` changes (due to `audioBlobUrl` changing), the old cleanup effect runs, which calls `cancel()`**
-4. **This resets all states (`transcriptReady`, `audioReady`, etc.) to `false`**
-5. **The player component never sees the content as "ready" and may cancel/restart generation**
+The error trace shows this happens in `Index.tsx` where `AnimatePresence` wraps components that can't receive refs.
 
-Additionally, in `DailyDownloadPlayer.tsx`:
-- Line 360 has `streamingContent` as a dependency, but `streamingContent` is a new object on every render
-- This causes the topic change effect to re-run unexpectedly
+## Components Requiring Fix
+
+| Component | File | Current Status |
+|-----------|------|----------------|
+| `VideoPlayerSheet` | `src/components/VideoPlayerSheet.tsx` | Missing forwardRef |
+| `TopicSelectionSheet` | `src/components/TopicSelectionSheet.tsx` | Missing forwardRef |
+| `DailyDownloadPlayer` | `src/components/DailyDownloadPlayer.tsx` | Missing forwardRef |
+| `ReviewBoard` | `src/components/ReviewBoard.tsx` | Missing forwardRef |
+| `ExpandedCardModal` | `src/components/ExpandedCardModal.tsx` | Missing forwardRef |
+| `PracticeQuizSheet` | `src/components/PracticeQuizSheet.tsx` | Already has forwardRef (no change needed) |
 
 ## Technical Solution
 
-### Fix 1: Stable `cancel` function in `useStreamingContent.ts`
+Each component needs to be wrapped with `forwardRef` and pass the ref to its root motion element.
 
-The `cancel` function should NOT have `audioBlobUrl` as a dependency. Instead, use a ref to track the blob URL for cleanup:
+### Example Pattern
 
+Before:
 ```typescript
-// Change from:
-const cancel = useCallback(() => {
-  // ...
-  if (audioBlobUrl) {
-    URL.revokeObjectURL(audioBlobUrl);
-  }
-  // ...
-}, [audioBlobUrl]);  // <-- This causes cancel to be recreated
-
-// Change to:
-const audioBlobUrlRef = useRef<string | null>(null);
-
-// Update ref when audioBlobUrl changes
-useEffect(() => {
-  audioBlobUrlRef.current = audioBlobUrl;
-}, [audioBlobUrl]);
-
-const cancel = useCallback(() => {
-  // ...
-  if (audioBlobUrlRef.current) {
-    URL.revokeObjectURL(audioBlobUrlRef.current);
-    audioBlobUrlRef.current = null;
-  }
-  // ...
-}, []);  // <-- Empty deps, stable function
+export const MyComponent = ({ isOpen, onClose }: Props) => {
+  if (!isOpen) return null;
+  
+  return (
+    <motion.div className="...">
+      {/* content */}
+    </motion.div>
+  );
+};
 ```
 
-### Fix 2: Stable cleanup effect
-
-Change the cleanup effect to not depend on `cancel`:
-
+After:
 ```typescript
-// Change from:
-useEffect(() => {
-  return () => {
-    cancel();
-  };
-}, [cancel]);  // <-- Runs cleanup every time cancel changes
+import { forwardRef } from 'react';
 
-// Change to:
-useEffect(() => {
-  return () => {
-    // Direct cleanup without calling cancel
-    abortControllerRef.current?.abort();
-    ttsAbortControllerRef.current?.abort();
-    if (audioBlobUrlRef.current) {
-      URL.revokeObjectURL(audioBlobUrlRef.current);
-    }
-  };
-}, []);  // <-- Only runs on unmount
-```
-
-### Fix 3: Fix dependency in `DailyDownloadPlayer.tsx`
-
-The topic change effect should not include `streamingContent` directly:
-
-```typescript
-// Change from:
-}, [topic?.id, streamingContent, getProgress]);
-
-// Change to (use streamingContent.cancel specifically):
-const cancelGeneration = streamingContent.cancel;
-// ...
-useEffect(() => {
-  if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
-    console.log('[Player] Topic changed, resetting');
-    cancelGeneration();
-    // ...
+export const MyComponent = forwardRef<HTMLDivElement, Props>(
+  function MyComponent({ isOpen, onClose }, ref) {
+    if (!isOpen) return null;
+    
+    return (
+      <motion.div ref={ref} className="...">
+        {/* content */}
+      </motion.div>
+    );
   }
-  // ...
-}, [topic?.id, cancelGeneration, getProgress]);
-```
-
-Similarly for the auto-generation effect - use destructured properties:
-
-```typescript
-const { 
-  audioReady, 
-  transcriptReady, 
-  isGenerating, 
-  isAudioGenerating, 
-  startGeneration 
-} = streamingContent;
-
-useEffect(() => {
-  if (audioReady || transcriptReady) return;
-  if (isGenerating || isAudioGenerating) return;
-  // ...
-}, [isOpen, topic?.id, audioReady, transcriptReady, isGenerating, isAudioGenerating, subjectName, voiceId, startGeneration]);
+);
 ```
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useStreamingContent.ts` | Use ref for audioBlobUrl in cancel, remove audioBlobUrl from cancel dependencies, fix cleanup effect to only run on unmount |
-| `src/components/DailyDownloadPlayer.tsx` | Destructure streamingContent properties to avoid object reference issues in useEffect dependencies |
+### 1. VideoPlayerSheet.tsx
+- Import `forwardRef`
+- Wrap component with `forwardRef<HTMLDivElement, VideoPlayerSheetProps>`
+- Add `ref` parameter and pass to root `motion.div`
 
-## Expected Behavior After Fix
+### 2. TopicSelectionSheet.tsx
+- Import `forwardRef`
+- Wrap component with `forwardRef<HTMLDivElement, TopicSelectionSheetProps>`
+- Add `ref` to the root fragment's first `motion.div` (backdrop)
 
-1. User opens a topic → Generation starts once
-2. `cancel()` is only called on actual topic change or unmount, not on state changes
-3. Audio screen shows generating overlay while transcript and audio generate
-4. When ready, the player UI appears with play button
+### 3. DailyDownloadPlayer.tsx
+- Import `forwardRef`
+- Wrap component with `forwardRef<HTMLDivElement, DailyDownloadPlayerProps>`
+- Add `ref` to root `motion.div`
 
+### 4. ReviewBoard.tsx
+- Import `forwardRef`
+- Wrap component with `forwardRef<HTMLDivElement, ReviewBoardProps>`
+- Add `ref` to root `motion.div`
+
+### 5. ExpandedCardModal.tsx
+- Import `forwardRef`
+- Wrap component with `forwardRef<HTMLDivElement, ExpandedCardModalProps>`
+- Add `ref` to root element
+
+## Expected Result
+
+After these changes:
+- No more "Function components cannot be given refs" warnings
+- AnimatePresence exit animations work correctly
+- Preview loads consistently every time
+- Smoother transitions between screens
