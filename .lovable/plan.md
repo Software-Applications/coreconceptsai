@@ -1,112 +1,156 @@
 
 
-# Audio Player Screen Bug Fixes
+# Fix Timer and Transcript Highlighting for Streaming Playback
 
-## Issues Identified
+## Problem Summary
 
-### Issue 1: Summary Button Should Be Removed
-The "Skip to Summary" button is currently shown on lines 1083-1107. This button appears after `hasStarted` is true and allows users to skip directly to the flash card summary. You want this removed.
+When audio plays using the streaming playback mode, two UI elements are broken:
 
-### Issue 2: Play/Pause Button Not Reflecting Audio Status
-The play/pause button logic on lines 1046-1052 only checks `isPlaying` state (from TTS), but doesn't account for the streaming playback state (`isStreamingPlaying`):
+1. **Timer stuck at 0:00** - The elapsed time display never updates
+2. **Word highlighting not moving** - Within the active paragraph, individual words don't highlight as they're spoken
 
-```typescript
-// Current problematic code (lines 1046-1052):
-{isTTSLoading ? (
-  <Loader2 className="w-8 h-8 animate-spin" />
-) : isPlaying ? (          // ← Only checks TTS isPlaying!
-  <Pause className="w-8 h-8" />
-) : (
-  <Play className="w-8 h-8 ml-1" />
-)}
-```
+Both issues share the same root cause: the streaming audio system doesn't track character-level progress.
 
-When streaming audio is playing (`isStreamingPlayback && isStreamingPlaying`), the button should show Pause, but currently it still shows Play because `isPlaying` is false (that's the TTS state, not the streaming state).
+## Root Cause
 
-### Issue 3: Ensure All Buttons Work
-The skip forward/backward buttons (lines 1021-1081) use `seekToChar()` which is a TTS-specific function. These won't work correctly during streaming playback mode.
+The component has two playback modes:
+- **TTS mode**: Uses `useGoogleTTS` hook which provides `currentCharIndex` 
+- **Streaming mode**: Uses a queue of pre-generated audio chunks
 
-## Solution
+During streaming playback:
+- The timer calculates elapsed time from `currentCharIndex` → always 0
+- Word highlighting within segments uses `currentCharIndex` → always 0
 
-### Fix 1: Remove Summary Button
-Delete lines 1083-1107 containing the "Skip to Summary" button.
+## Solution Overview
 
-### Fix 2: Fix Play/Pause Icon Logic
-Update the button icon condition to check both TTS and streaming states:
+Add character-level progress tracking to streaming playback by:
+1. Creating a `streamingCharIndex` state that calculates position based on:
+   - Which chunk is playing (0, 1, 2...)
+   - Progress within that chunk (from `audio.currentTime / audio.duration`)
+2. Using `streamingCharIndex` for timer and word highlighting when in streaming mode
 
-```typescript
-// Fixed code:
-{isTTSLoading ? (
-  <Loader2 className="w-8 h-8 animate-spin" />
-) : (isPlaying || (isStreamingPlayback && isStreamingPlaying)) ? (
-  <Pause className="w-8 h-8" />
-) : (
-  <Play className="w-8 h-8 ml-1" />
-)}
-```
+## Technical Changes
 
-### Fix 3: Update Skip Buttons for Streaming Mode
-Add conditional logic to skip buttons to work with streaming playback:
+### 1. Add Streaming Character Index State
 
-For **Skip Back**:
-- In streaming mode: Go to previous chunk if available
-- In TTS mode: Use existing `seekToChar()` logic
-
-For **Skip Forward**:
-- In streaming mode: Skip to next chunk if available
-- In TTS mode: Use existing `seekToChar()` logic
+Add new state and update it in the progress tracking interval:
 
 ```typescript
-// Skip back button onClick:
-onClick={() => {
-  lightTap();
-  if (!hasStarted) return;
+const [streamingCharIndex, setStreamingCharIndex] = useState(0);
+
+const updateStreamingProgress = useCallback(() => {
+  const audio = streamingAudioRef.current;
+  const totalChunks = totalChunksRef.current || 1;
+  const currentChunk = currentStreamingChunkRef.current;
   
-  if (isStreamingPlayback) {
-    // In streaming mode, go back one chunk
-    const prevIndex = Math.max(0, currentStreamingChunkRef.current - 1);
-    if (prevIndex !== currentStreamingChunkRef.current && streamingAudioQueueRef.current[prevIndex]) {
-      if (streamingAudioRef.current) {
-        streamingAudioRef.current.pause();
-      }
-      currentStreamingChunkRef.current = prevIndex;
-      setCurrentStreamingChunkIndex(prevIndex);
-      const audio = new Audio(streamingAudioQueueRef.current[prevIndex]);
-      audio.playbackRate = streamingPlaybackRate;
-      streamingAudioRef.current = audio;
-      audio.addEventListener('play', () => setIsStreamingPlaying(true));
-      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
-      audio.addEventListener('ended', () => {
-        setIsStreamingPlaying(false);
-        if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
-          playNextStreamingChunk();
-        } else {
-          setIsWaitingForNextChunk(true);
-        }
-      });
-      audio.play().catch(console.error);
-    }
-  } else {
-    // TTS mode - use existing seek logic
-    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
-    const skipChars = Math.floor(charsPerSecond * 15);
-    const newCharIndex = Math.max(0, currentCharIndex - skipChars);
-    seekToChar(newCharIndex);
+  if (audio && audio.duration && !isNaN(audio.duration)) {
+    const chunkProgress = (audio.currentTime / audio.duration);
+    const totalProgress = ((currentChunk + chunkProgress) / totalChunks) * 100;
+    setPlaybackProgress(Math.min(99, totalProgress));
+    
+    // Calculate character index for streaming mode
+    const totalChars = fullTranscriptTextRef.current.length;
+    const charIndex = Math.floor((totalProgress / 100) * totalChars);
+    setStreamingCharIndex(charIndex);
   }
-}}
+}, []);
 ```
 
-Similar logic for skip forward button.
+### 2. Add Ref for Full Transcript Text
+
+Since `updateStreamingProgress` is a callback, it needs a ref to access the current transcript text:
+
+```typescript
+const fullTranscriptTextRef = useRef<string>('');
+
+// Keep ref in sync
+useEffect(() => {
+  fullTranscriptTextRef.current = fullTranscriptText;
+}, [fullTranscriptText]);
+```
+
+### 3. Create Combined Character Index
+
+Add a derived value that uses the appropriate source based on playback mode:
+
+```typescript
+const combinedCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
+```
+
+### 4. Update Timer Calculation
+
+Modify `currentSeconds` to use the combined index:
+
+```typescript
+const currentSeconds = useMemo(() => {
+  if (fullTranscriptText.length === 0) return 0;
+  const charIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
+  return (charIndex / fullTranscriptText.length) * estimatedDuration;
+}, [streamingCharIndex, currentCharIndex, fullTranscriptText.length, estimatedDuration, isStreamingPlayback]);
+```
+
+### 5. Update Active Word Calculation
+
+Modify `activeWordIndex` to use the combined index:
+
+```typescript
+const activeWordIndex = useMemo(() => {
+  if (activeSegmentIndex < 0) return -1;
+  const segment = transcript[activeSegmentIndex];
+  if (!segment) return -1;
+  
+  const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
+  
+  // Calculate character offset within this segment
+  let prevCharsCount = 0;
+  for (let i = 0; i < activeSegmentIndex; i++) {
+    prevCharsCount += transcript[i].text.length + 1;
+  }
+  const charInSegment = effectiveCharIndex - prevCharsCount;
+  
+  // Find which word we're on
+  let charCount = 0;
+  for (let i = 0; i < segment.words.length; i++) {
+    const wordLength = segment.words[i].word.length + 1;
+    if (charInSegment < charCount + wordLength) {
+      return i;
+    }
+    charCount += wordLength;
+  }
+  return segment.words.length - 1;
+}, [activeSegmentIndex, currentCharIndex, streamingCharIndex, transcript, isStreamingPlayback]);
+```
+
+### 6. Reset Streaming State on Stop/End
+
+Ensure `streamingCharIndex` resets when playback ends or is stopped:
+
+```typescript
+// In handleSpeechEnd callback
+setStreamingCharIndex(0);
+
+// When closing player or switching topics
+setStreamingCharIndex(0);
+```
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/DailyDownloadPlayer.tsx` | Remove summary button, fix play/pause icon, update skip buttons |
+| `src/components/DailyDownloadPlayer.tsx` | Add `streamingCharIndex` state, `fullTranscriptTextRef`, update `updateStreamingProgress`, `currentSeconds`, and `activeWordIndex` |
 
-## Summary of Changes
+## Expected Behavior After Fix
 
-1. **Remove** the "Skip to Summary" button (lines 1083-1107)
-2. **Fix** play/pause icon to show correct state: `(isPlaying || (isStreamingPlayback && isStreamingPlaying))`
-3. **Update** skip back/forward buttons to handle streaming mode by navigating between chunks
+1. **Timer**: Updates smoothly from 0:00 as audio plays, showing correct elapsed time
+2. **Word highlighting**: Individual words in the active paragraph highlight in sequence as they're spoken
+3. **Both modes work**: Fix applies to streaming playback while TTS mode continues working as before
+
+## Testing Plan
+
+1. Open a topic and let content generate
+2. Click play - verify timer starts counting up
+3. Verify words in the active paragraph highlight progressively
+4. Skip forward/backward - verify timer and highlighting update correctly
+5. Pause and resume - verify timer and highlighting stop/resume
+6. Complete playback - verify timer shows full duration at end
 
