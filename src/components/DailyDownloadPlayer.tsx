@@ -684,7 +684,14 @@ export const DailyDownloadPlayer = ({
             </div>
           )}
 
-          {/* Transcript */}
+          {/* Transcript Section */}
+          <div className="flex items-center gap-2 mb-3 mt-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Transcript
+            </h3>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          
           <div 
             ref={transcriptRef}
             className="flex-1 overflow-y-auto pb-8 cursor-grab select-none"
@@ -693,7 +700,7 @@ export const DailyDownloadPlayer = ({
             onMouseUp={handleTranscriptMouseUp}
             onMouseLeave={handleTranscriptMouseUp}
           >
-            <div className="space-y-4">
+            <div className="space-y-6">
               {paragraphs.map((paragraph, index) => {
                 const isActive = index === activeSegmentIndex;
                 const words = paragraph.split(/\s+/);
