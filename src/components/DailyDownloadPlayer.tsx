@@ -51,6 +51,32 @@ export const DailyDownloadPlayer = ({
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
   const [isChangingVoice, setIsChangingVoice] = useState(false);
+
+  // Keep transcript highlighting synced tightly to playback without heavy listeners
+  const stopTimeSync = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+
+  const startTimeSync = useCallback(() => {
+    stopTimeSync();
+
+    const tick = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      // Always read the latest audio time (no incremental drift)
+      setCurrentTimeMs(audio.currentTime * 1000);
+
+      if (!audio.paused && !audio.ended) {
+        animationFrameRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
+  }, [stopTimeSync]);
   
   // Playback rate
   const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
@@ -204,14 +230,38 @@ export const DailyDownloadPlayer = ({
     
     const audio = new Audio(streamingContent.audioBlobUrl);
     audioRef.current = audio;
-    
-    audio.addEventListener('loadedmetadata', () => {
+
+    const handleLoadedMetadata = () => {
       setDurationMs(audio.duration * 1000);
-    });
-    
-    audio.addEventListener('play', () => setIsPlaying(true));
-    audio.addEventListener('pause', () => setIsPlaying(false));
-    audio.addEventListener('ended', handleAudioEnd);
+    };
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+      startTimeSync();
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
+      stopTimeSync();
+      // Keep UI accurate immediately on pause
+      setCurrentTimeMs(audio.currentTime * 1000);
+    };
+
+    const handleSeek = () => {
+      setCurrentTimeMs(audio.currentTime * 1000);
+    };
+
+    const handleEnded = () => {
+      stopTimeSync();
+      handleAudioEnd();
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('seeking', handleSeek);
+    audio.addEventListener('seeked', handleSeek);
+    audio.addEventListener('ended', handleEnded);
     
     // Apply current playback rate
     audio.playbackRate = playbackRate;
@@ -229,37 +279,17 @@ export const DailyDownloadPlayer = ({
     }
     
     return () => {
+      stopTimeSync();
       audio.pause();
-      audio.removeEventListener('loadedmetadata', () => {});
-      audio.removeEventListener('play', () => {});
-      audio.removeEventListener('pause', () => {});
-      audio.removeEventListener('ended', handleAudioEnd);
-    };
-  }, [streamingContent.audioBlobUrl, handleAudioEnd, playbackRate]);
 
-  // 60fps time sync using requestAnimationFrame for smooth highlighting
-  useEffect(() => {
-    const syncTime = () => {
-      if (audioRef.current && isPlaying) {
-        setCurrentTimeMs(audioRef.current.currentTime * 1000);
-        animationFrameRef.current = requestAnimationFrame(syncTime);
-      }
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('seeking', handleSeek);
+      audio.removeEventListener('seeked', handleSeek);
+      audio.removeEventListener('ended', handleEnded);
     };
-
-    if (isPlaying) {
-      animationFrameRef.current = requestAnimationFrame(syncTime);
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
-  }, [isPlaying]);
+  }, [streamingContent.audioBlobUrl, handleAudioEnd, playbackRate, startTimeSync, stopTimeSync]);
 
   // Handle voice change - regenerate audio and resume from current position
   const handleVoiceChange = useCallback(async (newVoiceId: string) => {
@@ -749,7 +779,8 @@ export const DailyDownloadPlayer = ({
             <div className="space-y-6">
               {paragraphs.map((paragraph, index) => {
                 const isActive = index === activeSegmentIndex;
-                const words = paragraph.split(/\s+/);
+                // Only split words for the active paragraph (keeps 60fps updates lightweight)
+                const words = isActive ? paragraph.split(/\s+/) : [];
                 
                 return (
                   <div key={index}>
@@ -763,22 +794,24 @@ export const DailyDownloadPlayer = ({
                             : 'text-muted-foreground'
                       }`}
                     >
-                      {isActive ? (
-                        words.map((word, wordIndex) => (
-                          <span
-                            key={wordIndex}
-                            className={`transition-colors duration-150 ${
-                              wordIndex <= activeWordIndex
-                                ? 'text-primary font-medium'
-                                : 'text-foreground'
-                            }`}
-                          >
-                            {word}{wordIndex < words.length - 1 ? ' ' : ''}
-                          </span>
-                        ))
-                      ) : (
-                        paragraph
-                      )}
+                      {isActive ? (() => {
+                        const splitIndex = Math.max(0, activeWordIndex + 1);
+                        const completed = words.slice(0, splitIndex).join(' ');
+                        const remaining = words.slice(splitIndex).join(' ');
+
+                        return (
+                          <>
+                            {completed ? (
+                              <span className="text-primary font-medium">
+                                {completed}{remaining ? ' ' : ''}
+                              </span>
+                            ) : null}
+                            {remaining ? (
+                              <span className="text-foreground">{remaining}</span>
+                            ) : null}
+                          </>
+                        );
+                      })() : paragraph}
                     </p>
                   </div>
                 );
