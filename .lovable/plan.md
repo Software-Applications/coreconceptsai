@@ -1,86 +1,112 @@
 
-# Streaming Audio Generation Without Auto-Play
 
-## ✅ IMPLEMENTED
+# Audio Player Screen Bug Fixes
 
-## Problem Summary
-Currently, when a user clicks on a topic in the Core Concepts drawer:
-1. The system generates transcript and audio in parallel (correct ✓)
-2. Audio auto-plays immediately when the first chunk is ready (incorrect ✗) → **FIXED**
-3. Clicking play requests TTS generation again instead of using pre-generated audio (incorrect ✗) → **FIXED**
+## Issues Identified
 
-## Solution Implemented
+### Issue 1: Summary Button Should Be Removed
+The "Skip to Summary" button is currently shown on lines 1083-1107. This button appears after `hasStarted` is true and allows users to skip directly to the flash card summary. You want this removed.
 
-Modified the audio player to:
-1. Generate transcript + audio in bite-sized paragraph chunks (already working)
-2. Show the player view when first chunk is ready (already working)
-3. **Remove auto-play** - audio waits for user interaction ✅
-4. **Use pre-generated audio** - clicking play uses the queued audio chunks, not new TTS requests ✅
+### Issue 2: Play/Pause Button Not Reflecting Audio Status
+The play/pause button logic on lines 1046-1052 only checks `isPlaying` state (from TTS), but doesn't account for the streaming playback state (`isStreamingPlaying`):
 
-## Technical Changes Made
-
-### 1. Added `isStreamingPlaying` State
-New state variable to track whether streaming audio is actively playing or paused.
-
-### 2. Modified `onFirstChunkAudioReady` Callback
-- Stores the first chunk's blob URL in the queue
-- Does NOT call `audio.play()` or set `hasStarted`
-- Audio remains paused until user interaction
-
-### 3. Updated `handlePlayPause` Function
-- Checks if streaming audio chunks are available
-- If available, creates Audio element from queued blob URLs and plays immediately
-- Falls back to TTS only if no streaming audio exists
-- Properly handles pause/resume for streaming audio
-
-### 4. Updated `playNextStreamingChunk` Function
-- Added play/pause event listeners to sync `isStreamingPlaying` state
-- Sets `isStreamingPlaying(true)` when starting next chunk
-
-### 5. Updated Waveform Animation
-- Now respects both TTS playing state and streaming playing state:
-  ```typescript
-  const waveformShouldAnimate = isPlaying || (isStreamingPlayback && isStreamingPlaying);
-  ```
-
-## Flow Diagram
-
-```text
-User clicks topic
-        ↓
-TopicSelectionSheet.handleSelectTopic()
-        ↓
-DailyDownloadPlayer opens
-        ↓
-Auto-triggers streamingContent.startStreaming()
-        ↓
-┌─────────────────────────────────────────┐
-│ Parallel Processing (per chunk):       │
-│   1. Transcript chunk arrives (SSE)    │
-│   2. TTS audio generated immediately   │
-│   3. Audio blob stored in queue        │
-└─────────────────────────────────────────┘
-        ↓
-First chunk ready → Show player (no auto-play) ✅
-        ↓
-User clicks PLAY
-        ↓
-Use queued audio blob → Start playback instantly ✅
-        ↓
-On chunk end → Play next queued chunk
-        ↓
-If next chunk not ready → Show buffering
-        ↓
-All chunks complete → Show flash summary
+```typescript
+// Current problematic code (lines 1046-1052):
+{isTTSLoading ? (
+  <Loader2 className="w-8 h-8 animate-spin" />
+) : isPlaying ? (          // ← Only checks TTS isPlaying!
+  <Pause className="w-8 h-8" />
+) : (
+  <Play className="w-8 h-8 ml-1" />
+)}
 ```
 
-## Testing Checklist
+When streaming audio is playing (`isStreamingPlayback && isStreamingPlaying`), the button should show Pause, but currently it still shows Play because `isPlaying` is false (that's the TTS state, not the streaming state).
 
-- [ ] Open Core Concepts drawer and select a topic
-- [ ] Verify the player shows loading overlay while generating
-- [ ] Verify player view appears when content is ready (audio NOT playing)
-- [ ] Click play - verify audio starts immediately without loading spinner
-- [ ] Pause and resume - verify streaming audio respects pause/resume
-- [ ] Change voice during playback - verify voice change works
-- [ ] Test with a new topic that requires generation
-- [ ] Test with a cached topic that has pre-existing transcript
+### Issue 3: Ensure All Buttons Work
+The skip forward/backward buttons (lines 1021-1081) use `seekToChar()` which is a TTS-specific function. These won't work correctly during streaming playback mode.
+
+## Solution
+
+### Fix 1: Remove Summary Button
+Delete lines 1083-1107 containing the "Skip to Summary" button.
+
+### Fix 2: Fix Play/Pause Icon Logic
+Update the button icon condition to check both TTS and streaming states:
+
+```typescript
+// Fixed code:
+{isTTSLoading ? (
+  <Loader2 className="w-8 h-8 animate-spin" />
+) : (isPlaying || (isStreamingPlayback && isStreamingPlaying)) ? (
+  <Pause className="w-8 h-8" />
+) : (
+  <Play className="w-8 h-8 ml-1" />
+)}
+```
+
+### Fix 3: Update Skip Buttons for Streaming Mode
+Add conditional logic to skip buttons to work with streaming playback:
+
+For **Skip Back**:
+- In streaming mode: Go to previous chunk if available
+- In TTS mode: Use existing `seekToChar()` logic
+
+For **Skip Forward**:
+- In streaming mode: Skip to next chunk if available
+- In TTS mode: Use existing `seekToChar()` logic
+
+```typescript
+// Skip back button onClick:
+onClick={() => {
+  lightTap();
+  if (!hasStarted) return;
+  
+  if (isStreamingPlayback) {
+    // In streaming mode, go back one chunk
+    const prevIndex = Math.max(0, currentStreamingChunkRef.current - 1);
+    if (prevIndex !== currentStreamingChunkRef.current && streamingAudioQueueRef.current[prevIndex]) {
+      if (streamingAudioRef.current) {
+        streamingAudioRef.current.pause();
+      }
+      currentStreamingChunkRef.current = prevIndex;
+      setCurrentStreamingChunkIndex(prevIndex);
+      const audio = new Audio(streamingAudioQueueRef.current[prevIndex]);
+      audio.playbackRate = streamingPlaybackRate;
+      streamingAudioRef.current = audio;
+      audio.addEventListener('play', () => setIsStreamingPlaying(true));
+      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+      audio.addEventListener('ended', () => {
+        setIsStreamingPlaying(false);
+        if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
+          playNextStreamingChunk();
+        } else {
+          setIsWaitingForNextChunk(true);
+        }
+      });
+      audio.play().catch(console.error);
+    }
+  } else {
+    // TTS mode - use existing seek logic
+    const charsPerSecond = (fullTranscriptText.length / estimatedDuration);
+    const skipChars = Math.floor(charsPerSecond * 15);
+    const newCharIndex = Math.max(0, currentCharIndex - skipChars);
+    seekToChar(newCharIndex);
+  }
+}}
+```
+
+Similar logic for skip forward button.
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/components/DailyDownloadPlayer.tsx` | Remove summary button, fix play/pause icon, update skip buttons |
+
+## Summary of Changes
+
+1. **Remove** the "Skip to Summary" button (lines 1083-1107)
+2. **Fix** play/pause icon to show correct state: `(isPlaying || (isStreamingPlayback && isStreamingPlaying))`
+3. **Update** skip back/forward buttons to handle streaming mode by navigating between chunks
+
