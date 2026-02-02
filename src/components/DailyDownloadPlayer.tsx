@@ -46,6 +46,7 @@ export const DailyDownloadPlayer = ({
   
   // Audio state
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -208,10 +209,6 @@ export const DailyDownloadPlayer = ({
       setDurationMs(audio.duration * 1000);
     });
     
-    audio.addEventListener('timeupdate', () => {
-      setCurrentTimeMs(audio.currentTime * 1000);
-    });
-    
     audio.addEventListener('play', () => setIsPlaying(true));
     audio.addEventListener('pause', () => setIsPlaying(false));
     audio.addEventListener('ended', handleAudioEnd);
@@ -234,12 +231,35 @@ export const DailyDownloadPlayer = ({
     return () => {
       audio.pause();
       audio.removeEventListener('loadedmetadata', () => {});
-      audio.removeEventListener('timeupdate', () => {});
       audio.removeEventListener('play', () => {});
       audio.removeEventListener('pause', () => {});
       audio.removeEventListener('ended', handleAudioEnd);
     };
   }, [streamingContent.audioBlobUrl, handleAudioEnd, playbackRate]);
+
+  // 60fps time sync using requestAnimationFrame for smooth highlighting
+  useEffect(() => {
+    const syncTime = () => {
+      if (audioRef.current && isPlaying) {
+        setCurrentTimeMs(audioRef.current.currentTime * 1000);
+        animationFrameRef.current = requestAnimationFrame(syncTime);
+      }
+    };
+
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(syncTime);
+    } else if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [isPlaying]);
 
   // Handle voice change - regenerate audio and resume from current position
   const handleVoiceChange = useCallback(async (newVoiceId: string) => {
@@ -733,10 +753,6 @@ export const DailyDownloadPlayer = ({
                 
                 return (
                   <div key={index}>
-                    {/* Subtle separator line between paragraphs */}
-                    {index > 0 && (
-                      <div className="h-px bg-border/50 mb-6" />
-                    )}
                     <p
                       ref={isActive ? activeSegmentRef : null}
                       className={`text-sm leading-relaxed transition-all duration-300 ${
