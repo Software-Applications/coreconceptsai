@@ -1,107 +1,151 @@
 
 
-# Fix Transcript Formatting & Highlighting Sync
+# DailyDownloadPlayer.tsx Cleanup & Optimization
 
-## Root Cause Analysis
+## Current Issues Identified
 
-### Issue 1: Missing Paragraphs
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| **Redundant state** | `showGeneratingOverlay` computed inline but uses already-tracked states | Minimal clutter |
+| **Duplicate calculations** | Character offset calculated twice (in `activeSegmentIndex` and `activeWordIndex`) | Repeated loops |
+| **Unnecessary wrapper div** | Each paragraph wrapped in `<div key={index}><p>...</p></div>` when `<p key={index}>` suffices | Extra DOM nodes |
+| **Magic numbers** | `HIGHLIGHT_LEAD_MS = 180`, paragraph split threshold `500`, chunk size `400` undocumented | Harder to tune |
+| **Inefficient paragraph offset** | Loops through all paragraphs every time to find character offset | O(n) per render |
+| **Waveform regenerated** | `waveformBars` uses `useMemo(() => ..., [])` but randomizes on mount | Regenerates on remount |
 
-The transcript returned from the API is wrapped in `<transcript>` tags:
+## Optimization Plan
+
+### 1. Precompute Paragraph Character Offsets
+
+Instead of looping through paragraphs on every render to find character positions, compute an offset array once when `paragraphs` changes:
+
+```typescript
+const paragraphOffsets = useMemo(() => {
+  let offset = 0;
+  return paragraphs.map((p) => {
+    const start = offset;
+    offset += p.length + 2; // +2 for paragraph break
+    return { start, end: offset };
+  });
+}, [paragraphs]);
 ```
-<transcript>
-Think about the last time...
 
-An action potential is...
-</transcript>
+Then use binary search or simple lookup:
+
+```typescript
+const activeSegmentIndex = useMemo(() => {
+  if (!hasStarted || !fullTranscriptText) return -1;
+  return paragraphOffsets.findIndex(
+    ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
+  ) ?? paragraphs.length - 1;
+}, [paragraphOffsets, currentCharIndex, hasStarted, fullTranscriptText]);
 ```
 
-The `stripTags` function (lines 106-112) only removes `[PAUSE]` and `[DIRECTION]` style bracketed tags - it does NOT strip the XML-style `<transcript>` tags. As a result:
+### 2. Consolidate Character Position Logic
 
-1. The text still contains `<transcript>` at the start and `</transcript>` at the end
-2. More critically, line 110 replaces all sequences of 2+ spaces with a single space: `.replace(/\s{2,}/g, ' ')` 
-3. **This also replaces `\n\n` (which regex treats as 2 whitespace chars) with a single space**, destroying all paragraph breaks
+Create a single derived value for both segment index and word index:
 
-### Issue 2: Slow Transcript Highlighting
-
-The current sync relies on **linear interpolation** (line 154):
-```js
-const progress = currentTimeMs / durationMs;
-return Math.floor(progress * fullTranscriptText.length);
+```typescript
+const { activeSegmentIndex, activeWordIndex, charInParagraph } = useMemo(() => {
+  if (!hasStarted || !fullTranscriptText || paragraphOffsets.length === 0) {
+    return { activeSegmentIndex: -1, activeWordIndex: -1, charInParagraph: 0 };
+  }
+  
+  const segIdx = paragraphOffsets.findIndex(
+    ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
+  );
+  const idx = segIdx === -1 ? paragraphs.length - 1 : segIdx;
+  const charPos = currentCharIndex - paragraphOffsets[idx].start;
+  
+  // Find word index
+  const words = paragraphs[idx]?.split(/\s+/) || [];
+  let count = 0;
+  let wordIdx = words.length - 1;
+  for (let i = 0; i < words.length; i++) {
+    count += words[i].length + 1;
+    if (charPos < count) {
+      wordIdx = i;
+      break;
+    }
+  }
+  
+  return { activeSegmentIndex: idx, activeWordIndex: wordIdx, charInParagraph: charPos };
+}, [paragraphOffsets, paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
 ```
 
-This assumes every character takes the same time to speak, but:
-- Speech naturally varies in pace (pauses between sentences, emphasis, etc.)
-- The actual TTS audio may not perfectly match this linear model
-- The audio `durationMs` may not exactly correspond to the visual text length
+### 3. Remove Unnecessary Wrapper Divs
 
-The `requestAnimationFrame` loop IS running at 60fps, but the calculated position is inherently lagging because linear interpolation underestimates the current position when speech is naturally front-loaded or has variations.
+Change paragraph rendering from:
 
-## Solution
+```tsx
+<div key={index}>
+  <p ref={...} className={...}>
+    ...
+  </p>
+</div>
+```
 
-### Fix 1: Update `stripTags` to Remove XML Tags and Preserve Newlines
+To:
 
-1. Strip `<transcript>` and `</transcript>` XML tags
-2. Preserve paragraph breaks by NOT collapsing `\n\n` into a single space
-3. Only collapse multiple spaces on the same line
+```tsx
+<p key={index} ref={...} className={...}>
+  ...
+</p>
+```
 
-### Fix 2: Improve Sync Accuracy with Slight Lead
+### 4. Extract Constants to Top of File
 
-Apply a small time offset (e.g., 150-200ms ahead) to the `currentTimeMs` used for character calculation. This compensates for:
-- Natural human perception delay
-- Slight audio buffering latency
-- The fact that we want highlighting to feel "in sync" which often means slightly anticipating
+```typescript
+// Configuration constants
+const HIGHLIGHT_LEAD_MS = 180;
+const PARAGRAPH_MIN_LENGTH = 500;
+const SENTENCE_CHUNK_SIZE = 400;
+const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
+const WAVEFORM_BAR_COUNT = 40;
+const PROGRESS_SAVE_INTERVAL_MS = 5000;
+```
 
-This is a common technique in karaoke/lyrics sync apps.
+### 5. Stabilize Waveform Bars
 
-## Implementation
+Move waveform generation outside component or use a seeded random:
 
-| File | Changes |
-|------|---------|
-| `src/components/DailyDownloadPlayer.tsx` | Update `stripTags` to remove `<transcript>` tags and preserve `\n\n`; add time offset to character calculation |
+```typescript
+// Outside component
+const WAVEFORM_BARS = Array.from({ length: 40 }, (_, i) => ({
+  height: 20 + (Math.sin(i * 0.7) + 1) * 30 + (Math.cos(i * 1.3) + 1) * 15,
+  delay: i * 0.02
+}));
+```
 
-### Code Changes
-
-**Fix stripTags (around line 106):**
+### 6. Simplify `stripTags` with Single Regex Chain
 
 ```typescript
 const stripTags = useCallback((text: string): string => {
   return text
-    // Remove XML-style transcript wrapper tags
     .replace(/<\/?transcript>/gi, '')
-    // Remove pause/direction bracketed tags
-    .replace(/\[PAUSE:\s*\d+\s*(?:Seconds?|s)\]/gi, '')
-    .replace(/\[(?:PROMPT|PAUSE|NOTE|DIRECTION)[^\]]*\]/gi, '')
-    // Collapse multiple spaces (but NOT newlines) into single space
-    .replace(/[ \t]+/g, ' ')
-    // Normalize multiple newlines to exactly two (paragraph break)
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\[(?:PAUSE|PROMPT|NOTE|DIRECTION)[^\]]*\]/gi, '')
+    .replace(/\n\n+/g, '\u0000')     // Use null char as temp marker
+    .replace(/\n/g, ' ')
+    .replace(/\u0000/g, '\n\n')
+    .replace(/ {2,}/g, ' ')
     .trim();
 }, []);
 ```
 
-**Fix character calculation with time offset (around line 152):**
+### 7. Remove Unused Imports
 
-```typescript
-// Apply a slight lead (anticipation) for better perceived sync
-const HIGHLIGHT_LEAD_MS = 180;
+`Loader2` is imported but not used in the rendered output.
 
-const currentCharIndex = useMemo(() => {
-  if (!durationMs || !fullTranscriptText.length) return 0;
-  // Add lead time for better perceived synchronization
-  const adjustedTimeMs = Math.min(currentTimeMs + HIGHLIGHT_LEAD_MS, durationMs);
-  const progress = adjustedTimeMs / durationMs;
-  return Math.floor(progress * fullTranscriptText.length);
-}, [currentTimeMs, durationMs, fullTranscriptText.length]);
-```
+## File Changes Summary
 
-## Expected Results
+| File | Changes |
+|------|---------|
+| `src/components/DailyDownloadPlayer.tsx` | Precompute paragraph offsets, consolidate active segment/word logic, remove wrapper divs, extract constants, stabilize waveform, simplify stripTags, remove unused imports |
 
-1. **Paragraphs visible**: The transcript will properly split on `\n\n` and display with `space-y-6` spacing
-2. **Faster highlighting**: The 180ms lead will make highlighting feel more "in sync" or even slightly ahead of the audio, which feels more natural to users
+## Expected Improvements
 
-## Technical Notes
-
-- The 180ms offset is configurable; common values in karaoke apps range from 100-300ms
-- The `\n\n` preservation is critical because the AI prompt explicitly asks for paragraph breaks with double newlines
-- This fix works for both cached and freshly generated transcripts
+1. **Performance**: O(1) paragraph lookup instead of O(n) loop per frame
+2. **Readability**: Constants documented at top, single source of truth for position logic
+3. **Bundle size**: Fewer DOM nodes, removed unused import
+4. **Maintainability**: Easier to tune timing values from constants
 
