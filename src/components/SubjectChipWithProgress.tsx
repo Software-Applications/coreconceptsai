@@ -64,7 +64,7 @@ export const SubjectChipWithProgress = forwardRef<HTMLButtonElement, SubjectChip
         className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-colors min-w-fit ${
           isSelected
             ? 'border-2 border-primary bg-card shadow-sm'
-            : 'border border-border bg-card hover:bg-accent'
+            : 'border border-border bg-card hover:bg-primary/5 hover:border-primary/30'
         }`}
       >
         <img 

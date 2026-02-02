@@ -85,7 +85,7 @@ export const ChapterDrawer = forwardRef<HTMLDivElement, ChapterDrawerProps>(
                       className={`w-full px-4 py-3.5 text-left flex items-center justify-between rounded-xl transition-colors ${
                         selectedChapter.id === chapter.id
                           ? "bg-primary/10 border border-primary/20"
-                          : "bg-card border border-border hover:bg-accent hover:border-primary/20"
+                          : "bg-card border border-border hover:bg-primary/5 hover:border-primary/30"
                       }`}
                       whileTap={{ scale: 0.98 }}
                       transition={springTransition}
