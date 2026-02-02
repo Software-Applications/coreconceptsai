@@ -1,156 +1,176 @@
 
+# Transcript and Audio Pause Rules Implementation
 
-# Fix Timer and Transcript Highlighting for Streaming Playback
+## Overview
 
-## Problem Summary
+You want to improve the transcript chunking and audio generation with better pacing:
 
-When audio plays using the streaming playback mode, two UI elements are broken:
+1. **Paragraph-based chunking**: Each text chunk should contain one or more complete paragraphs
+2. **5-second pauses**: Audio should pause for 5 seconds after reflective questions or `[PAUSE]` markers
+3. **2-second paragraph pauses**: Audio should pause for 2 seconds at the start of each new paragraph (superseded by the 5-second rule)
 
-1. **Timer stuck at 0:00** - The elapsed time display never updates
-2. **Word highlighting not moving** - Within the active paragraph, individual words don't highlight as they're spoken
+## Current Behavior
 
-Both issues share the same root cause: the streaming audio system doesn't track character-level progress.
+- Chunks are split by word count (~75 words) at sentence boundaries
+- `[PAUSE: 5 Seconds]` markers are in the transcript but TTS speaks them as text
+- No actual audio silence is inserted
 
-## Root Cause
+## Technical Solution
 
-The component has two playback modes:
-- **TTS mode**: Uses `useGoogleTTS` hook which provides `currentCharIndex` 
-- **Streaming mode**: Uses a queue of pre-generated audio chunks
+### 1. Modify Transcript Chunking (Edge Function)
 
-During streaming playback:
-- The timer calculates elapsed time from `currentCharIndex` → always 0
-- Word highlighting within segments uses `currentCharIndex` → always 0
+**File**: `supabase/functions/generate-content-stream/index.ts`
 
-## Solution Overview
-
-Add character-level progress tracking to streaming playback by:
-1. Creating a `streamingCharIndex` state that calculates position based on:
-   - Which chunk is playing (0, 1, 2...)
-   - Progress within that chunk (from `audio.currentTime / audio.duration`)
-2. Using `streamingCharIndex` for timer and word highlighting when in streaming mode
-
-## Technical Changes
-
-### 1. Add Streaming Character Index State
-
-Add new state and update it in the progress tracking interval:
+Update the `splitIntoChunks` function to respect paragraph boundaries:
 
 ```typescript
-const [streamingCharIndex, setStreamingCharIndex] = useState(0);
-
-const updateStreamingProgress = useCallback(() => {
-  const audio = streamingAudioRef.current;
-  const totalChunks = totalChunksRef.current || 1;
-  const currentChunk = currentStreamingChunkRef.current;
+function splitIntoChunks(text: string, maxWordsPerChunk: number = 150): string[] {
+  // Split by double newlines (paragraphs)
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  const chunks: string[] = [];
+  let currentChunk = '';
+  let currentWords = 0;
   
-  if (audio && audio.duration && !isNaN(audio.duration)) {
-    const chunkProgress = (audio.currentTime / audio.duration);
-    const totalProgress = ((currentChunk + chunkProgress) / totalChunks) * 100;
-    setPlaybackProgress(Math.min(99, totalProgress));
+  for (const paragraph of paragraphs) {
+    const paragraphWords = countWords(paragraph);
     
-    // Calculate character index for streaming mode
-    const totalChars = fullTranscriptTextRef.current.length;
-    const charIndex = Math.floor((totalProgress / 100) * totalChars);
-    setStreamingCharIndex(charIndex);
-  }
-}, []);
-```
-
-### 2. Add Ref for Full Transcript Text
-
-Since `updateStreamingProgress` is a callback, it needs a ref to access the current transcript text:
-
-```typescript
-const fullTranscriptTextRef = useRef<string>('');
-
-// Keep ref in sync
-useEffect(() => {
-  fullTranscriptTextRef.current = fullTranscriptText;
-}, [fullTranscriptText]);
-```
-
-### 3. Create Combined Character Index
-
-Add a derived value that uses the appropriate source based on playback mode:
-
-```typescript
-const combinedCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
-```
-
-### 4. Update Timer Calculation
-
-Modify `currentSeconds` to use the combined index:
-
-```typescript
-const currentSeconds = useMemo(() => {
-  if (fullTranscriptText.length === 0) return 0;
-  const charIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
-  return (charIndex / fullTranscriptText.length) * estimatedDuration;
-}, [streamingCharIndex, currentCharIndex, fullTranscriptText.length, estimatedDuration, isStreamingPlayback]);
-```
-
-### 5. Update Active Word Calculation
-
-Modify `activeWordIndex` to use the combined index:
-
-```typescript
-const activeWordIndex = useMemo(() => {
-  if (activeSegmentIndex < 0) return -1;
-  const segment = transcript[activeSegmentIndex];
-  if (!segment) return -1;
-  
-  const effectiveCharIndex = isStreamingPlayback ? streamingCharIndex : currentCharIndex;
-  
-  // Calculate character offset within this segment
-  let prevCharsCount = 0;
-  for (let i = 0; i < activeSegmentIndex; i++) {
-    prevCharsCount += transcript[i].text.length + 1;
-  }
-  const charInSegment = effectiveCharIndex - prevCharsCount;
-  
-  // Find which word we're on
-  let charCount = 0;
-  for (let i = 0; i < segment.words.length; i++) {
-    const wordLength = segment.words[i].word.length + 1;
-    if (charInSegment < charCount + wordLength) {
-      return i;
+    // If adding this paragraph exceeds limit and we have content, start new chunk
+    if (currentWords + paragraphWords > maxWordsPerChunk && currentChunk) {
+      chunks.push(currentChunk.trim());
+      currentChunk = paragraph;
+      currentWords = paragraphWords;
+    } else {
+      // Add paragraph to current chunk with double newline separator
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+      currentWords += paragraphWords;
     }
-    charCount += wordLength;
   }
-  return segment.words.length - 1;
-}, [activeSegmentIndex, currentCharIndex, streamingCharIndex, transcript, isStreamingPlayback]);
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks;
+}
 ```
 
-### 6. Reset Streaming State on Stop/End
+Also update the streaming generation logic to split at paragraph boundaries instead of sentence boundaries.
 
-Ensure `streamingCharIndex` resets when playback ends or is stopped:
+### 2. Convert Pause Markers to SSML (TTS Edge Function)
+
+**File**: `supabase/functions/google-tts/index.ts`
+
+Add a text preprocessing function that:
+- Converts `[PAUSE: 5 Seconds]` markers to SSML `<break time="5s"/>`
+- Adds `<break time="2s"/>` at the start of each paragraph (unless preceded by 5s pause)
+- Wraps the text in SSML `<speak>` tags
 
 ```typescript
-// In handleSpeechEnd callback
-setStreamingCharIndex(0);
+function preprocessTextForSSML(text: string): string {
+  // Split by paragraphs (double newlines)
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  
+  const processedParagraphs = paragraphs.map((paragraph, index) => {
+    let processed = paragraph;
+    
+    // Convert [PAUSE: X Seconds] to SSML breaks
+    processed = processed.replace(
+      /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi,
+      (_, seconds) => `<break time="${seconds}s"/>`
+    );
+    
+    // Add 2s break at paragraph start (if not first paragraph)
+    // Only add if the previous paragraph didn't end with a 5s break
+    if (index > 0) {
+      const prevParagraph = paragraphs[index - 1];
+      const endsWithLongPause = /\[PAUSE:\s*[5-9]\d*\s*(?:Seconds?|s)\]\s*$/i.test(prevParagraph);
+      
+      if (!endsWithLongPause) {
+        processed = `<break time="2s"/>${processed}`;
+      }
+    }
+    
+    return processed;
+  });
+  
+  return `<speak>${processedParagraphs.join(' ')}</speak>`;
+}
+```
 
-// When closing player or switching topics
-setStreamingCharIndex(0);
+Update the TTS API call to use SSML input:
+
+```typescript
+async function synthesizeChunk(
+  text: string,
+  voiceId: string,
+  speakingRate: number,
+  apiKey: string
+): Promise<string> {
+  // Preprocess text to SSML with pause handling
+  const ssmlText = preprocessTextForSSML(text);
+  
+  const response = await fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { ssml: ssmlText }, // Use SSML instead of plain text
+        voice: {
+          languageCode: 'en-US',
+          name: voiceId,
+        },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: speakingRate,
+          pitch: 0,
+          volumeGainDb: 0,
+        },
+      }),
+    }
+  );
+  // ... rest of function
+}
+```
+
+### 3. Update Prompt for Better Paragraph Structure
+
+**File**: `supabase/functions/generate-content-stream/index.ts`
+
+Add to the `TRANSCRIPT_SYSTEM_PROMPT`:
+
+```
+### PARAGRAPH STRUCTURE:
+- Use clear paragraph breaks (double newlines) between distinct ideas or sections
+- Each paragraph should contain a complete thought or concept
+- Reflective questions should end with the [PAUSE: 5 Seconds] tag
+- Keep paragraphs focused - aim for 2-4 sentences per paragraph
 ```
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/DailyDownloadPlayer.tsx` | Add `streamingCharIndex` state, `fullTranscriptTextRef`, update `updateStreamingProgress`, `currentSeconds`, and `activeWordIndex` |
+| `supabase/functions/generate-content-stream/index.ts` | Update `splitIntoChunks` to respect paragraph boundaries, update prompt for paragraph structure |
+| `supabase/functions/google-tts/index.ts` | Add `preprocessTextForSSML` function, convert pause markers to SSML breaks, add 2s breaks at paragraph starts |
 
-## Expected Behavior After Fix
+## Pause Logic Summary
 
-1. **Timer**: Updates smoothly from 0:00 as audio plays, showing correct elapsed time
-2. **Word highlighting**: Individual words in the active paragraph highlight in sequence as they're spoken
-3. **Both modes work**: Fix applies to streaming playback while TTS mode continues working as before
+```text
+Paragraph 1: "Let's start with the basics..."
+                                                  → [2s break]
+Paragraph 2: "Now, think about this..."
+             [PAUSE: 5 Seconds]                   → [5s break, no additional 2s]
+Paragraph 3: "The answer is..."                   
+                                                  → [2s break]
+Paragraph 4: "Before we move on... [PAUSE: 5 Seconds]"
+                                                  → [5s break, no additional 2s]
+Paragraph 5: "Great! Now let's..."
+```
 
-## Testing Plan
+## Testing Considerations
 
-1. Open a topic and let content generate
-2. Click play - verify timer starts counting up
-3. Verify words in the active paragraph highlight progressively
-4. Skip forward/backward - verify timer and highlighting update correctly
-5. Pause and resume - verify timer and highlighting stop/resume
-6. Complete playback - verify timer shows full duration at end
-
+- Test with topics that have multiple reflective questions
+- Verify audio pauses are audible at the right moments
+- Ensure paragraph boundaries are respected in chunking
+- Validate that cached transcripts still work correctly
