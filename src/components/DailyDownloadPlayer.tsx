@@ -89,10 +89,36 @@ export const DailyDownloadPlayer = ({
     return stripTags(streamingContent.fullTranscript);
   }, [streamingContent.fullTranscript, stripTags]);
 
-  // Parse transcript into paragraphs for display
+  // Parse transcript into paragraphs for display with fallback splitting
   const paragraphs = useMemo(() => {
     if (!fullTranscriptText) return [];
-    return fullTranscriptText.split(/\n\n+/).filter(p => p.trim());
+    
+    // Try splitting on double newlines first
+    let parts = fullTranscriptText.split(/\n\n+/).filter(p => p.trim());
+    
+    // Fallback: if only 1 paragraph and text is long, try single newlines
+    if (parts.length === 1 && fullTranscriptText.length > 500) {
+      parts = fullTranscriptText.split(/\n/).filter(p => p.trim());
+    }
+    
+    // Final fallback: split long text into chunks by sentences
+    if (parts.length === 1 && fullTranscriptText.length > 500) {
+      const sentences = fullTranscriptText.match(/[^.!?]+[.!?]+\s*/g) || [fullTranscriptText];
+      parts = [];
+      let currentParagraph = '';
+      
+      for (const sentence of sentences) {
+        if ((currentParagraph + sentence).length > 400) {
+          if (currentParagraph.trim()) parts.push(currentParagraph.trim());
+          currentParagraph = sentence;
+        } else {
+          currentParagraph += sentence;
+        }
+      }
+      if (currentParagraph.trim()) parts.push(currentParagraph.trim());
+    }
+    
+    return parts;
   }, [fullTranscriptText]);
 
   // Calculate character index from current audio time
@@ -706,34 +732,39 @@ export const DailyDownloadPlayer = ({
                 const words = paragraph.split(/\s+/);
                 
                 return (
-                  <p
-                    key={index}
-                    ref={isActive ? activeSegmentRef : null}
-                    className={`text-sm leading-relaxed transition-all duration-300 ${
-                      isActive 
-                        ? 'text-foreground' 
-                        : hasStarted && index < activeSegmentIndex
-                          ? 'text-muted-foreground/60'
-                          : 'text-muted-foreground'
-                    }`}
-                  >
-                    {isActive ? (
-                      words.map((word, wordIndex) => (
-                        <span
-                          key={wordIndex}
-                          className={`transition-colors duration-150 ${
-                            wordIndex <= activeWordIndex
-                              ? 'text-primary font-medium'
-                              : 'text-foreground'
-                          }`}
-                        >
-                          {word}{wordIndex < words.length - 1 ? ' ' : ''}
-                        </span>
-                      ))
-                    ) : (
-                      paragraph
+                  <div key={index}>
+                    {/* Subtle separator line between paragraphs */}
+                    {index > 0 && (
+                      <div className="h-px bg-border/50 mb-6" />
                     )}
-                  </p>
+                    <p
+                      ref={isActive ? activeSegmentRef : null}
+                      className={`text-sm leading-relaxed transition-all duration-300 ${
+                        isActive 
+                          ? 'text-foreground' 
+                          : hasStarted && index < activeSegmentIndex
+                            ? 'text-muted-foreground/60'
+                            : 'text-muted-foreground'
+                      }`}
+                    >
+                      {isActive ? (
+                        words.map((word, wordIndex) => (
+                          <span
+                            key={wordIndex}
+                            className={`transition-colors duration-150 ${
+                              wordIndex <= activeWordIndex
+                                ? 'text-primary font-medium'
+                                : 'text-foreground'
+                            }`}
+                          >
+                            {word}{wordIndex < words.length - 1 ? ' ' : ''}
+                          </span>
+                        ))
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  </div>
                 );
               })}
             </div>
