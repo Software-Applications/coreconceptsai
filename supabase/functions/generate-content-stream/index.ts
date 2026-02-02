@@ -41,6 +41,12 @@ const TRANSCRIPT_SYSTEM_PROMPT = `### ROLE: Active Learning Audio Designer
 - Count your words as you write. If you find yourself concluding before reaching 750 words, you MUST expand your explanations with more examples, analogies, and detail.
 - Ensure the pacing allows for the active prompting pauses
 
+### PARAGRAPH STRUCTURE:
+- Use clear paragraph breaks (double newlines) between distinct ideas or sections
+- Each paragraph should contain a complete thought or concept (2-4 sentences typically)
+- Reflective questions MUST end with the [PAUSE: 5 Seconds] tag
+- Keep paragraphs focused and well-separated for better audio pacing
+
 ### CORE STRATEGIES TO EMPLOY: Follow all guidelines below CAREFULLY. They are NON-NEGOTIABLE:
 
 1. SIGNPOSTING (Mental Mapping):
@@ -97,22 +103,26 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
-// Split cached transcript into chunks for streaming
-function splitIntoChunks(text: string, wordsPerChunk: number): string[] {
-  const sentences = text.split(/(?<=[.!?])\s+/);
+// Split cached transcript into chunks for streaming - respects paragraph boundaries
+function splitIntoChunks(text: string, maxWordsPerChunk: number): string[] {
+  // Split by double newlines (paragraphs)
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
   const chunks: string[] = [];
   let currentChunk = '';
   let currentWords = 0;
   
-  for (const sentence of sentences) {
-    const sentenceWords = sentence.split(/\s+/).length;
-    if (currentWords + sentenceWords > wordsPerChunk && currentChunk) {
+  for (const paragraph of paragraphs) {
+    const paragraphWords = countWords(paragraph);
+    
+    // If adding this paragraph exceeds limit and we have content, start new chunk
+    if (currentWords + paragraphWords > maxWordsPerChunk && currentChunk) {
       chunks.push(currentChunk.trim());
-      currentChunk = sentence;
-      currentWords = sentenceWords;
+      currentChunk = paragraph;
+      currentWords = paragraphWords;
     } else {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
-      currentWords += sentenceWords;
+      // Add paragraph to current chunk with double newline separator
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+      currentWords += paragraphWords;
     }
   }
   
@@ -332,35 +342,68 @@ Create an engaging, educational transcript that helps a student understand this 
                 // Check if we have enough words for a chunk (~30 sec audio)
                 const wordCount = countWords(chunkBuffer);
                 if (wordCount >= WORDS_PER_30_SEC) {
-                  // Find a sentence boundary to split at
-                  const sentences = chunkBuffer.split(/(?<=[.!?])\s+/);
-                  let chunkText = "";
-                  let remaining = "";
-                  let currentWordCount = 0;
+                  // Find a paragraph boundary to split at (prefer double newlines)
+                  const paragraphs = chunkBuffer.split(/\n\n+/);
                   
-                  for (let i = 0; i < sentences.length; i++) {
-                    const sentenceWords = countWords(sentences[i]);
-                    if (currentWordCount + sentenceWords <= WORDS_PER_30_SEC + 20) {
-                      chunkText += (chunkText ? " " : "") + sentences[i];
-                      currentWordCount += sentenceWords;
-                    } else {
-                      remaining = sentences.slice(i).join(" ");
-                      break;
+                  if (paragraphs.length > 1) {
+                    // We have paragraph boundaries - use them
+                    let chunkText = "";
+                    let remaining = "";
+                    let currentWordCount = 0;
+                    
+                    for (let i = 0; i < paragraphs.length; i++) {
+                      const paragraphWords = countWords(paragraphs[i]);
+                      if (currentWordCount + paragraphWords <= WORDS_PER_30_SEC + 30 || currentWordCount === 0) {
+                        chunkText += (chunkText ? "\n\n" : "") + paragraphs[i];
+                        currentWordCount += paragraphWords;
+                      } else {
+                        remaining = paragraphs.slice(i).join("\n\n");
+                        break;
+                      }
                     }
+                    
+                    if (chunkText.trim() && currentWordCount >= WORDS_PER_30_SEC * 0.5) {
+                      console.log(`[Stream] Emitting chunk ${chunkIndex}: ${countWords(chunkText)} words (paragraph boundary)`);
+                      sendEvent("chunk", { 
+                        index: chunkIndex, 
+                        text: chunkText.trim(), 
+                        isLast: false 
+                      });
+                      fullTranscript += chunkText + "\n\n";
+                      chunkIndex++;
+                      chunkBuffer = remaining;
+                    }
+                  } else {
+                    // No paragraph boundaries yet - fall back to sentence boundary
+                    const sentences = chunkBuffer.split(/(?<=[.!?])\s+/);
+                    let chunkText = "";
+                    let remaining = "";
+                    let currentWordCount = 0;
+                    
+                    for (let i = 0; i < sentences.length; i++) {
+                      const sentenceWords = countWords(sentences[i]);
+                      if (currentWordCount + sentenceWords <= WORDS_PER_30_SEC + 20) {
+                        chunkText += (chunkText ? " " : "") + sentences[i];
+                        currentWordCount += sentenceWords;
+                      } else {
+                        remaining = sentences.slice(i).join(" ");
+                        break;
+                      }
+                    }
+                    
+                    if (chunkText.trim()) {
+                      console.log(`[Stream] Emitting chunk ${chunkIndex}: ${countWords(chunkText)} words (sentence boundary)`);
+                      sendEvent("chunk", { 
+                        index: chunkIndex, 
+                        text: chunkText.trim(), 
+                        isLast: false 
+                      });
+                      fullTranscript += chunkText + " ";
+                      chunkIndex++;
+                    }
+                    
+                    chunkBuffer = remaining;
                   }
-                  
-                  if (chunkText.trim()) {
-                    console.log(`[Stream] Emitting chunk ${chunkIndex}: ${countWords(chunkText)} words`);
-                    sendEvent("chunk", { 
-                      index: chunkIndex, 
-                      text: chunkText.trim(), 
-                      isLast: false 
-                    });
-                    fullTranscript += chunkText + " ";
-                    chunkIndex++;
-                  }
-                  
-                  chunkBuffer = remaining;
                 }
               }
             }
