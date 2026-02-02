@@ -103,12 +103,65 @@ export const DailyDownloadPlayer = ({
   const [isWaitingForNextChunk, setIsWaitingForNextChunk] = useState(false);
   const [streamingPlaybackRate, setStreamingPlaybackRate] = useState(1.0);
   const [currentStreamingChunkIndex, setCurrentStreamingChunkIndex] = useState(0); // For UI updates
+  const [playbackProgress, setPlaybackProgress] = useState(0); // Track streaming playback progress (0-100)
+  const streamingProgressIntervalRef = useRef<number | null>(null);
   
   // Available playback rates
   const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
   
+  // Ref to track total chunks for progress calculation
+  const totalChunksRef = useRef<number>(1);
+  
+  // Helper to update streaming playback progress based on current audio position
+  const updateStreamingProgress = useCallback(() => {
+    const audio = streamingAudioRef.current;
+    const totalChunks = totalChunksRef.current || 1;
+    const currentChunk = currentStreamingChunkRef.current;
+    
+    if (audio && audio.duration && !isNaN(audio.duration)) {
+      // Calculate progress within current chunk
+      const chunkProgress = (audio.currentTime / audio.duration);
+      // Calculate total progress: completed chunks + progress in current chunk
+      const totalProgress = ((currentChunk + chunkProgress) / totalChunks) * 100;
+      setPlaybackProgress(Math.min(99, totalProgress));
+    } else {
+      // Fallback: just use chunk-based progress
+      const totalProgress = (currentChunk / totalChunks) * 100;
+      setPlaybackProgress(Math.min(99, totalProgress));
+    }
+  }, []);
+  
+  // Start progress tracking interval
+  const startProgressTracking = useCallback(() => {
+    if (streamingProgressIntervalRef.current) {
+      clearInterval(streamingProgressIntervalRef.current);
+    }
+    streamingProgressIntervalRef.current = window.setInterval(() => {
+      updateStreamingProgress();
+    }, 100); // Update every 100ms
+  }, [updateStreamingProgress]);
+  
+  // Stop progress tracking interval
+  const stopProgressTracking = useCallback(() => {
+    if (streamingProgressIntervalRef.current) {
+      clearInterval(streamingProgressIntervalRef.current);
+      streamingProgressIntervalRef.current = null;
+    }
+  }, []);
+  
+  // Cleanup progress tracking on unmount
+  useEffect(() => {
+    return () => {
+      if (streamingProgressIntervalRef.current) {
+        clearInterval(streamingProgressIntervalRef.current);
+      }
+    };
+  }, []);
+  
   // Define handleSpeechEnd first (used by multiple callbacks)
   const handleSpeechEnd = useCallback(() => {
+    stopProgressTracking();
+    setPlaybackProgress(100);
     if (topic) {
       setShowCelebration(true);
       // Show celebration briefly, then flash card
@@ -119,7 +172,7 @@ export const DailyDownloadPlayer = ({
       onTopicListened?.(topic.id);
       clearProgress(topic.id);
     }
-  }, [topic, onTopicListened, clearProgress]);
+  }, [topic, onTopicListened, clearProgress, stopProgressTracking]);
   
   // Play next chunk in streaming queue
   const playNextStreamingChunk = useCallback(() => {
@@ -135,10 +188,17 @@ export const DailyDownloadPlayer = ({
       streamingAudioRef.current = audio;
       
       // Sync play/pause state with audio events
-      audio.addEventListener('play', () => setIsStreamingPlaying(true));
-      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+      audio.addEventListener('play', () => {
+        setIsStreamingPlaying(true);
+        startProgressTracking();
+      });
+      audio.addEventListener('pause', () => {
+        setIsStreamingPlaying(false);
+        stopProgressTracking();
+      });
       audio.addEventListener('ended', () => {
         setIsStreamingPlaying(false);
+        stopProgressTracking();
         const nextNextIndex = currentStreamingChunkRef.current + 1;
         if (nextNextIndex < queue.length && queue[nextNextIndex]) {
           playNextStreamingChunk();
@@ -155,12 +215,13 @@ export const DailyDownloadPlayer = ({
       });
       
       setIsStreamingPlaying(true);
+      startProgressTracking();
       audio.play().catch(console.error);
     } else if (nextIndex < queue.length) {
       // Chunk exists but audio not ready - show buffering
       setIsWaitingForNextChunk(true);
     }
-  }, [handleSpeechEnd, streamingPlaybackRate]);
+  }, [handleSpeechEnd, streamingPlaybackRate, startProgressTracking, stopProgressTracking]);
   
   // Streaming content hook for parallel transcript + audio generation
   const streamingContent = useStreamingContent({
@@ -200,6 +261,13 @@ export const DailyDownloadPlayer = ({
   const streamingProgress = streamingContent.progress;
   const chunksReady = streamingContent.chunks.filter(c => c.audioReady).length;
   const totalChunks = streamingContent.chunks.length;
+  
+  // Sync total chunks ref for progress calculation
+  useEffect(() => {
+    if (totalChunks > 0) {
+      totalChunksRef.current = totalChunks;
+    }
+  }, [totalChunks]);
 
   const {
     isPlaying,
@@ -225,6 +293,9 @@ export const DailyDownloadPlayer = ({
 
   // Waveform animation should follow playing state for both streaming and TTS modes
   const waveformShouldAnimate = isPlaying || (isStreamingPlayback && isStreamingPlaying);
+  
+  // Combined progress: use streaming progress when in streaming mode, TTS progress otherwise
+  const combinedProgress = isStreamingPlayback ? playbackProgress : progress;
 
   // Helper to strip stage directions/tags from transcript text (pure function)
   const stripTags = (text: string): string => {
@@ -628,10 +699,17 @@ export const DailyDownloadPlayer = ({
         streamingAudioRef.current = audio;
         
         // Sync play/pause state with audio events
-        audio.addEventListener('play', () => setIsStreamingPlaying(true));
-        audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+        audio.addEventListener('play', () => {
+          setIsStreamingPlaying(true);
+          startProgressTracking();
+        });
+        audio.addEventListener('pause', () => {
+          setIsStreamingPlaying(false);
+          stopProgressTracking();
+        });
         audio.addEventListener('ended', () => {
           setIsStreamingPlaying(false);
+          stopProgressTracking();
           // Check if next chunk is ready
           if (streamingAudioQueueRef.current[1]) {
             playNextStreamingChunk();
@@ -646,6 +724,7 @@ export const DailyDownloadPlayer = ({
           }
         });
         
+        startProgressTracking();
         audio.play().catch(console.error);
       } else {
         // Fallback to TTS generation (for non-streaming content)
@@ -952,14 +1031,14 @@ export const DailyDownloadPlayer = ({
                 <motion.div 
                   className="h-full bg-primary rounded-full pointer-events-none"
                   initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
+                  animate={{ width: `${combinedProgress}%` }}
                   transition={{ duration: 0.1, ease: "linear" }}
                 />
                 
                 {/* Progress knob - larger on hover/drag */}
                 <motion.div
                   className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md border-2 border-background pointer-events-none group-hover:scale-125 transition-transform"
-                  style={{ left: `calc(${Math.min(progress, 98)}% - 8px)` }}
+                  style={{ left: `calc(${Math.min(combinedProgress, 98)}% - 8px)` }}
                 />
               </div>
             </div>
@@ -1035,16 +1114,24 @@ export const DailyDownloadPlayer = ({
                         const audio = new Audio(streamingAudioQueueRef.current[prevIndex]);
                         audio.playbackRate = streamingPlaybackRate;
                         streamingAudioRef.current = audio;
-                        audio.addEventListener('play', () => setIsStreamingPlaying(true));
-                        audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+                        audio.addEventListener('play', () => {
+                          setIsStreamingPlaying(true);
+                          startProgressTracking();
+                        });
+                        audio.addEventListener('pause', () => {
+                          setIsStreamingPlaying(false);
+                          stopProgressTracking();
+                        });
                         audio.addEventListener('ended', () => {
                           setIsStreamingPlaying(false);
+                          stopProgressTracking();
                           if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
                             playNextStreamingChunk();
                           } else {
                             setIsWaitingForNextChunk(true);
                           }
                         });
+                        startProgressTracking();
                         setIsStreamingPlaying(true);
                         audio.play().catch(console.error);
                       }
@@ -1098,10 +1185,17 @@ export const DailyDownloadPlayer = ({
                       const audio = new Audio(streamingAudioQueueRef.current[nextIndex]);
                       audio.playbackRate = streamingPlaybackRate;
                       streamingAudioRef.current = audio;
-                      audio.addEventListener('play', () => setIsStreamingPlaying(true));
-                      audio.addEventListener('pause', () => setIsStreamingPlaying(false));
+                      audio.addEventListener('play', () => {
+                        setIsStreamingPlaying(true);
+                        startProgressTracking();
+                      });
+                      audio.addEventListener('pause', () => {
+                        setIsStreamingPlaying(false);
+                        stopProgressTracking();
+                      });
                       audio.addEventListener('ended', () => {
                         setIsStreamingPlaying(false);
+                        stopProgressTracking();
                         if (streamingAudioQueueRef.current[currentStreamingChunkRef.current + 1]) {
                           playNextStreamingChunk();
                         } else {
@@ -1109,6 +1203,7 @@ export const DailyDownloadPlayer = ({
                         }
                       });
                       setIsStreamingPlaying(true);
+                      startProgressTracking();
                       audio.play().catch(console.error);
                     } else if (nextIndex >= streamingContent.chunks.length && !streamingContent.isStreaming) {
                       // Skip past end - show flash card
