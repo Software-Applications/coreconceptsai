@@ -93,7 +93,7 @@ export const FlashSummaryCard = ({
         {/* Visual content area */}
         <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 flex items-center justify-center min-h-[140px]">
           <div className="text-center">
-            <p className="text-3xl font-bold text-foreground mb-2">
+            <p className="text-lg font-bold text-foreground mb-2 line-clamp-3 leading-snug">
               {flashSummary.visualContent}
             </p>
             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(flashSummary.difficulty)}`}>

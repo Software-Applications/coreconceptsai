@@ -865,23 +865,6 @@ export const DailyDownloadPlayer = ({
                 />
               </div>
               
-              <div className="flex gap-3 mt-6 w-full max-w-sm">
-                <motion.button
-                  onClick={handleDismissFlashCard}
-                  className="flex-1 py-3 rounded-xl bg-muted text-foreground font-medium"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Done
-                </motion.button>
-                <motion.button
-                  onClick={handlePinFlashCard}
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Pin Card
-                </motion.button>
-              </div>
             </div>
           </motion.div>
         )}

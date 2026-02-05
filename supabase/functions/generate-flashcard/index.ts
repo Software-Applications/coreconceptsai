@@ -273,15 +273,28 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingSummary) {
-      console.log("[Flashcard] Returning cached flashcard");
-      const response: FlashcardResponse = {
-        success: true,
-        status: "cached",
-        flashSummary: existingSummary,
-      };
-      return new Response(JSON.stringify(response), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Check if cached content is too long (needs regeneration)
+      if (existingSummary.visual_content && existingSummary.visual_content.length > 80) {
+        console.log(`[Flashcard] Cached content too long (${existingSummary.visual_content.length} chars), regenerating...`);
+        
+        // Delete the old entry
+        await supabase
+          .from("flash_summaries")
+          .delete()
+          .eq("id", existingSummary.id);
+        
+        // Continue to regeneration (don't return cached)
+      } else {
+        console.log("[Flashcard] Returning cached flashcard");
+        const response: FlashcardResponse = {
+          success: true,
+          status: "cached",
+          flashSummary: existingSummary,
+        };
+        return new Response(JSON.stringify(response), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Generate new flashcard
