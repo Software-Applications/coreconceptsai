@@ -537,7 +537,7 @@ export const TopicSelectionSheet = ({
                 </>
               ) : (
                 // Browse Mode - Show All Topics (with exam highlighting)
-                <CommandGroup heading={examFilterActive ? `Exam Topics (${examTopicIds.size})` : `All Topics (${progressStats.listened}/${progressStats.total} completed)`}>
+                <CommandGroup heading={examFilterActive ? `Exam Topics (${examTopicIds.size})` : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`}>
                   {topics.map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
