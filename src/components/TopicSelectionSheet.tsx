@@ -481,6 +481,25 @@ export const TopicSelectionSheet = ({
                           })}
                         </CommandGroup>
                       )}
+
+                      {/* Request Topic CTA - always show at bottom of search results */}
+                      <div className="px-4 py-4 border-t border-border mt-2">
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="text-muted-foreground">Can't find what you need?</span>
+                          <button
+                            onClick={() => handleRequestTopic(searchQuery)}
+                            disabled={topicRequest.isPending}
+                            className="inline-flex items-center gap-1.5 text-primary font-medium hover:underline disabled:opacity-50"
+                          >
+                            {topicRequest.isPending ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Lightbulb className="w-3.5 h-3.5" />
+                            )}
+                            Request topic
+                          </button>
+                        </div>
+                      </div>
                     </>
                   ) : (
                     // No Results - Show Request Option
@@ -498,7 +517,7 @@ export const TopicSelectionSheet = ({
                         <button
                           onClick={() => handleRequestTopic(searchQuery)}
                           disabled={topicRequest.isPending}
-                          className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-xl transition-colors disabled:opacity-50"
                         >
                           {topicRequest.isPending ? (
                             <>
