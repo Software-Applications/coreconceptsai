@@ -1,87 +1,85 @@
 
-## Fix Flash Card Visual Content Generation
 
-### Problem
-The AI-generated flash card visual content is too long and verbose. In the screenshot, the "Homeostatic Feedback" card shows 178 characters of text displayed at `text-3xl` (30px), making it look cluttered and hard to read.
+## Fix Flashcard Display Issues
 
-**Current AI Output:**
-```
-The Feedback Loop Team: The Sensor (Scout 🕵️) detects a change, the Control 
-Center (Boss 🧠) compares it to the Set Point, and the Effector (Worker 🛠️) 
-carries out the correction.
-```
+### Problems Identified
 
-**Expected Output (based on working mock data examples):**
-```
-🕵️ Sensor → 🧠 Control Center → 🛠️ Effector
-```
+1. **Visual content too long**: Cached flashcards in the database have `visual_content` ranging from 119 to 233 characters, far exceeding the intended 60-character limit. The recent edge function update only affects new generations.
 
-### Root Cause
-The edge function prompt specifies "max 200 chars" but the mock data examples that look good are only 20-50 characters. The current prompt lacks:
-1. Clear examples showing the expected format
-2. Strict character limit enforcement
-3. Emphasis on mnemonics/diagrams over full sentences
+2. **Duplicate action buttons**: The `FlashSummaryCard` component has built-in "Got it" / "Pin for review" buttons, but `DailyDownloadPlayer.tsx` also renders a separate "Done" / "Pin Card" button set below it, causing the visual duplication you see.
+
+3. **Font size too large**: The `visualContent` uses `text-3xl` (30px font), which is excessive for long content.
 
 ### Solution
-Update the `generate-flashcard` edge function to:
-1. Reduce the character limit from 200 to 60 characters
-2. Add concrete examples showing the expected concise format
-3. Emphasize that visual_content should be a mnemonic/headline, NOT a sentence
-4. Add post-generation validation to truncate overly long content
 
-### Technical Changes
+#### Part 1: Remove Duplicate Buttons from Player
+
+**File: `src/components/DailyDownloadPlayer.tsx`**
+
+Remove lines 868-884 (the outer button set), keeping only the buttons inside `FlashSummaryCard`:
+
+```tsx
+// REMOVE THIS BLOCK (lines 868-884):
+<div className="flex gap-3 mt-6 w-full max-w-sm">
+  <motion.button onClick={handleDismissFlashCard} ...>Done</motion.button>
+  <motion.button onClick={handlePinFlashCard} ...>Pin Card</motion.button>
+</div>
+```
+
+#### Part 2: Auto-Regenerate Cached Flashcards
 
 **File: `supabase/functions/generate-flashcard/index.ts`**
 
-1. Update the system prompt (lines 43-47) to include examples:
-```typescript
-Output your response as a JSON object with these exact fields:
-- visual_type: one of "diagram", "formula", or "analogy"
-- visual_content: a SHORT mnemonic, formula, or visual representation (MAX 60 characters). Examples:
-  * "🔬 Bacteria → Viruses → Fungi → Protozoa"
-  * "📈 Lag → Log → Stationary → Death"
-  * "⚛️ Nucleus (p⁺ + n⁰) | Shell (e⁻)"
-  * "E = mc²"
-  NOT a sentence - think headline/mnemonic!
-- bullet_points: an array of exactly 3 concise bullet points summarizing key concepts
-- difficulty: one of "easy", "medium", or "hard"
-```
+When returning a cached flashcard, check if `visual_content` exceeds 80 characters. If so, delete the cached entry and regenerate:
 
-2. Update the user prompt (lines 120-126) with stricter instructions:
 ```typescript
-IMPORTANT: Return ONLY a valid JSON object with these exact fields:
-- "visual_type": one of "diagram", "formula", or "analogy"
-- "visual_content": MAX 60 CHARACTERS - a mnemonic or visual like "🧬 DNA → RNA → Protein" (NOT a full sentence!)
-- "bullet_points": array of exactly 3 short strings
-- "difficulty": one of "easy", "medium", or "hard"
-```
-
-3. Add post-generation validation to truncate long visual_content (after line 192):
-```typescript
-// Truncate visual_content if too long
-if (parsed.visual_content.length > 80) {
-  console.warn(`[Flashcard] visual_content too long (${parsed.visual_content.length} chars), truncating`);
-  // Try to find a natural break point
-  const truncated = parsed.visual_content.slice(0, 60);
-  const lastSpace = truncated.lastIndexOf(' ');
-  parsed.visual_content = lastSpace > 30 ? truncated.slice(0, lastSpace) + '...' : truncated + '...';
+// After fetching existing summary (around line 275)
+if (existingSummary) {
+  // Check if cached content is too long (needs regeneration)
+  if (existingSummary.visual_content && existingSummary.visual_content.length > 80) {
+    console.log(`[Flashcard] Cached content too long (${existingSummary.visual_content.length} chars), regenerating...`);
+    
+    // Delete the old entry
+    await supabase
+      .from("flash_summaries")
+      .delete()
+      .eq("id", existingSummary.id);
+    
+    // Continue to regeneration (don't return cached)
+  } else {
+    console.log("[Flashcard] Returning cached flashcard");
+    // Return cached as before
+  }
 }
 ```
 
-### Expected Result
+#### Part 3: Responsive Font Size for Visual Content
 
-| Before | After |
-|--------|-------|
-| 178-char full sentence displayed at 30px | 30-60 char mnemonic headline |
-| Cluttered, hard to read | Clean, scannable visual |
-| Looks like paragraph text | Looks like a formula/diagram |
+**File: `src/components/FlashSummaryCard.tsx`**
+
+Change the font size to be smaller and use line clamping for long content:
+
+```tsx
+// Before (line 96):
+<p className="text-3xl font-bold text-foreground mb-2">
+
+// After:
+<p className="text-lg font-bold text-foreground mb-2 line-clamp-3 leading-snug">
+```
 
 ### Files to Change
+
 | File | Change |
 |------|--------|
-| `supabase/functions/generate-flashcard/index.ts` | Update prompts with examples and add length validation |
+| `src/components/DailyDownloadPlayer.tsx` | Remove duplicate "Done" / "Pin Card" buttons |
+| `supabase/functions/generate-flashcard/index.ts` | Auto-regenerate cached flashcards that exceed 80 chars |
+| `src/components/FlashSummaryCard.tsx` | Reduce visual content font size from `text-3xl` to `text-lg` |
 
-### Notes
-- Existing cached flashcards will still show the old format until regenerated
-- New flashcards will use the improved concise format
-- The fallback (line 210) already uses a short format: `📚 Key concepts`
+### Expected Result
+
+| Issue | Before | After |
+|-------|--------|-------|
+| Visual content length | 100-230 chars | ≤60 chars (regenerated) |
+| Duplicate buttons | Two button sets visible | Single button set inside card |
+| Font size | 30px (`text-3xl`) | 18px (`text-lg`) with line clamping |
+
