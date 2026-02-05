@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle } from 'lucide-react';
+import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useDragScroll } from '@/hooks/useDragScroll';
@@ -69,6 +69,7 @@ export const TopicSelectionSheet = ({
   const topicRequest = useTopicRequest();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [examFilterActive, setExamFilterActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
   const listScrollRef = useDragScroll<HTMLDivElement>();
@@ -198,8 +199,20 @@ export const TopicSelectionSheet = ({
 
   const handleChipClick = useCallback((term: string) => {
     lightTap();
+    setExamFilterActive(false); // Clear exam filter when searching
     setSearchQuery(term);
   }, [lightTap]);
+
+  const handleExamFilterToggle = useCallback(() => {
+    lightTap();
+    setExamFilterActive(prev => !prev);
+    setSearchQuery(''); // Clear search when toggling exam filter
+  }, [lightTap]);
+
+  // Mock exam topic IDs - first 3 topics are "exam relevant"
+  const examTopicIds = useMemo(() => {
+    return new Set(topics.slice(0, 3).map(t => t.id));
+  }, [topics]);
 
   // Calculate progress stats
   const progressStats = useMemo(() => {
@@ -296,7 +309,25 @@ export const TopicSelectionSheet = ({
                     className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-3 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
-                    {/* Recent searches first */}
+                    {/* Exam Filter Chip - Always first */}
+                    <button
+                      onClick={wrapChipClick(handleExamFilterToggle)}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
+                        examFilterActive 
+                          ? 'bg-destructive text-destructive-foreground' 
+                          : 'bg-destructive/10 hover:bg-destructive/20 text-destructive'
+                      }`}
+                    >
+                      <Flame className="w-3.5 h-3.5" />
+                      Upcoming Exam
+                    </button>
+
+                    {/* Divider after exam chip */}
+                    {(recentSearches.length > 0 || suggestionChips.length > 0) && (
+                      <div className="w-px h-5 bg-border flex-shrink-0 self-center" />
+                    )}
+
+                    {/* Recent searches */}
                     {recentSearches.map((term) => (
                       <div
                         key={`recent-${term}`}
@@ -476,17 +507,53 @@ export const TopicSelectionSheet = ({
                   )}
                 </>
               ) : (
-                // Browse Mode - Show All Topics
-                <CommandGroup heading={`All Topics (${progressStats.listened}/${progressStats.total} completed)`}>
+                // Browse Mode - Show All Topics (with exam highlighting)
+                <CommandGroup heading={examFilterActive ? `Exam Topics (${examTopicIds.size})` : `All Topics (${progressStats.listened}/${progressStats.total} completed)`}>
                   {topics.map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
+                    const isExamTopic = examTopicIds.has(topic.id);
+                    const showHighlight = examFilterActive && isExamTopic;
+                    
+                    // When exam filter is active, dim non-exam topics
+                    if (examFilterActive && !isExamTopic) {
+                      return (
+                        <CommandItem
+                          key={topic.id}
+                          value={topic.id}
+                          onSelect={() => handleSelectTopic(topic)}
+                          className="flex items-center gap-3 p-3 cursor-pointer opacity-40"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-muted'
+                          }`}>
+                            {listened ? (
+                              <CheckCircle className="w-4 h-4 text-primary" />
+                            ) : hasResume ? (
+                              <RotateCcw className="w-4 h-4 text-warning" />
+                            ) : (
+                              <Headphones className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </CommandItem>
+                      );
+                    }
+                    
                     return (
                       <CommandItem
                         key={topic.id}
                         value={topic.id}
                         onSelect={() => handleSelectTopic(topic)}
-                        className="flex items-center gap-3 p-3 cursor-pointer"
+                        className={`flex items-center gap-3 p-3 cursor-pointer ${
+                          showHighlight ? 'bg-destructive/10 ring-1 ring-destructive/30 rounded-lg' : ''
+                        }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
@@ -502,6 +569,12 @@ export const TopicSelectionSheet = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
+                            {showHighlight && (
+                              <span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded-full">
+                                <Flame className="w-2.5 h-2.5" />
+                                Exam
+                              </span>
+                            )}
                             {listened && <span className="text-xs text-primary font-medium">✓</span>}
                             {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
                           </div>
