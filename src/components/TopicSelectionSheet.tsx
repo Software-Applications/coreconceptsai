@@ -562,7 +562,7 @@ export const TopicSelectionSheet = ({
                         value={topic.id}
                         onSelect={() => handleSelectTopic(topic)}
                         className={`flex items-center gap-3 p-3 cursor-pointer ${
-                          showHighlight ? 'bg-warning/10 ring-1 ring-warning/30 rounded-lg' : ''
+                          showHighlight ? '!bg-warning/10 ring-1 ring-warning/30 rounded-lg data-[selected=true]:!bg-warning/15' : ''
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
