@@ -1,151 +1,353 @@
 
+# Edge Functions Rebuild Plan
 
-# DailyDownloadPlayer.tsx Cleanup & Optimization
+## Summary
 
-## Current Issues Identified
+This plan rebuilds the three core edge functions (Transcript Generator, Flashcard Summary Generator, and Text-to-Speech Generator) according to your specified rules. The current combined `generate-content-stream` and `generate-content` functions will be deleted and replaced with three modular, decoupled edge functions that follow your exact specifications.
 
-| Issue | Description | Impact |
-|-------|-------------|--------|
-| **Redundant state** | `showGeneratingOverlay` computed inline but uses already-tracked states | Minimal clutter |
-| **Duplicate calculations** | Character offset calculated twice (in `activeSegmentIndex` and `activeWordIndex`) | Repeated loops |
-| **Unnecessary wrapper div** | Each paragraph wrapped in `<div key={index}><p>...</p></div>` when `<p key={index}>` suffices | Extra DOM nodes |
-| **Magic numbers** | `HIGHLIGHT_LEAD_MS = 180`, paragraph split threshold `500`, chunk size `400` undocumented | Harder to tune |
-| **Inefficient paragraph offset** | Loops through all paragraphs every time to find character offset | O(n) per render |
-| **Waveform regenerated** | `waveformBars` uses `useMemo(() => ..., [])` but randomizes on mount | Regenerates on remount |
+---
 
-## Optimization Plan
+## Current vs. New Architecture
 
-### 1. Precompute Paragraph Character Offsets
+### Current State (Problems)
 
-Instead of looping through paragraphs on every render to find character positions, compute an offset array once when `paragraphs` changes:
+| Function | Issues |
+|----------|--------|
+| `generate-content-stream` | Combined transcript + flashcard in one function; no proper cache validation |
+| `generate-content` | Overwrites topic description field; also combined function |
+| `google-tts` | Mostly compliant, needs refinement for your pause marker regex |
 
+### New Architecture
+
+```text
+Frontend (DailyDownloadPlayer)
+         │
+         ▼
+┌────────────────────────────┐
+│  1. generate-transcript    │  ← Check cache first (length > 750, has "Summary")
+│     - Never overwrite desc │     If cache invalid, generate via Gemini
+│     - 3 retries (1s,2s,5s) │     Save to topics.transcript only
+└────────────┬───────────────┘
+             │ On Success
+             ▼
+┌────────────────────────────┐
+│  2. generate-flashcard     │  ← Only triggers if transcript succeeded
+│     - Check cache first    │     Title = Topic Name (never override)
+│     - 3 bullet points      │     Save to flash_summaries table
+│     - Never touch topics   │
+└────────────┬───────────────┘
+             │ On Success
+             ▼
+┌────────────────────────────┐
+│  3. google-tts             │  ← Only triggers if transcript succeeded
+│     - Ignore XML tags      │     Parse [PAUSE:\s*(\d+)\s*(?:Seconds?] regex
+│     - Paragraph breaks 2s  │     XML escape (&, <, >, ", ')
+│     - Resume on voice swap │     3 retries (1s,2s,5s)
+└────────────────────────────┘
+```
+
+---
+
+## Edge Functions to Create
+
+### 1. Transcript Generator (`generate-transcript`)
+
+**Purpose**: Generate educational transcript for a topic
+
+**API**: Google Gemini (via `GOOGLE_API_KEY`)
+
+**Rules Implementation**:
+
+| Rule | Requirement | Implementation |
+|------|-------------|----------------|
+| 1 | Check cache first - length > 750, must have "Summary" keyword | Query `topics.transcript`, validate with both conditions |
+| 1a | If cache valid, stream cached content (`forceRegenerate: false`) | Return cached transcript immediately |
+| 2 | If cache invalid, use API to generate | Call Gemini, save to `topics.transcript` column |
+| 3 | Never overwrite topic description field | Only update `transcript` column, never touch `description` |
+| 4 | Mark fulfilled ONLY if conditions met | Return `status: "fulfilled"` or `status: "failed"` |
+| 5 | Retry logic: 3 attempts (1s, 2s, 5s delays) | Exponential backoff implementation |
+| 6 | Ask for API code (Gemini) | Uses `GOOGLE_API_KEY` |
+| 7 | Follow prompt rules | Ask for new prompt |
+
+**Cache Validation Logic**:
+```text
+function isValidCachedTranscript(transcript):
+    IF transcript is null/empty → INVALID
+    IF transcript.length <= 750 → INVALID
+    IF transcript does NOT contain "summary" (case-insensitive) → INVALID
+    RETURN VALID
+```
+
+**Response Format**:
 ```typescript
-const paragraphOffsets = useMemo(() => {
-  let offset = 0;
-  return paragraphs.map((p) => {
-    const start = offset;
-    offset += p.length + 2; // +2 for paragraph break
-    return { start, end: offset };
-  });
-}, [paragraphs]);
+{
+  success: boolean;
+  status: "cached" | "generated" | "failed";
+  transcript?: string;
+  error?: string;
+}
 ```
 
-Then use binary search or simple lookup:
+---
 
+### 2. Flashcard Summary Generator (`generate-flashcard`)
+
+**Purpose**: Generate flashcard summary based on transcript
+
+**API**: Google Gemini (via `GOOGLE_API_KEY`)
+
+**Rules Implementation**:
+
+| Rule | Requirement | Implementation |
+|------|-------------|----------------|
+| 1 | Triggers immediately after Transcript Generator fulfilled | Called by frontend only after transcript success |
+| 2 | Do NOT trigger if Transcript Generator failed | Frontend guards this check |
+| 3 | Check cache first - if exists, stream cached content | Query `flash_summaries` table by `topic_id` |
+| 4 | Structure: Title = Topic Name, Body = API output, 3 bullets | Structured JSON output with schema |
+| 5 | Save output to database | Insert to `flash_summaries` table |
+| 6 | Never overwrite topic description or topic name | Does not touch `topics` table at all |
+| 7 | Retry logic: 3 attempts (1s, 2s, 5s delays) | Exponential backoff implementation |
+| 8 | Ask for API code (Gemini) | Uses `GOOGLE_API_KEY` |
+| 9 | Follow prompt rules | Ask for new prompt |
+
+**Response Format**:
 ```typescript
-const activeSegmentIndex = useMemo(() => {
-  if (!hasStarted || !fullTranscriptText) return -1;
-  return paragraphOffsets.findIndex(
-    ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
-  ) ?? paragraphs.length - 1;
-}, [paragraphOffsets, currentCharIndex, hasStarted, fullTranscriptText]);
+{
+  success: boolean;
+  status: "cached" | "generated" | "failed";
+  flashSummary?: {
+    id: string;
+    topic_id: string;
+    visual_type: "diagram" | "formula" | "analogy";
+    visual_content: string;
+    bullet_points: string[]; // exactly 3
+    difficulty: "easy" | "medium" | "hard";
+    ai_generated: boolean;
+  };
+  error?: string;
+}
 ```
 
-### 2. Consolidate Character Position Logic
+---
 
-Create a single derived value for both segment index and word index:
+### 3. Text-to-Speech Generator (`google-tts`)
 
-```typescript
-const { activeSegmentIndex, activeWordIndex, charInParagraph } = useMemo(() => {
-  if (!hasStarted || !fullTranscriptText || paragraphOffsets.length === 0) {
-    return { activeSegmentIndex: -1, activeWordIndex: -1, charInParagraph: 0 };
-  }
-  
-  const segIdx = paragraphOffsets.findIndex(
-    ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
-  );
-  const idx = segIdx === -1 ? paragraphs.length - 1 : segIdx;
-  const charPos = currentCharIndex - paragraphOffsets[idx].start;
-  
-  // Find word index
-  const words = paragraphs[idx]?.split(/\s+/) || [];
-  let count = 0;
-  let wordIdx = words.length - 1;
-  for (let i = 0; i < words.length; i++) {
-    count += words[i].length + 1;
-    if (charPos < count) {
-      wordIdx = i;
-      break;
-    }
-  }
-  
-  return { activeSegmentIndex: idx, activeWordIndex: wordIdx, charInParagraph: charPos };
-}, [paragraphOffsets, paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
+**Purpose**: Convert transcript to audio with SSML pause handling
+
+**API**: Google Cloud TTS (via `GOOGLE_API_KEY`)
+
+**Rules Implementation**:
+
+| Rule | Requirement | Implementation |
+|------|-------------|----------------|
+| 1 | Triggers immediately after Transcript Generator fulfilled | Called by frontend only after transcript success |
+| 2 | Do NOT trigger if Transcript Generator failed | Frontend guards this check |
+| 3 | Ignore XML tags | Strip `<transcript>` and similar tags before processing |
+| 4 | Parse pause markers | Extract `[PAUSE:X Seconds]` patterns |
+| 5 | Parse newlines `/n` or `\n` | Split on `\n\n+` for paragraphs |
+| 6 | Paragraph pauses: insert `<break time="2s"/>` | Add between paragraphs in SSML |
+| 7 | Pause marker regex: `/[PAUSE:\s*(\d+)\s*(?:Seconds?/` | Pattern: `/\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi` |
+| 8 | XML escaping: `&`, `<`, `>`, `"`, `'` | `escapeXmlChars()` function |
+| 9 | Resume on voice change | Frontend handles position tracking (already implemented) |
+| 10 | Mark fulfilled if conditions met | Return `success: true/false` |
+| 11 | Retry logic: 3 attempts (1s, 2s, 5s delays) | Exponential backoff for API calls |
+| 12 | Follow prompt rules | SSML wrapping with `<speak>` tags |
+| 13 | Ask for API code (Google TTS) | Uses `GOOGLE_API_KEY` |
+
+**SSML Preprocessing Pipeline**:
+```text
+Input Text
+    │
+    ▼
+Strip <transcript> tags
+    │
+    ▼
+Split by \n\n+ (paragraphs)
+    │
+    ▼
+For each paragraph:
+    ├── Extract [PAUSE:\s*(\d+)\s*(?:Seconds?|s)] markers
+    ├── Replace with placeholders
+    ├── XML escape remaining text (&, <, >, ", ')
+    ├── Replace placeholders with <break time="Xs"/>
+    └── Add <break time="2s"/> between paragraphs
+    │
+    ▼
+Wrap in <speak>...</speak>
+    │
+    ▼
+Send to Google TTS API
 ```
 
-### 3. Remove Unnecessary Wrapper Divs
+---
 
-Change paragraph rendering from:
+## Frontend Changes
 
-```tsx
-<div key={index}>
-  <p ref={...} className={...}>
-    ...
-  </p>
-</div>
+### Updated Hook: `useStreamingContent.ts`
+
+The hook will be refactored to:
+
+1. **Call transcript generator first** (`generate-transcript`)
+2. **On transcript success**: Call flashcard generator (`generate-flashcard`) AND TTS generator (`google-tts`) in parallel
+3. **On transcript failure**: Show error modal with "Retry" button
+4. **Track step-by-step status** for UI feedback
+
+**Key Changes**:
+- Replace single `generate-content-stream` call with sequential/parallel calls
+- Add `retryGeneration()` method for retry functionality
+- Track individual step failures
+
+### New Component: `RetryErrorModal.tsx`
+
+A modal component that appears when transcript generation fails:
+
+- **Message**: "Failed to stream content"
+- **Retry button**: Re-calls `startGeneration()`
+- **Cancel button**: Closes modal and player
+
+**UI Behavior**:
+```text
+Generation Error
+    │
+    ▼
+┌─────────────────────────────┐
+│  Failed to stream content   │
+│                             │
+│  [Retry]      [Cancel]      │
+└─────────────────────────────┘
 ```
 
-To:
+### Updated Component: `DailyDownloadPlayer.tsx`
 
-```tsx
-<p key={index} ref={...} className={...}>
-  ...
-</p>
+- Import and integrate `RetryErrorModal`
+- Show modal when `streamingContent.error` is set
+- Handle retry and cancel actions
+
+---
+
+## Files to Delete
+
+| File | Reason |
+|------|--------|
+| `supabase/functions/generate-content-stream/index.ts` | Replaced by `generate-transcript` |
+| `supabase/functions/generate-content/index.ts` | Replaced by `generate-transcript` |
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/functions/generate-transcript/index.ts` | Create | New transcript generator with cache validation |
+| `supabase/functions/generate-flashcard/index.ts` | Create | New flashcard generator (decoupled) |
+| `supabase/functions/google-tts/index.ts` | Modify | Refine pause regex, ensure proper SSML |
+| `supabase/config.toml` | Modify | Update function registrations |
+| `src/hooks/useStreamingContent.ts` | Modify | Call new endpoints, add error/retry handling |
+| `src/components/RetryErrorModal.tsx` | Create | Error modal with Retry button |
+| `src/components/DailyDownloadPlayer.tsx` | Modify | Integrate RetryErrorModal |
+
+---
+
+## Technical Details
+
+### Retry Logic Implementation (All Functions)
+
+```text
+RETRY_DELAYS = [1000, 2000, 5000]  // 1s, 2s, 5s
+
+function withRetry(fn, maxAttempts = 3):
+    lastError = null
+    
+    for attempt = 0 to maxAttempts - 1:
+        try:
+            return fn()
+        catch error:
+            lastError = error
+            log("Attempt {attempt + 1}/{maxAttempts} failed: {error}")
+            
+            if attempt < maxAttempts - 1:
+                sleep(RETRY_DELAYS[attempt])
+    
+    throw lastError
 ```
 
-### 4. Extract Constants to Top of File
+### Transcript Cache Validation
 
-```typescript
-// Configuration constants
-const HIGHLIGHT_LEAD_MS = 180;
-const PARAGRAPH_MIN_LENGTH = 500;
-const SENTENCE_CHUNK_SIZE = 400;
-const PLAYBACK_RATES = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
-const WAVEFORM_BAR_COUNT = 40;
-const PROGRESS_SAVE_INTERVAL_MS = 5000;
+```text
+function isValidCachedTranscript(transcript):
+    if not transcript:
+        return false
+    if length(transcript) <= 750:
+        return false
+    if not contains_case_insensitive(transcript, "summary"):
+        return false
+    return true
 ```
 
-### 5. Stabilize Waveform Bars
+### SSML Pause Marker Regex
 
-Move waveform generation outside component or use a seeded random:
+```text
+Pattern: /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi
 
-```typescript
-// Outside component
-const WAVEFORM_BARS = Array.from({ length: 40 }, (_, i) => ({
-  height: 20 + (Math.sin(i * 0.7) + 1) * 30 + (Math.cos(i * 1.3) + 1) * 15,
-  delay: i * 0.02
-}));
+Matches:
+- [PAUSE: 5 Seconds]
+- [PAUSE:5Seconds]
+- [PAUSE: 10 s]
+- [PAUSE:3s]
 ```
 
-### 6. Simplify `stripTags` with Single Regex Chain
+### XML Escape Function
 
-```typescript
-const stripTags = useCallback((text: string): string => {
-  return text
-    .replace(/<\/?transcript>/gi, '')
-    .replace(/\[(?:PAUSE|PROMPT|NOTE|DIRECTION)[^\]]*\]/gi, '')
-    .replace(/\n\n+/g, '\u0000')     // Use null char as temp marker
-    .replace(/\n/g, ' ')
-    .replace(/\u0000/g, '\n\n')
-    .replace(/ {2,}/g, ' ')
-    .trim();
-}, []);
+```text
+function escapeXmlChars(text):
+    text = replace(text, "&", "&amp;")
+    text = replace(text, "<", "&lt;")
+    text = replace(text, ">", "&gt;")
+    text = replace(text, '"', "&quot;")
+    text = replace(text, "'", "&apos;")
+    return text
 ```
 
-### 7. Remove Unused Imports
+---
 
-`Loader2` is imported but not used in the rendered output.
+## Updated Config.toml
 
-## File Changes Summary
+```toml
+project_id = "uzlkbqfxlamwetmvpqsi"
 
-| File | Changes |
-|------|---------|
-| `src/components/DailyDownloadPlayer.tsx` | Precompute paragraph offsets, consolidate active segment/word logic, remove wrapper divs, extract constants, stabilize waveform, simplify stripTags, remove unused imports |
+[functions.generate-transcript]
+verify_jwt = false
 
-## Expected Improvements
+[functions.generate-flashcard]
+verify_jwt = false
 
-1. **Performance**: O(1) paragraph lookup instead of O(n) loop per frame
-2. **Readability**: Constants documented at top, single source of truth for position logic
-3. **Bundle size**: Fewer DOM nodes, removed unused import
-4. **Maintainability**: Easier to tune timing values from constants
+[functions.google-tts]
+verify_jwt = false
 
+[functions.generate-textbook-cover]
+verify_jwt = false
+```
+
+---
+
+## API Keys Required
+
+| Function | Required Secrets | Status |
+|----------|-----------------|--------|
+| `generate-transcript` | `GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Already configured |
+| `generate-flashcard` | `GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Already configured |
+| `google-tts` | `GOOGLE_API_KEY` | Already configured |
+
+---
+
+## Implementation Order
+
+1. Create `generate-transcript` edge function
+2. Create `generate-flashcard` edge function
+3. Refine `google-tts` edge function with updated pause regex
+4. Update `supabase/config.toml`
+5. Delete old `generate-content-stream` and `generate-content` functions
+6. Create `RetryErrorModal` component
+7. Update `useStreamingContent` hook to call new endpoints
+8. Update `DailyDownloadPlayer` to show retry modal on error
+9. Deploy and test end-to-end
