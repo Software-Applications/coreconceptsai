@@ -14,6 +14,7 @@ interface CoreConceptsHubProps {
   onCardClick: (card: PinnedCard) => void;
   pinnedCards: PinnedCard[];
   unlistenedCount: number;
+  examTopicsCount?: number;
 }
 
 export const CoreConceptsHub = ({
@@ -21,7 +22,8 @@ export const CoreConceptsHub = ({
   onOpenReviewBoard,
   onCardClick,
   pinnedCards,
-  unlistenedCount
+  unlistenedCount,
+  examTopicsCount = 0
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
   const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
@@ -82,7 +84,7 @@ export const CoreConceptsHub = ({
                 </AnimatePresence>
               </div>
 
-              {/* Title */}
+               {/* Title */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   Core Concepts <AIBadge size="sm" />
@@ -90,6 +92,11 @@ export const CoreConceptsHub = ({
                 <p className="text-[11px] text-muted-foreground truncate">
                   AI explanations of tough topics
                 </p>
+                {examTopicsCount > 0 && (
+                  <p className="text-[10px] font-medium text-primary mt-1">
+                    🔥 {examTopicsCount} {examTopicsCount === 1 ? 'topic' : 'topics'} match your upcoming exam
+                  </p>
+                )}
               </div>
 
               {/* Arrow CTA */}
