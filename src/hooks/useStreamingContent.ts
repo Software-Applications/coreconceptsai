@@ -53,10 +53,10 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   const optionsRef = useRef(options);
   const isMountedRef = useRef(true);
   const audioBlobUrlRef = useRef<string | null>(null);
+  const currentParamsRef = useRef<StreamingContentParams | null>(null);
   
   // Track saved position for voice change resume
   const savedPositionMsRef = useRef<number>(0);
-  const wasPlayingRef = useRef<boolean>(false);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -85,7 +85,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     return URL.createObjectURL(blob);
   }, []);
 
-  // Generate audio for full transcript
+  // Generate audio via TTS
   const generateAudio = useCallback(async (
     text: string,
     voiceId: string,
@@ -134,6 +134,48 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     }
   }, [base64ToBlobUrl]);
 
+  // Generate flashcard
+  const generateFlashcard = useCallback(async (
+    topicId: string,
+    topicTitle: string,
+    transcript: string,
+    signal: AbortSignal
+  ): Promise<FlashSummary | null> => {
+    try {
+      console.log('[StreamContent] Generating flashcard...');
+      
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/generate-flashcard`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ topicId, topicTitle, transcript }),
+          signal,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Flashcard request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.flashSummary) {
+        console.log(`[StreamContent] Flashcard ready (status: ${data.status})`);
+        return data.flashSummary;
+      }
+      return null;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null;
+      }
+      console.error('[StreamContent] Flashcard error:', err);
+      return null; // Don't throw - flashcard failure shouldn't break the flow
+    }
+  }, []);
+
   const startGeneration = useCallback(async (params: StreamingContentParams) => {
     // Cancel any existing generation
     if (abortControllerRef.current) {
@@ -151,6 +193,9 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     abortControllerRef.current = new AbortController();
     const mainSignal = abortControllerRef.current.signal;
 
+    // Store params for retry
+    currentParamsRef.current = params;
+
     // Reset state
     setIsGenerating(true);
     setIsAudioGenerating(false);
@@ -162,15 +207,15 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     setAudioBlobUrl(null);
     setAudioDurationMs(0);
     savedPositionMsRef.current = 0;
-    wasPlayingRef.current = false;
 
     const { voiceId = 'en-US-Neural2-D', speakingRate = 1.0 } = params;
 
     try {
-      console.log('[StreamContent] Starting generation...');
+      // Step 1: Generate transcript
+      console.log('[StreamContent] Step 1: Calling generate-transcript...');
       
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/generate-content-stream`,
+      const transcriptResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/generate-transcript`,
         {
           method: 'POST',
           headers: {
@@ -188,103 +233,74 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Streaming request failed: ${response.status}`);
+      if (!transcriptResponse.ok) {
+        throw new Error(`Transcript request failed: ${transcriptResponse.status}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      const transcriptData = await transcriptResponse.json();
+      
+      if (!transcriptData.success || !transcriptData.transcript) {
+        throw new Error(transcriptData.error || 'Failed to generate transcript');
+      }
 
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let transcript = '';
-      let summary: FlashSummary | null = null;
+      const transcript = transcriptData.transcript;
+      console.log(`[StreamContent] Transcript ready (status: ${transcriptData.status})`);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (isMountedRef.current) {
+        setFullTranscript(transcript);
+        setTranscriptReady(true);
+        setIsGenerating(false);
+        optionsRef.current.onTranscriptReady?.(transcript);
+      }
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
+      // Step 2: On transcript success, call flashcard AND TTS in parallel
+      console.log('[StreamContent] Step 2: Calling flashcard and TTS in parallel...');
+      
+      if (isMountedRef.current && !mainSignal.aborted) {
+        setIsAudioGenerating(true);
+        
+        ttsAbortControllerRef.current = new AbortController();
+        
+        // Run flashcard and TTS in parallel
+        const [flashResult, audioResult] = await Promise.all([
+          generateFlashcard(
+            params.topicId,
+            params.topicTitle,
+            transcript,
+            ttsAbortControllerRef.current.signal
+          ),
+          generateAudio(
+            transcript,
+            voiceId,
+            speakingRate,
+            ttsAbortControllerRef.current.signal
+          )
+        ]);
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          try {
-            const data = JSON.parse(line.slice(6));
-            
-            if (data.type === 'transcript') {
-              // Full transcript received
-              transcript = data.text;
-              console.log('[StreamContent] Received full transcript');
-              
-              if (isMountedRef.current) {
-                setFullTranscript(transcript);
-                setTranscriptReady(true);
-                setIsGenerating(false);
-                optionsRef.current.onTranscriptReady?.(transcript);
-              }
-              
-              // Start TTS generation immediately
-              if (isMountedRef.current && !mainSignal.aborted) {
-                setIsAudioGenerating(true);
-                
-                ttsAbortControllerRef.current = new AbortController();
-                
-                try {
-                  const audioResult = await generateAudio(
-                    transcript,
-                    voiceId,
-                    speakingRate,
-                    ttsAbortControllerRef.current.signal
-                  );
-                  
-                  if (audioResult && isMountedRef.current) {
-                    setAudioBlobUrl(audioResult.blobUrl);
-                    setAudioDurationMs(audioResult.durationMs);
-                    setAudioReady(true);
-                    optionsRef.current.onAudioReady?.(audioResult.blobUrl, audioResult.durationMs);
-                  }
-                } catch (ttsErr) {
-                  if (ttsErr instanceof Error && ttsErr.name !== 'AbortError') {
-                    console.error('[StreamContent] TTS generation failed:', ttsErr);
-                    if (isMountedRef.current) {
-                      setError('Audio generation failed');
-                    }
-                  }
-                } finally {
-                  if (isMountedRef.current) {
-                    setIsAudioGenerating(false);
-                  }
-                }
-              }
-              
-            } else if (data.type === 'summary') {
-              console.log('[StreamContent] Received flash summary');
-              summary = data.flashSummary;
-              if (isMountedRef.current) {
-                setFlashSummary(summary);
-              }
-            } else if (data.type === 'done') {
-              console.log('[StreamContent] Generation complete');
-              
-              // Invalidate queries to refresh with new content
-              queryClient.invalidateQueries({ queryKey: ['topics'] });
-              queryClient.invalidateQueries({ queryKey: ['topic'] });
-            } else if (data.type === 'error') {
-              throw new Error(data.message);
-            }
-          } catch (parseError) {
-            if (parseError instanceof Error && parseError.name !== 'AbortError') {
-              console.warn('[StreamContent] Failed to parse SSE event:', parseError);
-            }
-          }
+        // Handle flashcard result
+        if (flashResult && isMountedRef.current) {
+          setFlashSummary(flashResult);
+        }
+
+        // Handle audio result
+        if (audioResult && isMountedRef.current) {
+          setAudioBlobUrl(audioResult.blobUrl);
+          setAudioDurationMs(audioResult.durationMs);
+          setAudioReady(true);
+          optionsRef.current.onAudioReady?.(audioResult.blobUrl, audioResult.durationMs);
+        }
+
+        if (isMountedRef.current) {
+          setIsAudioGenerating(false);
         }
       }
-      
+
+      // Invalidate queries to refresh with new content
+      queryClient.invalidateQueries({ queryKey: ['topics'] });
+      queryClient.invalidateQueries({ queryKey: ['topic'] });
+
       // Call completion callback
-      optionsRef.current.onComplete?.(transcript, summary);
+      optionsRef.current.onComplete?.(transcript, flashSummary);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -301,7 +317,16 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
       optionsRef.current.onError?.(errorMessage);
     }
-  }, [generateAudio, queryClient, audioBlobUrl]);
+  }, [generateAudio, generateFlashcard, queryClient, audioBlobUrl, flashSummary]);
+
+  // Retry generation with previously used params
+  const retryGeneration = useCallback(() => {
+    if (currentParamsRef.current) {
+      console.log('[StreamContent] Retrying generation...');
+      setError(null);
+      startGeneration(currentParamsRef.current);
+    }
+  }, [startGeneration]);
 
   const cancel = useCallback(() => {
     console.log('[StreamContent] Cancelling...');
@@ -321,6 +346,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       setAudioReady(false);
       setAudioBlobUrl(null);
       setFullTranscript('');
+      setError(null);
     }
   }, []);
 
@@ -418,6 +444,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     
     // Actions
     startGeneration,
+    retryGeneration,
     cancel,
     regenerateAudioWithVoice,
   };
