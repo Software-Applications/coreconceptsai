@@ -32,6 +32,7 @@ interface TopicSelectionSheetProps {
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
   currentSubjectId?: string;
+  examTopicIds?: Set<string>;
 }
 
 // Helper to highlight matching text
@@ -63,7 +64,8 @@ export const TopicSelectionSheet = ({
   onSelectTopic,
   isListened,
   hasProgress,
-  currentSubjectId
+  currentSubjectId,
+  examTopicIds: propExamTopicIds
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
   const topicRequest = useTopicRequest();
@@ -209,10 +211,14 @@ export const TopicSelectionSheet = ({
     setSearchQuery(''); // Clear search when toggling exam filter
   }, [lightTap]);
 
-  // Mock exam topic IDs - first 3 topics are "exam relevant"
+  // Use prop examTopicIds if provided, otherwise fall back to mock (first 3 topics)
   const examTopicIds = useMemo(() => {
+    if (propExamTopicIds && propExamTopicIds.size > 0) {
+      return propExamTopicIds;
+    }
+    // Fallback to mock data when no exam is set
     return new Set(topics.slice(0, 3).map(t => t.id));
-  }, [topics]);
+  }, [propExamTopicIds, topics]);
 
   // Calculate progress stats
   const progressStats = useMemo(() => {

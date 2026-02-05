@@ -26,6 +26,7 @@ import { useConfetti } from "@/hooks/useConfetti";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useChapters } from "@/hooks/useChapters";
 import { useTopics, type DailyDownloadTopic } from "@/hooks/useTopics";
+import { useExamTopicIds } from "@/hooks/useExams";
 import { subjectCrossFade } from "@/lib/motionVariants";
 import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/data/courseData";
 import { type PinnedCard } from "@/data/dailyDownloadData";
@@ -119,6 +120,11 @@ const Index = () => {
     if (!selectedTopicId) return null;
     return allTopics.find(t => t.id === selectedTopicId) ?? null;
   }, [allTopics, selectedTopicId]);
+  
+  // Get exam-related topics
+  const { examTopicIds, hasExam } = useExamTopicIds(selectedSubject?.id, subjectTopics);
+  const examTopicsCount = hasExam ? examTopicIds.size : 0;
+  
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
@@ -270,7 +276,7 @@ const Index = () => {
           onCardClick={setExpandedPinnedCard}
           pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
-          examTopicsCount={Math.min(3, subjectTopics.length)}
+          examTopicsCount={examTopicsCount}
         />
 
 
@@ -373,9 +379,12 @@ const Index = () => {
             onSelectTopic={handleSelectTopic}
             isListened={isListened}
             hasProgress={hasAudioProgress}
+            currentSubjectId={selectedSubject?.id}
+            examTopicIds={examTopicIds}
           />
         )}
       </AnimatePresence>
+
 
       <AnimatePresence mode="wait">
         {selectedTopic && (
