@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Volume2 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+
 
 const TRANSCRIPT_MESSAGES = [
   "Writing your personalized brief...",
@@ -90,12 +90,6 @@ export const GeneratingOverlay = ({
             </p>
           )}
 
-          {/* Progress indicator for audio generation */}
-          {isGeneratingAudio && (
-            <div className="w-48 mb-4">
-              <Progress value={undefined} className="h-1.5 animate-pulse" />
-            </div>
-          )}
           
           {/* Rotating sub-copy with crossfade */}
           <div className="h-8 relative w-full flex items-center justify-center">
