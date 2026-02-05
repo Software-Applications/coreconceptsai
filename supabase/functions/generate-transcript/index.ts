@@ -12,7 +12,10 @@ const RETRY_DELAYS = [1000, 2000, 5000];
 
 const TRANSCRIPT_SYSTEM_PROMPT = `### ROLE: Active Learning Audio Designer
 
-### OBJECTIVE: Your goal is to transform the provided topic into a "Lean-Forward" PODCAST-STYLE audio transcript with the simplest and easiest-to-follow explanation. Do not simply narrate facts; design an experience that forces the user, who is a student, to mentally process, predict, and retrieve information.
+### OBJECTIVE:
+Your goal is to transform the provided topic into a "Lean-Forward" PODCAST-STYLE audio transcript with the simplest and easiest-to-follow explanation. Do not simply narrate facts; design an experience that forces the user, who is a student, to mentally process, predict, and retrieve information.
+
+FOLLOW every line of the guidance provided below without fail. They are non-negotiable.
 
 ### TONE AND STYLE:
 - Use a tone that conveys reliability and credibility, showing conviction, steadiness, and clarity.
@@ -38,10 +41,10 @@ const TRANSCRIPT_SYSTEM_PROMPT = `### ROLE: Active Learning Audio Designer
 - Ensure the pacing allows for the active prompting pauses
 
 ### PARAGRAPH STRUCTURE:
-- Use clear paragraph breaks (double newlines) between distinct ideas or sections
-- Each paragraph should contain a complete thought or concept (2-4 sentences typically)
-- Reflective questions MUST end with the [PAUSE: 5 Seconds] tag
-- Keep paragraphs focused and well-separated for better audio pacing
+- Each paragraph should contain a complete thought or concept, explaining a distinct idea or section.
+- Questions should end with the [PAUSE: 5 Seconds] marker. Include it in the transcript.
+- Paragraphs must end with the [PAUSE: 3 Seconds] marker.
+- Maintain paragraph format.
 
 ### CORE STRATEGIES TO EMPLOY: Follow all guidelines below CAREFULLY. They are NON-NEGOTIABLE:
 
@@ -51,12 +54,12 @@ const TRANSCRIPT_SYSTEM_PROMPT = `### ROLE: Active Learning Audio Designer
 
 2. ACTIVE PROMPTING:
 - Include strategic questions throughout the transcript to encourage active thinking, to force the user to pause and reflect rather than just listen passively.
-- Format: "[PAUSE: 5 Seconds] Ask: 'Think about this for a moment...', 'Before we continue, ask yourself...', 'Can you see why...?', 'What do you think would happen if...?', etc."
+- Format: "Think about this for a moment...", "Before we continue, ask yourself...", "Can you see why...?", "What do you think would happen if...?", etc.
 - Space these prompts naturally throughout the transcript (aim for 2-5 prompts in total)
 
 3. PAUSE AND PREDICT:
 - Before revealing a key result, solution, or climax of a concept, insert a "Predictive Pause."
-- Format: "[PAUSE: 5 Seconds] Ask: 'Based on what we just discussed, what do you think the outcome was? Take a second to guess before I tell you.'"
+- Format: "Based on what we just discussed, what do you think the outcome was? Take a second to guess before I tell you."
 
 4. RETRIEVAL INTERRUPTIONS:
 - Every 3–5 minutes, stop the flow for a "Mental Check-In."
@@ -65,15 +68,16 @@ const TRANSCRIPT_SYSTEM_PROMPT = `### ROLE: Active Learning Audio Designer
 5. ELABORATIVE INTERROGATION:
 - Use "Connection Prompts." Ask the user: "How does this relate to a topic you recently learnt?"
 
-6. THE FEYNMAN WRAP-UP:
+6. WRAP-UP:
 - End the transcript with a quick summary that reinforces the key points the student just learned.
 - Follow the summary with a "Teaching Challenge."
 - Instruction: "Tell the user: 'If you had to explain this concept to someone who has never heard of it, how would you summarize it in 30 seconds? Try explaining it out loud now.'"
 
 ### RESPONSE FORMAT:
 - Write the transcript inside <transcript> tags.
-- Do not include any stage directions, speaker labels, or meta-commentary—just the words you would speak.
-- Do not include Welcome messages, dive into the topic directly.
+- Exclude any stage directions, speaker labels, or meta-commentary—just the words you would speak.
+- Exclude Welcome messages, dive into the topic directly.
+- The summary must begin with 'Let's summarize this topic'
 - Your output should consist only of the transcript itself within the specified tags.`;
 
 interface TranscriptRequest {
@@ -91,11 +95,11 @@ interface TranscriptResponse {
   error?: string;
 }
 
-// Cache validation: length > 750 AND contains "summary" (case-insensitive)
+// Cache validation: length > 750 AND contains "let's summarize this topic" (case-insensitive)
 function isValidCachedTranscript(transcript: string | null): boolean {
   if (!transcript) return false;
   if (transcript.length <= 750) return false;
-  if (!transcript.toLowerCase().includes("summary")) return false;
+  if (!transcript.toLowerCase().includes("let's summarize this topic")) return false;
   return true;
 }
 
@@ -133,12 +137,13 @@ async function generateTranscriptWithRetry(
               {
                 parts: [
                   {
-                    text: `Generate a transcript for this ${subjectName || "educational"} topic:
-
+                    text: `<topic>
 Topic Title: ${topicTitle}
 ${topicDescription ? `Description: ${topicDescription}` : ""}
+Subject: ${subjectName || "General Education"}
+</topic>
 
-Create an engaging, educational transcript that helps a student understand this topic.`,
+Create the transcript for the topic above.`,
                   },
                 ],
               },

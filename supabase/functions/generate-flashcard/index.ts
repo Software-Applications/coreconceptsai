@@ -29,7 +29,7 @@ You may use one or more of the following formats to best summarize the topic:
 - Insights
 - Any combination of the above
 
-Before creating your flashcard, think about:
+Before creating your flashcard, use a scratchpad to think about:
 1. What are the key concepts from the transcript?
 2. Which format(s) would best help students understand and remember this topic?
 3. How can you organize the information to fit on one flashcard while maintaining clarity?
@@ -107,12 +107,15 @@ async function generateFlashcardWithRetry(
               {
                 parts: [
                   {
-                    text: `Create a flashcard summary for this topic based on the transcript.
-
-Topic: ${topicTitle}
-
-Transcript:
+                    text: `<transcript>
 ${transcript.slice(0, 4000)}
+</transcript>
+
+<topic>
+${topicTitle}
+</topic>
+
+Create the flashcard summary for the topic above based on the transcript provided.
 
 IMPORTANT: Return ONLY a valid JSON object with these exact fields:
 - "visual_type": one of "diagram", "formula", or "analogy"
