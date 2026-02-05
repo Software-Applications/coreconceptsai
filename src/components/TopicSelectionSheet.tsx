@@ -558,7 +558,7 @@ export const TopicSelectionSheet = ({
                         value={topic.id}
                         onSelect={() => handleSelectTopic(topic)}
                         className={`flex items-center gap-3 p-3 cursor-pointer ${
-                          showHighlight ? 'bg-destructive/10 ring-1 ring-destructive/30 rounded-lg' : ''
+                          showHighlight ? 'bg-warning/10 ring-1 ring-warning/30 rounded-lg' : ''
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -576,7 +576,7 @@ export const TopicSelectionSheet = ({
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
                             {showHighlight && (
-                              <span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded-full">
+                              <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-500 font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
                                 <Flame className="w-2.5 h-2.5" />
                                 Exam
                               </span>
