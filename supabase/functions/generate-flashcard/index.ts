@@ -42,7 +42,12 @@ Now create your flashcard summary. Make sure to:
 
 Output your response as a JSON object with these exact fields:
 - visual_type: one of "diagram", "formula", or "analogy"
-- visual_content: the visual content - a diagram description, formula, or analogy (use emoji if helpful)
+- visual_content: a SHORT mnemonic, formula, or visual representation (MAX 60 characters). Examples:
+  * "🔬 Bacteria → Viruses → Fungi → Protozoa"
+  * "📈 Lag → Log → Stationary → Death"
+  * "⚛️ Nucleus (p⁺ + n⁰) | Shell (e⁻)"
+  * "E = mc²"
+  NOT a sentence - think headline/mnemonic!
 - bullet_points: an array of exactly 3 concise bullet points summarizing key concepts
 - difficulty: one of "easy", "medium", or "hard"`;
 
@@ -119,11 +124,9 @@ Create the flashcard summary for the topic above based on the transcript provide
 
 IMPORTANT: Return ONLY a valid JSON object with these exact fields:
 - "visual_type": one of "diagram", "formula", or "analogy"
-- "visual_content": a short visual description (max 200 chars)
+- "visual_content": MAX 60 CHARACTERS - a mnemonic or visual like "🧬 DNA → RNA → Protein" (NOT a full sentence!)
 - "bullet_points": array of exactly 3 short strings
-- "difficulty": one of "easy", "medium", or "hard"
-
-Keep all string values SHORT to ensure valid JSON output.`,
+- "difficulty": one of "easy", "medium", or "hard"`,
                   },
                 ],
               },
@@ -189,6 +192,14 @@ Keep all string values SHORT to ensure valid JSON output.`,
         while (parsed.bullet_points.length < 3) {
           parsed.bullet_points.push("Key concept from this topic");
         }
+      }
+
+      // Truncate visual_content if too long
+      if (parsed.visual_content.length > 80) {
+        console.warn(`[Flashcard] visual_content too long (${parsed.visual_content.length} chars), truncating`);
+        const truncated = parsed.visual_content.slice(0, 60);
+        const lastSpace = truncated.lastIndexOf(' ');
+        parsed.visual_content = lastSpace > 30 ? truncated.slice(0, lastSpace) + '...' : truncated + '...';
       }
 
       console.log("[Flashcard] Generated successfully");
