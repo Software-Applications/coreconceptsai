@@ -1,53 +1,54 @@
 
 
-## Fix Exam Topic Highlight Colors to Match Amber Pattern
+## Update Topic Card Hover to Use Subtle Primary Tint
 
 ### Problem
-When clicking the "Upcoming Exam" chip, the matching topics are highlighted in red (`destructive`), which is inconsistent with the amber styling we just applied to the chip itself.
+The topic cards in the selection drawer use the CommandItem component which has a built-in hover state using the `accent` color (orange/amber at `hsl(38 92% 50%)`). This creates a heavy, visually dominant hover effect that's inconsistent with other components.
 
-**Current red styling (lines 560-582):**
-- Card container: `bg-destructive/10 ring-1 ring-destructive/30`
-- "Exam" badge: `text-destructive bg-destructive/10`
+### Current Pattern in Codebase
+
+| Component | Hover Style | Color |
+|-----------|-------------|-------|
+| Subject Chips | `hover:bg-primary/5` | Subtle blue tint |
+| Chapter Drawer Items | `hover:bg-primary/5` | Subtle blue tint |
+| Topic Cards (CommandItem) | `data-[selected]:bg-accent` | Heavy orange/amber |
+
+### Design System Recommendation
+
+Per the color standardization pattern:
+> "Component hover states use a subtle primary tint (`hover:bg-primary/5`) instead of the orange/amber `accent` color."
+
+This confirms the user's instinct - the current hover is too heavy and should match the subtle primary tint pattern.
 
 ### Solution
 
-Update `src/components/TopicSelectionSheet.tsx` to use amber/warning colors instead of destructive:
+Update `src/components/ui/command.tsx` to override the `accent` hover with the subtle `primary/5` pattern:
 
-| Element | Current (Red) | Updated (Amber) |
-|---------|---------------|-----------------|
-| Card background | `bg-destructive/10` | `bg-warning/10` |
-| Card ring | `ring-destructive/30` | `ring-warning/30` |
-| Badge text | `text-destructive` | `text-amber-600 dark:text-amber-500` |
-| Badge background | `bg-destructive/10` | `bg-warning/10` |
+**Line 108** - CommandItem styling:
 
-### Code Changes
-
-**Line 560-561** - Card container styling:
 ```tsx
 // Before:
-showHighlight ? 'bg-destructive/10 ring-1 ring-destructive/30 rounded-lg' : ''
+"relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50"
 
 // After:
-showHighlight ? 'bg-warning/10 ring-1 ring-warning/30 rounded-lg' : ''
+"relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-primary/5 data-[selected=true]:text-foreground data-[disabled=true]:opacity-50"
 ```
 
-**Lines 578-583** - "Exam" badge styling:
-```tsx
-// Before:
-<span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded-full">
+### Changes Summary
 
-// After:
-<span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-500 font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
-```
+| Aspect | Before | After |
+|--------|--------|-------|
+| Selection background | `bg-accent` (orange) | `bg-primary/5` (subtle blue) |
+| Selection text | `text-accent-foreground` | `text-foreground` (stays readable) |
 
 ### Result
-- Exam topics will have a warm amber highlight instead of red
-- Consistent with the "Upcoming Exam" chip styling
-- Consistent with the exam nudge pill on the Core Concepts card
-- Follows the semantic color pattern: urgency = amber, not red
+- Topic card hover matches Subject Chips and Chapter Drawer items
+- Consistent with the navy-blue theme
+- Subtle, non-distracting interaction feedback
+- Follows established design patterns
 
 ### File to Change
 | File | Change |
 |------|--------|
-| `src/components/TopicSelectionSheet.tsx` | Update topic card and badge colors from destructive (red) to warning (amber) |
+| `src/components/ui/command.tsx` | Update CommandItem selection colors from `accent` to `primary/5` |
 
