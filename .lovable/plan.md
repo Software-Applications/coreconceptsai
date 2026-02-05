@@ -1,43 +1,66 @@
 
-## Enhance Exam Nudge Visibility with Larger Size and Pill Background
+## Fix Upcoming Exam Chip Color Pattern
 
-### Current State
-The exam nudge is currently:
-- Size: `text-[10px]` (10px) - smallest element on the card
-- Color: `text-amber-600 dark:text-amber-500`
-- No background or visual container
+### Problem
+The "Upcoming Exam" chip in the Core Concepts drawer uses `destructive` (red), which is semantically incorrect:
+- Red (`destructive`) = errors, dangerous/irreversible actions
+- The exam filter represents **urgency/time-sensitivity**, not danger
 
-### Proposed Changes
+### Design Pattern Alignment
+Per the color standardization memory, semantic colors should indicate state:
+- `success` (green) → completed/positive states
+- `warning` (amber) → urgency/attention needed
+- `destructive` (red) → errors/dangerous actions
+- `info` (blue) → informational
 
-**Update `src/components/CoreConceptsHub.tsx` (line 95-99)**
+The exam nudge on the Core Concepts card already uses amber styling, so this chip should match.
 
-Replace the current nudge with an enhanced version that combines larger text and a subtle pill background:
+### Solution
 
-```tsx
-{examTopicsCount > 0 && (
-  <div className="inline-flex items-center gap-1.5 bg-amber-500/10 dark:bg-amber-500/15 px-2.5 py-1 rounded-full mt-2">
-    <span className="text-xs font-medium text-amber-600 dark:text-amber-500">
-      🔥 {examTopicsCount} {examTopicsCount === 1 ? 'topic' : 'topics'} match your upcoming exam
-    </span>
-  </div>
-)}
+**Update `src/components/TopicSelectionSheet.tsx` (lines 319-329)**
+
+Change the Upcoming Exam chip from destructive (red) to warning (amber):
+
+```text
+Before                              After
+─────────────────────────────────   ─────────────────────────────────
+bg-destructive/10                → bg-warning/10
+hover:bg-destructive/20          → hover:bg-warning/20
+text-destructive                 → text-amber-600 dark:text-amber-500
+bg-destructive                   → bg-warning
+text-destructive-foreground      → text-warning-foreground
 ```
 
-### Visual Changes
-| Aspect | Before | After |
-|--------|--------|-------|
-| Size | `text-[10px]` (10px) | `text-xs` (12px) |
-| Background | None | `bg-amber-500/10` with 2.5px x 1px padding |
-| Shape | Plain text | Pill-shaped with `rounded-full` |
-| Structure | `<p>` tag | `<div>` with flex layout for proper alignment |
+**Updated code:**
+```tsx
+<button
+  onClick={wrapChipClick(handleExamFilterToggle)}
+  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
+    examFilterActive 
+      ? 'bg-warning text-warning-foreground' 
+      : 'bg-warning/10 hover:bg-warning/20 text-amber-600 dark:text-amber-500'
+  }`}
+>
+  <Flame className="w-3.5 h-3.5" />
+  Upcoming Exam
+</button>
+```
 
-### Design Rationale
-- **Larger text** (12px vs 10px) improves readability and draws more attention
-- **Subtle pill background** (`bg-amber-500/10`) creates visual separation without being intrusive
-- **Rounded corners** enhance the "badge-like" appearance, conveying importance
-- **Flex layout** ensures proper alignment and spacing between emoji and text
-- **Dark mode support** with `dark:bg-amber-500/15` maintains visibility in dark mode
+### Visual Comparison
 
-### Result
-The exam nudge will be significantly more prominent while maintaining visual harmony with the rest of the card's design.
+| State | Current (Red) | Proposed (Amber) |
+|-------|---------------|------------------|
+| Default | Light red bg, red text | Light amber bg, amber text |
+| Hover | Darker red bg | Darker amber bg |
+| Active | Solid red bg, white text | Solid amber bg, white text |
 
+### Benefits
+- Consistent with exam nudge pill styling on the Core Concepts card
+- Matches the fire emoji's warm color association
+- Follows semantic color guidelines (urgency = amber, not red)
+- Less alarming visual weight than red
+
+### File to Change
+| File | Change |
+|------|--------|
+| `src/components/TopicSelectionSheet.tsx` | Update chip colors from destructive (red) to warning (amber) |
