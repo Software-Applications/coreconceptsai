@@ -1,54 +1,69 @@
 
-
-## Update Topic Card Hover to Use Subtle Primary Tint
+## Fix First Topic Always in Hover State
 
 ### Problem
-The topic cards in the selection drawer use the CommandItem component which has a built-in hover state using the `accent` color (orange/amber at `hsl(38 92% 50%)`). This creates a heavy, visually dominant hover effect that's inconsistent with other components.
+The first topic in the Core Concepts AI drawer is always displayed in a "hover" (selected) state. This happens because the `cmdk` library (which powers the Command component) automatically selects the first item by default when no controlled `value` is provided.
 
-### Current Pattern in Codebase
-
-| Component | Hover Style | Color |
-|-----------|-------------|-------|
-| Subject Chips | `hover:bg-primary/5` | Subtle blue tint |
-| Chapter Drawer Items | `hover:bg-primary/5` | Subtle blue tint |
-| Topic Cards (CommandItem) | `data-[selected]:bg-accent` | Heavy orange/amber |
-
-### Design System Recommendation
-
-Per the color standardization pattern:
-> "Component hover states use a subtle primary tint (`hover:bg-primary/5`) instead of the orange/amber `accent` color."
-
-This confirms the user's instinct - the current hover is too heavy and should match the subtle primary tint pattern.
-
-### Solution
-
-Update `src/components/ui/command.tsx` to override the `accent` hover with the subtle `primary/5` pattern:
-
-**Line 108** - CommandItem styling:
+### Root Cause
+In `src/components/TopicSelectionSheet.tsx`, the `Command` component is rendered without a controlled `value` prop:
 
 ```tsx
-// Before:
-"relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50"
-
-// After:
-"relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-primary/5 data-[selected=true]:text-foreground data-[disabled=true]:opacity-50"
+<Command 
+  className="flex-1 min-h-0 border-t border-border"
+  shouldFilter={false}
+>
 ```
 
-### Changes Summary
+Without explicit control, cmdk auto-selects the first `CommandItem`, applying the `data-[selected='true']` attribute which triggers the hover-like styling.
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Selection background | `bg-accent` (orange) | `bg-primary/5` (subtle blue) |
-| Selection text | `text-accent-foreground` | `text-foreground` (stays readable) |
+### Solution
+Control the Command component's selection state by:
+1. Adding a `value` state initialized to an empty string (no selection)
+2. Passing `value` and `onValueChange` props to the Command component
 
-### Result
-- Topic card hover matches Subject Chips and Chapter Drawer items
-- Consistent with the navy-blue theme
-- Subtle, non-distracting interaction feedback
-- Follows established design patterns
+This approach:
+- Prevents automatic first-item selection on mount
+- Allows user interaction (keyboard/mouse) to still work naturally
+- Follows the documented cmdk API pattern
 
-### File to Change
+### Technical Implementation
+
+**File: `src/components/TopicSelectionSheet.tsx`**
+
+1. Add new state for controlling selection (around line 73):
+```tsx
+const [selectedValue, setSelectedValue] = useState('');
+```
+
+2. Update Command component props (around line 285):
+```tsx
+<Command 
+  className="flex-1 min-h-0 border-t border-border"
+  shouldFilter={false}
+  value={selectedValue}
+  onValueChange={setSelectedValue}
+>
+```
+
+3. Reset the selection when the sheet closes (update existing useEffect around line 231):
+```tsx
+useEffect(() => {
+  if (!isOpen) {
+    setSearchQuery('');
+    setDebouncedQuery('');
+    setSelectedValue(''); // Reset selection when sheet closes
+  }
+}, [isOpen]);
+```
+
+### Visual Result
+
+| Before | After |
+|--------|-------|
+| First topic always highlighted with blue tint | No topic highlighted until user hovers or uses keyboard |
+| Appears "stuck" in hover state | Clean, neutral appearance on open |
+
+### Files to Change
 | File | Change |
 |------|--------|
-| `src/components/ui/command.tsx` | Update CommandItem selection colors from `accent` to `primary/5` |
-
+| `src/components/TopicSelectionSheet.tsx` | Add controlled selection state to Command component |
