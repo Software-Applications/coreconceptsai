@@ -1,69 +1,63 @@
 
-## Fix First Topic Always in Hover State
 
-### Problem
-The first topic in the Core Concepts AI drawer is always displayed in a "hover" (selected) state. This happens because the `cmdk` library (which powers the Command component) automatically selects the first item by default when no controlled `value` is provided.
+## Remove Non-Functional Progress Bar from Audio Generation Overlay
 
-### Root Cause
-In `src/components/TopicSelectionSheet.tsx`, the `Command` component is rendered without a controlled `value` prop:
-
+### Current State
+The `GeneratingOverlay` component displays an indeterminate progress bar during audio generation (lines 93-98):
 ```tsx
-<Command 
-  className="flex-1 min-h-0 border-t border-border"
-  shouldFilter={false}
->
+{isGeneratingAudio && (
+  <div className="w-48 mb-4">
+    <Progress value={undefined} className="h-1.5 animate-pulse" />
+  </div>
+)}
 ```
 
-Without explicit control, cmdk auto-selects the first `CommandItem`, applying the `data-[selected='true']` attribute which triggers the hover-like styling.
+This progress bar:
+- Uses `value={undefined}` so it doesn't show actual progress
+- Just pulses indefinitely, which adds visual noise without providing useful feedback
+- Creates awkward spacing between the topic title and rotating messages
 
 ### Solution
-Control the Command component's selection state by:
-1. Adding a `value` state initialized to an empty string (no selection)
-2. Passing `value` and `onValueChange` props to the Command component
 
-This approach:
-- Prevents automatic first-item selection on mount
-- Allows user interaction (keyboard/mouse) to still work naturally
-- Follows the documented cmdk API pattern
+1. **Remove the progress bar** - Delete lines 93-98 entirely
+2. **Remove unused import** - Remove `Progress` from imports (line 4)
+3. **Adjust spacing** - The topic title already has `mb-4` which provides good spacing to the rotating messages
 
-### Technical Implementation
+### Code Changes
 
-**File: `src/components/TopicSelectionSheet.tsx`**
-
-1. Add new state for controlling selection (around line 73):
+**Line 4** - Remove unused import:
 ```tsx
-const [selectedValue, setSelectedValue] = useState('');
+// Before:
+import { Progress } from '@/components/ui/progress';
+
+// After:
+(removed)
 ```
 
-2. Update Command component props (around line 285):
+**Lines 93-98** - Remove progress bar block:
 ```tsx
-<Command 
-  className="flex-1 min-h-0 border-t border-border"
-  shouldFilter={false}
-  value={selectedValue}
-  onValueChange={setSelectedValue}
->
-```
+// Before:
+{/* Progress indicator for audio generation */}
+{isGeneratingAudio && (
+  <div className="w-48 mb-4">
+    <Progress value={undefined} className="h-1.5 animate-pulse" />
+  </div>
+)}
 
-3. Reset the selection when the sheet closes (update existing useEffect around line 231):
-```tsx
-useEffect(() => {
-  if (!isOpen) {
-    setSearchQuery('');
-    setDebouncedQuery('');
-    setSelectedValue(''); // Reset selection when sheet closes
-  }
-}, [isOpen]);
+// After:
+(removed)
 ```
 
 ### Visual Result
 
 | Before | After |
 |--------|-------|
-| First topic always highlighted with blue tint | No topic highlighted until user hovers or uses keyboard |
-| Appears "stuck" in hover state | Clean, neutral appearance on open |
+| Icon → Title → Topic → Progress bar → Messages | Icon → Title → Topic → Messages |
+| Extra visual element that adds no value | Cleaner, more focused loading state |
+| Awkward vertical spacing | Natural flow from title to messages |
 
-### Files to Change
+### File to Change
 | File | Change |
 |------|--------|
-| `src/components/TopicSelectionSheet.tsx` | Add controlled selection state to Command component |
+| `src/components/GeneratingOverlay.tsx` | Remove Progress import and progress bar JSX |
+
