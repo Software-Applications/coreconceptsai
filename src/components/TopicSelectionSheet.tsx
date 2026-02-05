@@ -320,8 +320,8 @@ export const TopicSelectionSheet = ({
                       onClick={wrapChipClick(handleExamFilterToggle)}
                       className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
                         examFilterActive 
-                          ? 'bg-destructive text-destructive-foreground' 
-                          : 'bg-destructive/10 hover:bg-destructive/20 text-destructive'
+                          ? 'bg-warning text-warning-foreground' 
+                          : 'bg-warning/10 hover:bg-warning/20 text-amber-600 dark:text-amber-500'
                       }`}
                     >
                       <Flame className="w-3.5 h-3.5" />
