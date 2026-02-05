@@ -93,7 +93,7 @@ export const CoreConceptsHub = ({
                   AI explanations of tough topics
                 </p>
                 {examTopicsCount > 0 && (
-                  <p className="text-[10px] font-medium text-primary mt-1">
+                  <p className="text-[10px] font-medium text-amber-600 dark:text-amber-500 mt-1">
                     🔥 {examTopicsCount} {examTopicsCount === 1 ? 'topic' : 'topics'} match your upcoming exam
                   </p>
                 )}

@@ -121,9 +121,14 @@ const Index = () => {
     return allTopics.find(t => t.id === selectedTopicId) ?? null;
   }, [allTopics, selectedTopicId]);
   
-  // Get exam-related topics
-  const { examTopicIds, hasExam } = useExamTopicIds(selectedSubject?.id, subjectTopics);
-  const examTopicsCount = hasExam ? examTopicIds.size : 0;
+  // Get exam-related topics with fallback for demo
+  const { examTopicIds: realExamTopicIds, hasExam } = useExamTopicIds(selectedSubject?.id, subjectTopics);
+  
+  // Fallback: if no exam data, use first 3 topics as mock exam topics for demo
+  const examTopicIds = hasExam 
+    ? realExamTopicIds 
+    : new Set(subjectTopics.slice(0, 3).map(t => t.id));
+  const examTopicsCount = examTopicIds.size;
   
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
