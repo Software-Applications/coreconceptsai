@@ -754,7 +754,7 @@ export const DailyDownloadPlayer = ({
           
           <div 
             ref={transcriptRef}
-            className="flex-1 overflow-y-auto pb-8 cursor-grab select-none"
+            className="flex-1 overflow-y-auto scrollbar-hide pb-8 cursor-grab select-none"
             onMouseDown={handleTranscriptMouseDown}
             onMouseMove={handleTranscriptMouseMove}
             onMouseUp={handleTranscriptMouseUp}
