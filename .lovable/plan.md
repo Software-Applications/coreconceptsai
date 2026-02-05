@@ -1,66 +1,53 @@
 
-## Fix Upcoming Exam Chip Color Pattern
+
+## Fix Exam Topic Highlight Colors to Match Amber Pattern
 
 ### Problem
-The "Upcoming Exam" chip in the Core Concepts drawer uses `destructive` (red), which is semantically incorrect:
-- Red (`destructive`) = errors, dangerous/irreversible actions
-- The exam filter represents **urgency/time-sensitivity**, not danger
+When clicking the "Upcoming Exam" chip, the matching topics are highlighted in red (`destructive`), which is inconsistent with the amber styling we just applied to the chip itself.
 
-### Design Pattern Alignment
-Per the color standardization memory, semantic colors should indicate state:
-- `success` (green) → completed/positive states
-- `warning` (amber) → urgency/attention needed
-- `destructive` (red) → errors/dangerous actions
-- `info` (blue) → informational
-
-The exam nudge on the Core Concepts card already uses amber styling, so this chip should match.
+**Current red styling (lines 560-582):**
+- Card container: `bg-destructive/10 ring-1 ring-destructive/30`
+- "Exam" badge: `text-destructive bg-destructive/10`
 
 ### Solution
 
-**Update `src/components/TopicSelectionSheet.tsx` (lines 319-329)**
+Update `src/components/TopicSelectionSheet.tsx` to use amber/warning colors instead of destructive:
 
-Change the Upcoming Exam chip from destructive (red) to warning (amber):
+| Element | Current (Red) | Updated (Amber) |
+|---------|---------------|-----------------|
+| Card background | `bg-destructive/10` | `bg-warning/10` |
+| Card ring | `ring-destructive/30` | `ring-warning/30` |
+| Badge text | `text-destructive` | `text-amber-600 dark:text-amber-500` |
+| Badge background | `bg-destructive/10` | `bg-warning/10` |
 
-```text
-Before                              After
-─────────────────────────────────   ─────────────────────────────────
-bg-destructive/10                → bg-warning/10
-hover:bg-destructive/20          → hover:bg-warning/20
-text-destructive                 → text-amber-600 dark:text-amber-500
-bg-destructive                   → bg-warning
-text-destructive-foreground      → text-warning-foreground
-```
+### Code Changes
 
-**Updated code:**
+**Line 560-561** - Card container styling:
 ```tsx
-<button
-  onClick={wrapChipClick(handleExamFilterToggle)}
-  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
-    examFilterActive 
-      ? 'bg-warning text-warning-foreground' 
-      : 'bg-warning/10 hover:bg-warning/20 text-amber-600 dark:text-amber-500'
-  }`}
->
-  <Flame className="w-3.5 h-3.5" />
-  Upcoming Exam
-</button>
+// Before:
+showHighlight ? 'bg-destructive/10 ring-1 ring-destructive/30 rounded-lg' : ''
+
+// After:
+showHighlight ? 'bg-warning/10 ring-1 ring-warning/30 rounded-lg' : ''
 ```
 
-### Visual Comparison
+**Lines 578-583** - "Exam" badge styling:
+```tsx
+// Before:
+<span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded-full">
 
-| State | Current (Red) | Proposed (Amber) |
-|-------|---------------|------------------|
-| Default | Light red bg, red text | Light amber bg, amber text |
-| Hover | Darker red bg | Darker amber bg |
-| Active | Solid red bg, white text | Solid amber bg, white text |
+// After:
+<span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-500 font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
+```
 
-### Benefits
-- Consistent with exam nudge pill styling on the Core Concepts card
-- Matches the fire emoji's warm color association
-- Follows semantic color guidelines (urgency = amber, not red)
-- Less alarming visual weight than red
+### Result
+- Exam topics will have a warm amber highlight instead of red
+- Consistent with the "Upcoming Exam" chip styling
+- Consistent with the exam nudge pill on the Core Concepts card
+- Follows the semantic color pattern: urgency = amber, not red
 
 ### File to Change
 | File | Change |
 |------|--------|
-| `src/components/TopicSelectionSheet.tsx` | Update chip colors from destructive (red) to warning (amber) |
+| `src/components/TopicSelectionSheet.tsx` | Update topic card and badge colors from destructive (red) to warning (amber) |
+
