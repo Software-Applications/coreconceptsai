@@ -71,6 +71,7 @@ export const TopicSelectionSheet = ({
   const topicRequest = useTopicRequest();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
   const [examFilterActive, setExamFilterActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
@@ -232,6 +233,7 @@ export const TopicSelectionSheet = ({
     if (!isOpen) {
       setSearchQuery('');
       setDebouncedQuery('');
+      setSelectedValue('');
     }
   }, [isOpen]);
 
@@ -285,6 +287,8 @@ export const TopicSelectionSheet = ({
         <Command 
           className="flex-1 min-h-0 border-t border-border"
           shouldFilter={false}
+          value={selectedValue}
+          onValueChange={setSelectedValue}
         >
           <CommandInput
             ref={inputRef}
