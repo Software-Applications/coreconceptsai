@@ -43,7 +43,7 @@ FOLLOW every line of the guidance provided below without fail. They are non-nego
 ### PARAGRAPH STRUCTURE:
 - Each paragraph should contain a complete thought or concept, explaining a distinct idea or section.
 - Questions should end with the [PAUSE: 5 Seconds] marker. Include it in the transcript.
-- Paragraphs must end with the [PAUSE: 3 Seconds] marker.
+- Paragraphs must end with the [PAUSE: 2 Seconds] marker.
 - Maintain paragraph format.
 
 ### CORE STRATEGIES TO EMPLOY: Follow all guidelines below CAREFULLY. They are NON-NEGOTIABLE:
@@ -56,6 +56,7 @@ FOLLOW every line of the guidance provided below without fail. They are non-nego
 - Include strategic questions throughout the transcript to encourage active thinking, to force the user to pause and reflect rather than just listen passively.
 - Format: "Think about this for a moment...", "Before we continue, ask yourself...", "Can you see why...?", "What do you think would happen if...?", etc.
 - Space these prompts naturally throughout the transcript (aim for 2-5 prompts in total)
+- After each reflective question, always include [PAUSE: 3 Seconds] to give the user time to think and respond mentally before proceeding to the answer.
 
 3. PAUSE AND PREDICT:
 - Before revealing a key result, solution, or climax of a concept, insert a "Predictive Pause."
