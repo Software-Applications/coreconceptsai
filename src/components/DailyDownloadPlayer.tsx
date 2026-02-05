@@ -13,6 +13,7 @@ import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
 import { GeneratingOverlay } from './GeneratingOverlay';
 import { SwipeHintHandle } from './SwipeHintHandle';
+import { RetryErrorModal } from './RetryErrorModal';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // ============================================================================
@@ -111,12 +112,13 @@ export const DailyDownloadPlayer = ({
   // Streaming content hook
   const streamingContent = useStreamingContent({
     onError: (error) => {
-      sonnerToast.error("Generation Issue", {
-        description: error || "Try again later.",
-        duration: 3000,
-      });
+      // Don't show toast - we'll show the retry modal instead
+      console.log('[Player] Generation error:', error);
     },
   });
+
+  // Show retry modal when there's an error
+  const showRetryModal = Boolean(streamingContent.error && !streamingContent.isGenerating);
 
   // Helper to strip stage directions/tags from transcript text
   const stripTags = useCallback((text: string): string => {
@@ -578,6 +580,19 @@ export const DailyDownloadPlayer = ({
         isGenerating={streamingContent.isGenerating} 
         isGeneratingAudio={streamingContent.isAudioGenerating || isChangingVoice}
         topicTitle={topic.title} 
+        onCancel={() => {
+          streamingContent.cancel();
+          onClose();
+        }}
+      />
+
+      {/* Retry error modal */}
+      <RetryErrorModal
+        isOpen={showRetryModal}
+        errorMessage={streamingContent.error || "Failed to stream content"}
+        onRetry={() => {
+          streamingContent.retryGeneration();
+        }}
         onCancel={() => {
           streamingContent.cancel();
           onClose();

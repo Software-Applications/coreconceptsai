@@ -1,9 +1,9 @@
 project_id = "uzlkbqfxlamwetmvpqsi"
 
-[functions.generate-content]
+[functions.generate-transcript]
 verify_jwt = false
 
-[functions.generate-content-stream]
+[functions.generate-flashcard]
 verify_jwt = false
 
 [functions.google-tts]

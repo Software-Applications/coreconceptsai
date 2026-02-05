@@ -62,16 +62,24 @@ function escapeXmlChars(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
+// Strip XML-like tags (e.g., <transcript>) from text before processing
+function stripXmlTags(text: string): string {
+  return text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
+}
+
 // Preprocess text to SSML with pause handling
 function preprocessTextForSSML(text: string): string {
-  // Split by paragraphs (double newlines)
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  // Step 1: Strip any XML-like tags (e.g., <transcript>)
+  const cleanedText = stripXmlTags(text);
+  
+  // Step 2: Split by paragraphs (double newlines or \n\n)
+  const paragraphs = cleanedText.split(/\n\n+/).filter(p => p.trim());
   
   // Track if previous paragraph ended with a long pause (5+ seconds)
   let prevEndsWithLongPause = false;
   
   const processedParagraphs = paragraphs.map((paragraph, index) => {
-    // First, extract and preserve pause markers, then escape the rest
+    // Pause marker regex: /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi
     const pauseMarkerRegex = /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi;
     const pauseMarkers: { index: number; seconds: string }[] = [];
     let match;
