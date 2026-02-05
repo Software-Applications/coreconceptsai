@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Pause, Headphones, SkipBack, SkipForward, Sparkles } from 'lucide-react';
-import { toast as sonnerToast } from 'sonner';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useVoicePreference } from '@/hooks/useVoicePreference';
 import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useStreamingContent } from '@/hooks/useStreamingContent';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
+import { useWordTimings } from '@/hooks/useWordTimings';
 import { FlashSummaryCard } from './FlashSummaryCard';
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
@@ -169,52 +169,22 @@ export const DailyDownloadPlayer = ({
     return parts;
   }, [fullTranscriptText]);
 
-  // Precompute paragraph character offsets for O(1) lookup
-  const paragraphOffsets = useMemo(() => {
-    let offset = 0;
-    return paragraphs.map((p) => {
-      const start = offset;
-      offset += p.length + 2; // +2 for paragraph break (\n\n)
-      return { start, end: offset };
-    });
-  }, [paragraphs]);
+  // Use word-level timing for accurate transcript highlighting
+  // This accounts for pause markers and uses binary search for O(log n) lookup
+  const { activeSegmentIndex, activeWordIndex } = useWordTimings({
+    rawTranscript: streamingContent.fullTranscript,
+    actualDurationMs: durationMs,
+    currentTimeMs: currentTimeMs + HIGHLIGHT_LEAD_MS,
+    playbackRate,
+    hasStarted,
+  });
 
-  // Calculate character index from current audio time
+  // Calculate current character index for progress saving (approximate)
   const currentCharIndex = useMemo(() => {
     if (!durationMs || !fullTranscriptText.length) return 0;
-    const adjustedTimeMs = Math.min(currentTimeMs + HIGHLIGHT_LEAD_MS, durationMs);
-    const progress = adjustedTimeMs / durationMs;
+    const progress = currentTimeMs / durationMs;
     return Math.floor(progress * fullTranscriptText.length);
   }, [currentTimeMs, durationMs, fullTranscriptText.length]);
-
-  // Consolidated: find active segment, word index, and char position in one pass
-  const { activeSegmentIndex, activeWordIndex } = useMemo(() => {
-    if (!hasStarted || !fullTranscriptText || paragraphOffsets.length === 0) {
-      return { activeSegmentIndex: -1, activeWordIndex: -1 };
-    }
-    
-    // Find which paragraph contains current char
-    let segIdx = paragraphOffsets.findIndex(
-      ({ start, end }) => currentCharIndex >= start && currentCharIndex < end
-    );
-    if (segIdx === -1) segIdx = paragraphs.length - 1;
-    
-    const charInParagraph = currentCharIndex - paragraphOffsets[segIdx].start;
-    
-    // Find word index within paragraph
-    const words = paragraphs[segIdx]?.split(/\s+/) || [];
-    let charCount = 0;
-    let wordIdx = words.length - 1;
-    for (let i = 0; i < words.length; i++) {
-      charCount += words[i].length + 1;
-      if (charInParagraph < charCount) {
-        wordIdx = i;
-        break;
-      }
-    }
-    
-    return { activeSegmentIndex: segIdx, activeWordIndex: wordIdx };
-  }, [paragraphOffsets, paragraphs, currentCharIndex, hasStarted, fullTranscriptText]);
 
   // Progress percentage for progress bar
   const progress = useMemo(() => {
