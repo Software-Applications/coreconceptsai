@@ -270,6 +270,7 @@ const Index = () => {
           onCardClick={setExpandedPinnedCard}
           pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
+          examTopicsCount={3}
         />
 
 
