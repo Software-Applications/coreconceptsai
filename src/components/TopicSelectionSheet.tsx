@@ -579,7 +579,16 @@ export const TopicSelectionSheet = ({
                       ? `Exam Topics (${examTopicIds.size})` 
                       : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`
                 }>
-                  {(trendingFilterActive && allTopics.length > 0 ? allTopics : topics).map((topic) => {
+                  {(trendingFilterActive && allTopics.length > 0 
+                    ? [...allTopics].sort((a, b) => {
+                        const aIsTrending = trendingTopicIds.has(a.id);
+                        const bIsTrending = trendingTopicIds.has(b.id);
+                        if (aIsTrending && !bIsTrending) return -1;
+                        if (!aIsTrending && bIsTrending) return 1;
+                        return 0;
+                      })
+                    : topics
+                  ).map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     const isExamTopic = examTopicIds.has(topic.id);
