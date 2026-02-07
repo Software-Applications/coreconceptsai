@@ -1,135 +1,145 @@
 
-## Fix Request CTA Logic and Styling
+## Trending Topics Carousel on Home Page
 
-### Problem Analysis
+### Overview
 
-**Issue 1: Request CTA Missing for Direct Hits**
+Add a horizontal "Trending Topics" carousel to the home page that highlights the most-listened Core Concepts. This provides quick discovery and encourages engagement with popular content.
 
-The current logic in `TopicSelectionSheet.tsx` only shows the "Request Topic" CTA when there are **no search results at all**. When there ARE direct hits, the CTA is completely absent.
+### Design Decisions
+
+**Data Source for "Trending"**
+
+Since the `user_progress` table currently has no listen data (0 listens for all topics), we have two options:
+
+1. **Real analytics**: Query `user_progress` grouped by `topic_id` with `completed = true` count
+2. **Fallback**: Show first 8 topics from across all subjects as "Featured" until real data accumulates
+
+The implementation will use real analytics with a fallback - showing aggregated listen counts when available, otherwise displaying a curated set of topics.
+
+**Placement**
+
+Position the carousel BELOW the `CoreConceptsHub` component but ABOVE the "Related Videos and Practice" section. This keeps all Core Concepts content grouped together.
 
 ```text
-Current Logic:
-┌─────────────────────────────────────────┐
-│ Search query >= 2 chars                 │
-├─────────────────────────────────────────┤
-│ Has Results?                            │
-│   YES → Show Direct Hits + Related      │
-│         (NO Request CTA)         ← BUG  │
-│   NO  → Show Request CTA                │
-└─────────────────────────────────────────┘
-
-Expected Logic:
-┌─────────────────────────────────────────┐
-│ Search query >= 2 chars                 │
-├─────────────────────────────────────────┤
-│ Has Results?                            │
-│   YES → Show Direct Hits + Related      │
-│         + Request CTA at bottom   ← FIX │
-│   NO  → Show Request CTA                │
-└─────────────────────────────────────────┘
++----------------------------------+
+| Header                           |
+| Subject Chips                    |
++----------------------------------+
+| Textbook Reference Card          |
++----------------------------------+
+| Core Concepts AI Hub             |
+|   (Saved Cards accordion)        |
++----------------------------------+
+| Trending Topics Carousel   <- NEW|
++----------------------------------+
+| ─────── separator ──────────     |
+| Related Videos and Practice      |
+|   Chapter Drawer                 |
+|   Videos Section                 |
+|   Practice Section               |
++----------------------------------+
 ```
 
-**Issue 2: Blue CTA Styling Too Heavy**
+**Visual Design**
 
-The current button uses `bg-primary` (solid blue), which is inconsistent with the project's color patterns. Per the color standardization memory, hover states use subtle `primary/5` tints. The `SearchResultsSection.tsx` component (unused in this flow) correctly uses `variant="outline"` with subtle styling.
-
-| Current | Expected |
-|---------|----------|
-| `bg-primary text-primary-foreground` (solid blue) | `variant="ghost"` or `variant="outline"` (lighter) |
-| Full-width heavy button | Compact, centered, subtle button |
+- Section header: TrendingUp icon + "Trending Topics" title
+- Horizontal scroll carousel matching existing Videos/Practice styling
+- Card design: Compact topic card (similar to `PinnedCardPreview` sizing) with:
+  - Topic title (primary)
+  - Subject name badge (secondary)
+  - Listen count indicator
+  - "Listened" checkmark if user has completed
 
 ---
 
-### Solution
+### Technical Implementation
 
-#### Part 1: Add Request CTA After Search Results
+#### Part 1: Create `useTrendingTopics` Hook
 
-**File: `src/components/TopicSelectionSheet.tsx`**
+**File: `src/hooks/useTrendingTopics.ts`**
 
-After the search results (line 483, after the Related Topics CommandGroup closes), add the Request CTA section:
-
-```tsx
-{/* Request Topic CTA - always show at bottom of search results */}
-{searchQuery.trim().length >= 2 && (
-  <div className="px-4 py-4 border-t border-border mt-2">
-    <div className="flex items-center justify-center gap-2 text-sm">
-      <span className="text-muted-foreground">Can't find what you need?</span>
-      <button
-        onClick={() => handleRequestTopic(searchQuery)}
-        disabled={topicRequest.isPending}
-        className="inline-flex items-center gap-1.5 text-primary font-medium hover:underline disabled:opacity-50"
-      >
-        {topicRequest.isPending ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Lightbulb className="w-3.5 h-3.5" />
-        )}
-        Request topic
-      </button>
-    </div>
-  </div>
-)}
+```typescript
+// Fetches topics ranked by listen count across all subjects
+// Joins topics with user_progress to get aggregate completion counts
+// Returns top 10 topics with listen_count and subject_name
 ```
 
-#### Part 2: Update No-Results CTA Styling
-
-**File: `src/components/TopicSelectionSheet.tsx`**
-
-Change the button in `CommandEmpty` (lines 498-514) from solid blue to a subtle ghost/outline style:
-
-```tsx
-// Before (line 501):
-className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 ..."
-
-// After:
-className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-xl transition-colors disabled:opacity-50"
+Query strategy:
+```sql
+SELECT 
+  t.*,
+  s.name as subject_name,
+  COUNT(up.topic_id) as listen_count
+FROM topics t
+JOIN chapters c ON t.chapter_id = c.id
+JOIN subjects s ON c.subject_id = s.id
+LEFT JOIN user_progress up ON t.id = up.topic_id AND up.completed = true
+GROUP BY t.id, s.name
+ORDER BY listen_count DESC, t.created_at DESC
+LIMIT 10
 ```
+
+#### Part 2: Create `TrendingTopicCard` Component
+
+**File: `src/components/TrendingTopicCard.tsx`**
+
+Compact card designed for horizontal carousel:
+- Fixed width (~160px) matching `PinnedCardPreview` sizing pattern
+- Topic title (line-clamped to 2 lines)
+- Subject badge (small colored chip)
+- Listen count with headphones icon
+- Checkmark overlay if listened
+- Framer Motion hover/tap animations matching existing cards
+
+#### Part 3: Create `TrendingTopicsCarousel` Component
+
+**File: `src/components/TrendingTopicsCarousel.tsx`**
+
+- Uses `useTapVsDrag` for scroll handling (matching existing patterns)
+- Section header with `TrendingUp` icon
+- Horizontal scrolling container with snap behavior
+- Maps trending topics to `TrendingTopicCard` components
+- Clicking a card opens that topic in `DailyDownloadPlayer`
+
+#### Part 4: Integrate into Home Page
+
+**File: `src/pages/Index.tsx`**
+
+1. Import new components and hook
+2. Add `TrendingTopicsCarousel` after `CoreConceptsHub` (around line 286)
+3. Pass `onSelectTopic` handler to open the player
+4. Pass `isListened` function for checkmark display
 
 ---
 
-### Files to Change
+### Files to Create/Modify
 
-| File | Change |
-|------|--------|
-| `src/components/TopicSelectionSheet.tsx` | Add Request CTA after search results; update no-results button styling |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/useTrendingTopics.ts` | Create | Hook to fetch trending topics with listen counts |
+| `src/components/TrendingTopicCard.tsx` | Create | Compact card component for carousel items |
+| `src/components/TrendingTopicsCarousel.tsx` | Create | Carousel container with header and scroll behavior |
+| `src/pages/Index.tsx` | Modify | Add carousel below CoreConceptsHub |
+
+---
 
 ### Expected Result
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Direct hits found | No Request CTA | Request CTA at bottom of results |
-| Related topics only | No Request CTA | Request CTA at bottom of results |
-| No results | Solid blue "Request" button | Subtle tinted button |
-| Button styling | Heavy `bg-primary` | Light `bg-primary/10` with text-primary |
-
-### Visual Comparison
-
 ```text
-Before (no results):
-┌────────────────────────────────────┐
-│  💡 No topics match "xyz"          │
-│  Request this topic and we'll...   │
-│  ┌────────────────────────────┐    │
-│  │ 💡 Request "xyz"           │ ← Heavy solid blue
-│  └────────────────────────────┘    │
-└────────────────────────────────────┘
-
-After (no results):
-┌────────────────────────────────────┐
-│  💡 No topics match "xyz"          │
-│  Request this topic and we'll...   │
-│     ┌──────────────────┐           │
-│     │ 💡 Request "xyz" │ ← Subtle primary/10 tint
-│     └──────────────────┘           │
-└────────────────────────────────────┘
-
-After (with results):
-┌────────────────────────────────────┐
-│  Direct Matches (3)                │
-│  ├─ Topic A                        │
-│  ├─ Topic B                        │
-│  └─ Topic C                        │
-│ ─────────────────────────────────  │
-│  Can't find it? Request topic  💡  │ ← NEW subtle inline CTA
-└────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│ 📈 Trending Topics                  │
+├─────────────────────────────────────┤
+│ ┌────────┐ ┌────────┐ ┌────────┐    │
+│ │ ✓      │ │        │ │        │ →  │
+│ │Topic A │ │Topic B │ │Topic C │    │
+│ │Biology │ │Chem    │ │Micro   │    │
+│ │🎧 24   │ │🎧 18   │ │🎧 12   │    │
+│ └────────┘ └────────┘ └────────┘    │
+└─────────────────────────────────────┘
 ```
+
+### Edge Cases
+
+- **No trending data**: Show loading skeleton, then fallback to first 8 topics
+- **User has listened to all trending**: Cards show checkmarks but remain accessible for replay
+- **Empty state**: Hide entire section if no topics exist (unlikely)
