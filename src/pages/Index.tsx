@@ -133,6 +133,11 @@ const Index = () => {
     : new Set(subjectTopics.slice(0, 3).map(t => t.id));
   const examTopicsCount = examTopicIds.size;
   
+  // Memoize trending topic IDs Set
+  const trendingTopicIds = useMemo(() => 
+    new Set(trendingTopics.map(t => t.id)),
+    [trendingTopics]
+  );
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
@@ -403,7 +408,7 @@ const Index = () => {
             hasProgress={hasAudioProgress}
             currentSubjectId={selectedSubject?.id}
             examTopicIds={examTopicIds}
-            trendingTopicIds={new Set(trendingTopics.map(t => t.id))}
+            trendingTopicIds={trendingTopicIds}
             initialFilter={topicSelectionFilter}
           />
         )}
