@@ -1,49 +1,33 @@
 
+# Standardize Spacing Above Related Videos and Practice Section
 
-# Equalize Spacing Between Saved Cards and Trending Sections
+## Current State
 
-## Current Spacing Analysis
+The "Related Videos and Practice" section container has `pt-4` (16px top padding), which is inconsistent with the recently standardized 12px (`pt-3`) pattern used in CoreConceptsHub sections (Saved Cards, Trending Topics).
 
-| Section | Container Padding | Visual Effect |
-|---------|-------------------|---------------|
-| Saved Cards | `pt-3 pb-1.5` (12px top, 6px bottom) | More space above |
-| Trending Topics | `py-1.5` (6px top, 6px bottom) | Less space above |
+**Current code (line 315)**:
+```tsx
+<div className="pt-4 pb-3">
+```
 
-This creates an asymmetric look where Saved Cards has 12px gap from the Core Concepts card, but Trending Topics only has 6px gap from Saved Cards.
+## Issue
 
----
+- CoreConceptsHub sections: `pt-3` (12px) - Saved Cards, Trending Topics
+- Related Videos and Practice: `pt-4` (16px) - inconsistent spacing
+- This creates visual inconsistency on the home screen
 
 ## Solution
 
-Make both sections use the same padding pattern for visual consistency:
+Change the container padding from `pt-4` to `pt-3` to match the established 12px spacing pattern throughout the application.
 
-**Option A (Recommended)**: Use `pt-3 pb-1.5` for both sections
-- Gives each section 12px of breathing room from the element above
-- Matches the existing memory standard: "Saved Cards section uses pt-3 (12px) top padding for separation"
-
----
-
-## Implementation
-
-### File: `src/components/CoreConceptsHub.tsx`
-
-**Change line 221** from:
+**Updated code (line 315)**:
 ```tsx
-<div className="px-3 py-1.5">
+<div className="pt-3 pb-3">
 ```
 
-**To:**
-```tsx
-<div className="px-3 pt-3 pb-1.5">
-```
+## Impact
 
-This single change makes the Trending Topics section match the Saved Cards section spacing.
-
----
-
-## Visual Result
-
-- Both sections will have 12px top padding (separation from element above)
-- Both sections will have 6px bottom padding (tight internal spacing)
-- Consistent visual rhythm throughout the CoreConceptsHub
+- Unified spacing: all major sections on home screen will use `pt-3` (12px) for top separation
+- Maintains consistent visual rhythm across the interface
+- Single-line change with no side effects
 
