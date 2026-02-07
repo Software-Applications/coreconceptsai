@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Headphones, ChevronDown, Bookmark, ChevronRight } from 'lucide-react';
+import { Headphones, ChevronDown, Bookmark, ChevronRight, TrendingUp } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
 import { PinnedCardPreview } from './PinnedCardPreview';
+import { TrendingTopicCard } from './TrendingTopicCard';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { PinnedCard } from '@/data/dailyDownloadData';
+import type { TrendingTopic } from '@/hooks/useTrendingTopics';
 
 interface CoreConceptsHubProps {
   onOpenTopics: () => void;
@@ -15,6 +18,10 @@ interface CoreConceptsHubProps {
   pinnedCards: PinnedCard[];
   unlistenedCount: number;
   examTopicsCount?: number;
+  trendingTopics?: TrendingTopic[];
+  trendingLoading?: boolean;
+  onSelectTrendingTopic?: (topicId: string, chapterId: string) => void;
+  isTopicListened?: (topicId: string) => boolean;
 }
 
 export const CoreConceptsHub = ({
@@ -23,22 +30,43 @@ export const CoreConceptsHub = ({
   onCardClick,
   pinnedCards,
   unlistenedCount,
-  examTopicsCount = 0
+  examTopicsCount = 0,
+  trendingTopics = [],
+  trendingLoading = false,
+  onSelectTrendingTopic,
+  isTopicListened = () => false
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
   const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
+  const { scrollRef: trendingScrollRef, handleClick: handleTrendingClick } = useTapVsDrag<HTMLDivElement>();
+  
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem('saved-cards-expanded');
     return stored !== null ? stored === 'true' : true;
   });
   
+  const [isTrendingExpanded, setIsTrendingExpanded] = useState(() => {
+    const stored = localStorage.getItem('trending-topics-expanded');
+    return stored !== null ? stored === 'true' : true;
+  });
+  
   const hasPinnedCards = pinnedCards.length > 0;
+  const hasTrendingTopics = trendingTopics.length > 0 || trendingLoading;
 
-  const handleToggleAccordion = () => {
+  const handleToggleSavedCards = () => {
     lightTap();
     setIsExpanded(prev => {
       const newState = !prev;
       localStorage.setItem('saved-cards-expanded', String(newState));
+      return newState;
+    });
+  };
+
+  const handleToggleTrending = () => {
+    lightTap();
+    setIsTrendingExpanded(prev => {
+      const newState = !prev;
+      localStorage.setItem('trending-topics-expanded', String(newState));
       return newState;
     });
   };
@@ -113,7 +141,7 @@ export const CoreConceptsHub = ({
         <div className="px-3 py-1.5 mt-1">
           {/* Section Header - Clickable */}
           <button
-            onClick={handleToggleAccordion}
+            onClick={handleToggleSavedCards}
             className="w-full flex items-center justify-between py-1.5 hover:bg-muted/30 rounded-lg transition-colors -mx-1 px-1"
           >
             <div className="flex items-center gap-2">
@@ -185,6 +213,68 @@ export const CoreConceptsHub = ({
             )}
           </AnimatePresence>
         </div>
+
+        {/* Trending Topics Section */}
+        {hasTrendingTopics && (
+          <div className="px-3 py-1.5">
+            {/* Section Header - Clickable */}
+            <button
+              onClick={handleToggleTrending}
+              className="w-full flex items-center justify-between py-1.5 hover:bg-muted/30 rounded-lg transition-colors -mx-1 px-1"
+            >
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-xs font-medium text-muted-foreground">Trending Topics</h3>
+                <span className="text-xs text-muted-foreground/70">({trendingTopics.length})</span>
+              </div>
+              <motion.div
+                animate={{ rotate: isTrendingExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+            </button>
+
+            {/* Collapsible Content */}
+            <AnimatePresence>
+              {isTrendingExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="py-2">
+                    {trendingLoading ? (
+                      <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                        {[...Array(4)].map((_, i) => (
+                          <Skeleton key={i} className="w-40 h-28 rounded-xl flex-shrink-0" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        ref={trendingScrollRef}
+                        data-drag-scroll="x"
+                        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                      >
+                        {trendingTopics.map((topic) => (
+                          <TrendingTopicCard
+                            key={topic.id}
+                            topic={topic}
+                            isListened={isTopicListened(topic.id)}
+                            onClick={handleTrendingClick(() => onSelectTrendingTopic?.(topic.id, topic.chapter_id))}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </div>
   );

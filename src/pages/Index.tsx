@@ -16,7 +16,7 @@ import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
 import { ExpandedCardModal } from "@/components/ExpandedCardModal";
 import { SubjectChips } from "@/components/SubjectChips";
-import { TrendingTopicsCarousel } from "@/components/TrendingTopicsCarousel";
+import { useTrendingTopics } from "@/hooks/useTrendingTopics";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
 import { useWatchedVideos } from "@/hooks/useWatchedVideos";
@@ -57,6 +57,7 @@ const Index = () => {
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
   const { data: allChapters = [], isLoading: chaptersLoading } = useChapters();
   const { data: allTopics = [], isLoading: topicsLoading } = useTopics();
+  const { data: trendingTopics = [], isLoading: trendingLoading } = useTrendingTopics(10);
   
   // Custom hooks
   const { pinnedCards, pinCard, unpinCard, clearAllPinned } = usePinnedCards();
@@ -275,7 +276,7 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Core Concepts AI Hub (with integrated pinned cards) */}
+        {/* Core Concepts AI Hub (with integrated pinned cards and trending topics) */}
         <CoreConceptsHub
           onOpenTopics={() => setShowTopicSelection(true)}
           onOpenReviewBoard={() => setShowReviewBoard(true)}
@@ -283,12 +284,10 @@ const Index = () => {
           pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
           examTopicsCount={examTopicsCount}
-        />
-
-        {/* Trending Topics Carousel */}
-        <TrendingTopicsCarousel
-          onSelectTopic={(topicId) => setSelectedTopicId(topicId)}
-          isListened={isListened}
+          trendingTopics={trendingTopics}
+          trendingLoading={trendingLoading}
+          onSelectTrendingTopic={(topicId) => setSelectedTopicId(topicId)}
+          isTopicListened={isListened}
         />
 
         {/* Related Videos and Practice */}
