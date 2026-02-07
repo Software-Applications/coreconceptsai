@@ -44,12 +44,12 @@ export const CoreConceptsHub = ({
   
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem('saved-cards-expanded');
-    return stored !== null ? stored === 'true' : true;
+    return stored !== null ? stored === 'true' : false;
   });
   
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(() => {
     const stored = localStorage.getItem('trending-topics-expanded');
-    return stored !== null ? stored === 'true' : true;
+    return stored !== null ? stored === 'true' : false;
   });
   
   const hasPinnedCards = pinnedCards.length > 0;
