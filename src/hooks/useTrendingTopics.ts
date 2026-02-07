@@ -9,16 +9,14 @@ export interface TrendingTopic {
   subject_name: string;
   subject_color: string | null;
   listen_count: number;
+  created_at: string | null;
 }
-
-// Define which topic positions are "trending" (1-indexed: 1st, 2nd, 3rd, 5th, 8th)
-const TRENDING_POSITIONS = [0, 1, 2, 4, 7]; // 0-indexed positions
 
 export const useTrendingTopics = (limit: number = 10) => {
   return useQuery({
     queryKey: ['trending-topics', limit],
     queryFn: async (): Promise<TrendingTopic[]> => {
-      // Fetch topics with their subject info, ordered by creation date
+      // Fetch ALL topics with their subject info
       const { data: topics, error: topicsError } = await supabase
         .from('topics')
         .select(`
@@ -26,6 +24,7 @@ export const useTrendingTopics = (limit: number = 10) => {
           title,
           description,
           chapter_id,
+          created_at,
           chapters!inner (
             subject_id,
             subjects!inner (
@@ -33,9 +32,7 @@ export const useTrendingTopics = (limit: number = 10) => {
               color
             )
           )
-        `)
-        .order('created_at', { ascending: true })
-        .limit(50); // Fetch enough to cover positions
+        `);
 
       if (topicsError) {
         console.error('Error fetching topics:', topicsError);
@@ -46,13 +43,8 @@ export const useTrendingTopics = (limit: number = 10) => {
         return [];
       }
 
-      // Filter to only the trending positions (1st, 2nd, 3rd, 5th, 8th topics)
-      const trendingTopicsRaw = TRENDING_POSITIONS
-        .filter(pos => pos < topics.length)
-        .map(pos => topics[pos]);
-
       // Fetch listen counts from user_progress (aggregate across all users)
-      const topicIds = trendingTopicsRaw.map(t => t.id);
+      const topicIds = topics.map(t => t.id);
       const { data: progressData, error: progressError } = await supabase
         .from('user_progress')
         .select('topic_id')
@@ -73,8 +65,8 @@ export const useTrendingTopics = (limit: number = 10) => {
         });
       }
 
-      // Transform topics
-      const trendingTopics: TrendingTopic[] = trendingTopicsRaw.map(topic => {
+      // Transform and sort topics by listen_count DESC, then created_at DESC
+      const trendingTopics: TrendingTopic[] = topics.map(topic => {
         const chapters = topic.chapters as unknown as {
           subject_id: string;
           subjects: { name: string; color: string | null };
@@ -88,7 +80,20 @@ export const useTrendingTopics = (limit: number = 10) => {
           subject_name: chapters.subjects.name,
           subject_color: chapters.subjects.color,
           listen_count: listenCounts.get(topic.id) || 0,
+          created_at: topic.created_at,
         };
+      });
+
+      // Sort by listen_count DESC, then by created_at DESC (newer first for ties)
+      trendingTopics.sort((a, b) => {
+        // Primary: listen_count descending
+        if (b.listen_count !== a.listen_count) {
+          return b.listen_count - a.listen_count;
+        }
+        // Secondary: created_at descending (newer first)
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
       });
 
       return trendingTopics.slice(0, limit);
