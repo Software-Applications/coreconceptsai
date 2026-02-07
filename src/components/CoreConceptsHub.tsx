@@ -271,7 +271,7 @@ export const CoreConceptsHub = ({
                       <div
                         ref={trendingScrollRef}
                         data-drag-scroll="x"
-                        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
+                        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none"
                         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                       >
                         {trendingTopics.map((topic) => (
