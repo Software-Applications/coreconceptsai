@@ -216,7 +216,7 @@ export const CoreConceptsHub = ({
 
         {/* Trending Topics Section */}
         {hasTrendingTopics && (
-          <div className="px-3 pt-1.5">
+          <div className="px-3">
             {/* Section Header - Clickable */}
             <button
               onClick={handleToggleTrending}
