@@ -47,6 +47,7 @@ const Index = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeTile | null>(null);
   const [showTopicSelection, setShowTopicSelection] = useState(false);
+  const [topicSelectionFilter, setTopicSelectionFilter] = useState<'trending' | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [showReviewBoard, setShowReviewBoard] = useState(false);
   const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
@@ -278,7 +279,10 @@ const Index = () => {
 
         {/* Core Concepts AI Hub (with integrated pinned cards and trending topics) */}
         <CoreConceptsHub
-          onOpenTopics={() => setShowTopicSelection(true)}
+          onOpenTopics={() => {
+            setTopicSelectionFilter(null);
+            setShowTopicSelection(true);
+          }}
           onOpenReviewBoard={() => setShowReviewBoard(true)}
           onCardClick={setExpandedPinnedCard}
           pinnedCards={subjectPinnedCards}
@@ -288,6 +292,10 @@ const Index = () => {
           trendingLoading={trendingLoading}
           onSelectTrendingTopic={(topicId) => setSelectedTopicId(topicId)}
           isTopicListened={isListened}
+          onOpenTrendingTopics={() => {
+            setTopicSelectionFilter('trending');
+            setShowTopicSelection(true);
+          }}
         />
 
         {/* Related Videos and Practice */}
@@ -384,13 +392,18 @@ const Index = () => {
         {showTopicSelection && (
           <TopicSelectionSheet
             isOpen={showTopicSelection}
-            onClose={() => setShowTopicSelection(false)}
+            onClose={() => {
+              setShowTopicSelection(false);
+              setTopicSelectionFilter(null);
+            }}
             topics={subjectTopics}
             onSelectTopic={handleSelectTopic}
             isListened={isListened}
             hasProgress={hasAudioProgress}
             currentSubjectId={selectedSubject?.id}
             examTopicIds={examTopicIds}
+            trendingTopicIds={new Set(trendingTopics.map(t => t.id))}
+            initialFilter={topicSelectionFilter}
           />
         )}
       </AnimatePresence>

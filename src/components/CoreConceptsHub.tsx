@@ -22,6 +22,7 @@ interface CoreConceptsHubProps {
   trendingLoading?: boolean;
   onSelectTrendingTopic?: (topicId: string, chapterId: string) => void;
   isTopicListened?: (topicId: string) => boolean;
+  onOpenTrendingTopics?: () => void;
 }
 
 export const CoreConceptsHub = ({
@@ -34,7 +35,8 @@ export const CoreConceptsHub = ({
   trendingTopics = [],
   trendingLoading = false,
   onSelectTrendingTopic,
-  isTopicListened = () => false
+  isTopicListened = () => false,
+  onOpenTrendingTopics
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
   const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
@@ -228,11 +230,11 @@ export const CoreConceptsHub = ({
                 <span className="text-xs text-muted-foreground/70">({trendingTopics.length})</span>
               </div>
               <div className="flex items-center gap-2">
-                {isTrendingExpanded && (
+                {isTrendingExpanded && onOpenTrendingTopics && (
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      onOpenTopics();
+                      onOpenTrendingTopics();
                     }} 
                     className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
                   >
