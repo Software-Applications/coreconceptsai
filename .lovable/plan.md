@@ -1,86 +1,33 @@
 
 
-## Nest Trending Topics Under Core Concepts Hub
+## Rename "Trending Topics" to "Trending Concepts"
 
 ### Overview
 
-Move the Trending Topics carousel inside `CoreConceptsHub` as a second collapsible accordion section, matching the "My Saved Cards" pattern. This creates a cleaner information hierarchy where all Core Concepts AI sub-features are grouped together.
+Simple text update to rename the section header from "Trending Topics" to "Trending Concepts", which better aligns with the parent "Core Concepts" branding.
 
-### Visual Design
+### Arrow Position Decision
 
-```text
-Before:
-┌──────────────────────────────────────┐
-│ Core Concepts AI Hub                 │
-│   └─ My Saved Cards (5)         ▼    │
-│      [card] [card] [card] →          │
-└──────────────────────────────────────┘
-┌──────────────────────────────────────┐
-│ 📈 Trending Topics                   │  ← Separate section
-│   [card] [card] [card] →             │
-└──────────────────────────────────────┘
+**Keep chevron on the right** for consistency with the "My Saved Cards" section. Both collapsible sections should follow the same pattern:
+- Left: Icon + Label + Count
+- Right: Chevron arrow
 
-After:
-┌──────────────────────────────────────┐
-│ Core Concepts AI Hub                 │
-│   └─ My Saved Cards (5)         ▼    │
-│      [card] [card] [card] →          │
-│   └─ 📈 Trending Topics (10)    ▼    │  ← Nested under hub
-│      [card] [card] [card] →          │
-└──────────────────────────────────────┘
-```
+This is the standard accordion pattern and maintains visual harmony across both sub-sections.
 
 ---
 
 ### Technical Implementation
 
-#### Part 1: Update CoreConceptsHub Props
+**File: `src/components/CoreConceptsHub.tsx`**
 
-Add new props to receive trending data and handlers:
-
+Update line 227:
 ```typescript
-interface CoreConceptsHubProps {
-  // ... existing props
-  trendingTopics: TrendingTopic[];
-  trendingLoading: boolean;
-  onSelectTrendingTopic: (topicId: string, chapterId: string) => void;
-  isTopicListened: (topicId: string) => boolean;
-}
+// Before
+<h3 className="text-xs font-medium text-muted-foreground">Trending Topics</h3>
+
+// After
+<h3 className="text-xs font-medium text-muted-foreground">Trending Concepts</h3>
 ```
-
-#### Part 2: Add Trending Accordion State
-
-Add a second accordion state with localStorage persistence:
-
-```typescript
-const [isTrendingExpanded, setIsTrendingExpanded] = useState(() => {
-  const stored = localStorage.getItem('trending-topics-expanded');
-  return stored !== null ? stored === 'true' : true;
-});
-```
-
-#### Part 3: Add Trending Section UI
-
-After the "My Saved Cards" section, add a matching collapsible section:
-
-```text
-Section Header Pattern:
-┌────────────────────────────────────────────────────┐
-│ 📈  Trending Topics  (10)                      ▼   │
-└────────────────────────────────────────────────────┘
-```
-
-The section will include:
-- `TrendingUp` icon (matching Saved Cards' `Bookmark` icon)
-- "Trending Topics" label
-- Count in parentheses: `(10)`
-- Collapsible chevron with rotation animation
-
-#### Part 4: Update Index.tsx
-
-1. Fetch trending topics at the page level using `useTrendingTopics`
-2. Pass trending data to `CoreConceptsHub` as props
-3. Remove the standalone `<TrendingTopicsCarousel />` component
 
 ---
 
@@ -88,29 +35,5 @@ The section will include:
 
 | File | Changes |
 |------|---------|
-| `src/components/CoreConceptsHub.tsx` | Add trending section as second collapsible accordion |
-| `src/pages/Index.tsx` | Move `useTrendingTopics` call here, pass data to CoreConceptsHub, remove TrendingTopicsCarousel |
-
-### Files to Keep (No Changes)
-
-| File | Reason |
-|------|--------|
-| `src/hooks/useTrendingTopics.ts` | Reuse existing hook |
-| `src/components/TrendingTopicCard.tsx` | Reuse existing card component |
-| `src/components/TrendingTopicsCarousel.tsx` | Keep file for potential future use (or delete later) |
-
----
-
-### Expected Result
-
-The Core Concepts Hub becomes a cohesive container with two collapsible sub-sections:
-
-1. **My Saved Cards (5)** - User's pinned flashcards
-2. **Trending Topics (10)** - Most-listened topics across all users
-
-Both sections follow the same visual pattern:
-- Muted icon + label + count
-- Collapsible with chevron animation
-- Horizontal scrolling card carousel when expanded
-- Independent expand/collapse state persisted in localStorage
+| `src/components/CoreConceptsHub.tsx` | Rename "Trending Topics" to "Trending Concepts" on line 227 |
 
