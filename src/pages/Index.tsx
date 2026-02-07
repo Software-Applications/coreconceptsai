@@ -138,6 +138,14 @@ const Index = () => {
     new Set(trendingTopics.map(t => t.id)),
     [trendingTopics]
   );
+  
+  // Filter trending topics by selected subject for the home carousel
+  const subjectTrendingTopics = useMemo(() => 
+    selectedSubject 
+      ? trendingTopics.filter(t => t.subject_name === selectedSubject.name)
+      : [],
+    [selectedSubject?.name, trendingTopics]
+  );
   const unlistenedCount = getUnlistenedCount(subjectTopics.map(t => t.id));
   const listenedCount = subjectTopics.length - unlistenedCount;
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
@@ -293,7 +301,7 @@ const Index = () => {
           pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
           examTopicsCount={examTopicsCount}
-          trendingTopics={trendingTopics}
+          trendingTopics={subjectTrendingTopics}
           trendingLoading={trendingLoading}
           onSelectTrendingTopic={(topicId) => setSelectedTopicId(topicId)}
           isTopicListened={isListened}
