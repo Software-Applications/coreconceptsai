@@ -28,6 +28,7 @@ interface TopicSelectionSheetProps {
   isOpen: boolean;
   onClose: () => void;
   topics: DailyDownloadTopic[];
+  allTopics?: DailyDownloadTopic[]; // All topics across subjects for trending filter
   onSelectTopic: (topic: DailyDownloadTopic) => void;
   isListened?: (topicId: string) => boolean;
   hasProgress?: (topicId: string) => boolean;
@@ -63,6 +64,7 @@ export const TopicSelectionSheet = ({
   isOpen,
   onClose,
   topics,
+  allTopics = [],
   onSelectTopic,
   isListened,
   hasProgress,
@@ -577,15 +579,11 @@ export const TopicSelectionSheet = ({
                       ? `Exam Topics (${examTopicIds.size})` 
                       : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`
                 }>
-                  {topics
-                    .filter(topic => {
-                      // When trending filter active, only show trending topics
-                      if (trendingFilterActive) {
-                        return trendingTopicIds.has(topic.id);
-                      }
-                      return true;
-                    })
-                    .map((topic) => {
+                  {/* Use allTopics for trending filter (cross-subject), otherwise use subject-filtered topics */}
+                  {(trendingFilterActive 
+                    ? allTopics.filter(topic => trendingTopicIds.has(topic.id))
+                    : topics
+                  ).map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     const isExamTopic = examTopicIds.has(topic.id);
