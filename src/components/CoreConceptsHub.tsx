@@ -182,7 +182,7 @@ export const CoreConceptsHub = ({
               >
                 {/* Cards or Empty State */}
                 {hasPinnedCards ? (
-                  <div className="py-2">
+                  <div className="pt-2">
                     <div
                       ref={scrollRef}
                       data-drag-scroll="x"
@@ -199,7 +199,7 @@ export const CoreConceptsHub = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="py-3">
+                  <div className="pt-3">
                     <div className="bg-muted/30 rounded-lg p-4 text-center">
                       <Bookmark className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No saved cards yet</p>
