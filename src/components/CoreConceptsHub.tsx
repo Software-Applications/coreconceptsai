@@ -140,7 +140,7 @@ export const CoreConceptsHub = ({
         </div>
 
         {/* Saved Cards Section - Demoted, cleaner */}
-         <div className="px-3 pt-1.5">
+         <div className="px-3 py-3">
           {/* Section Header - Clickable */}
           <button
             onClick={handleToggleSavedCards}
@@ -217,8 +217,8 @@ export const CoreConceptsHub = ({
         </div>
 
         {/* Trending Topics Section */}
-        {hasTrendingTopics && (
-          <div className="px-3">
+         {hasTrendingTopics && (
+           <div className="px-3 py-3">
             {/* Section Header - Clickable */}
             <button
               onClick={handleToggleTrending}
