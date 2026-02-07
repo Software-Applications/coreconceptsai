@@ -312,7 +312,7 @@ const Index = () => {
         />
 
         {/* Related Videos and Practice */}
-        <div className="pt-4 pb-3">
+        <div className="pt-3 pb-3">
           {/* Separator line with padding */}
           <div className="border-t border-border mb-4" />
           {/* Sticky Section Header */}
