@@ -579,11 +579,7 @@ export const TopicSelectionSheet = ({
                       ? `Exam Topics (${examTopicIds.size})` 
                       : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`
                 }>
-                  {/* Use allTopics for trending filter (cross-subject), otherwise use subject-filtered topics */}
-                  {(trendingFilterActive 
-                    ? allTopics.filter(topic => trendingTopicIds.has(topic.id))
-                    : topics
-                  ).map((topic) => {
+                  {topics.map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     const isExamTopic = examTopicIds.has(topic.id);
@@ -591,8 +587,10 @@ export const TopicSelectionSheet = ({
                     const showExamHighlight = examFilterActive && isExamTopic;
                     const showTrendingHighlight = trendingFilterActive && isTrendingTopic;
                     
-                    // When exam filter is active, dim non-exam topics
-                    if (examFilterActive && !isExamTopic) {
+                    // When a filter is active, dim non-matching topics
+                    const isDimmed = (examFilterActive && !isExamTopic) || (trendingFilterActive && !isTrendingTopic);
+                    
+                    if (isDimmed) {
                       return (
                         <CommandItem
                           key={topic.id}
