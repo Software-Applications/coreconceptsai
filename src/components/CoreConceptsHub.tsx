@@ -245,7 +245,7 @@ export const CoreConceptsHub = ({
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="py-2">
+                  <div className="pt-2">
                     {trendingLoading ? (
                       <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                         {[...Array(4)].map((_, i) => (
