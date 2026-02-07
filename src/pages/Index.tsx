@@ -58,7 +58,7 @@ const Index = () => {
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
   const { data: allChapters = [], isLoading: chaptersLoading } = useChapters();
   const { data: allTopics = [], isLoading: topicsLoading } = useTopics();
-  const { data: trendingTopics = [], isLoading: trendingLoading } = useTrendingTopics(10);
+  const { data: trendingTopics = [], isLoading: trendingLoading } = useTrendingTopics(30);
   
   // Custom hooks
   const { pinnedCards, pinCard, unpinCard, clearAllPinned } = usePinnedCards();
