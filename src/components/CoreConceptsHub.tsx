@@ -138,7 +138,7 @@ export const CoreConceptsHub = ({
         </div>
 
         {/* Saved Cards Section - Demoted, cleaner */}
-        <div className="px-3 py-1.5 mt-1">
+         <div className="px-3 pt-1.5">
           {/* Section Header - Clickable */}
           <button
             onClick={handleToggleSavedCards}
