@@ -227,12 +227,25 @@ export const CoreConceptsHub = ({
                 <h3 className="text-xs font-medium text-muted-foreground">Trending Concepts</h3>
                 <span className="text-xs text-muted-foreground/70">({trendingTopics.length})</span>
               </div>
-              <motion.div
-                animate={{ rotate: isTrendingExpanded ? 180 : 0 }}
+              <div className="flex items-center gap-2">
+                {isTrendingExpanded && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTopics();
+                    }} 
+                    className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                  >
+                    See All <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
+                <motion.div
+                  animate={{ rotate: isTrendingExpanded ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </motion.div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </motion.div>
+              </div>
             </button>
 
             {/* Collapsible Content */}
