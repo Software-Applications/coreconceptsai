@@ -587,7 +587,15 @@ export const TopicSelectionSheet = ({
                         if (!aIsTrending && bIsTrending) return 1;
                         return 0;
                       })
-                    : topics
+                    : examFilterActive
+                      ? [...topics].sort((a, b) => {
+                          const aIsExam = examTopicIds.has(a.id);
+                          const bIsExam = examTopicIds.has(b.id);
+                          if (aIsExam && !bIsExam) return -1;
+                          if (!aIsExam && bIsExam) return 1;
+                          return 0;
+                        })
+                      : topics
                   ).map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
