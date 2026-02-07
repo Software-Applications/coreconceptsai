@@ -11,11 +11,14 @@ export interface TrendingTopic {
   listen_count: number;
 }
 
+// Define which topic positions are "trending" (1-indexed: 1st, 2nd, 3rd, 5th, 8th)
+const TRENDING_POSITIONS = [0, 1, 2, 4, 7]; // 0-indexed positions
+
 export const useTrendingTopics = (limit: number = 10) => {
   return useQuery({
     queryKey: ['trending-topics', limit],
     queryFn: async (): Promise<TrendingTopic[]> => {
-      // Fetch topics with their subject info
+      // Fetch topics with their subject info, ordered by creation date
       const { data: topics, error: topicsError } = await supabase
         .from('topics')
         .select(`
@@ -31,7 +34,8 @@ export const useTrendingTopics = (limit: number = 10) => {
             )
           )
         `)
-        .limit(50); // Fetch more to filter later
+        .order('created_at', { ascending: true })
+        .limit(50); // Fetch enough to cover positions
 
       if (topicsError) {
         console.error('Error fetching topics:', topicsError);
@@ -42,8 +46,13 @@ export const useTrendingTopics = (limit: number = 10) => {
         return [];
       }
 
+      // Filter to only the trending positions (1st, 2nd, 3rd, 5th, 8th topics)
+      const trendingTopicsRaw = TRENDING_POSITIONS
+        .filter(pos => pos < topics.length)
+        .map(pos => topics[pos]);
+
       // Fetch listen counts from user_progress (aggregate across all users)
-      const topicIds = topics.map(t => t.id);
+      const topicIds = trendingTopicsRaw.map(t => t.id);
       const { data: progressData, error: progressError } = await supabase
         .from('user_progress')
         .select('topic_id')
@@ -64,8 +73,8 @@ export const useTrendingTopics = (limit: number = 10) => {
         });
       }
 
-      // Transform and sort topics
-      const trendingTopics: TrendingTopic[] = topics.map(topic => {
+      // Transform topics
+      const trendingTopics: TrendingTopic[] = trendingTopicsRaw.map(topic => {
         const chapters = topic.chapters as unknown as {
           subject_id: string;
           subjects: { name: string; color: string | null };
@@ -80,14 +89,6 @@ export const useTrendingTopics = (limit: number = 10) => {
           subject_color: chapters.subjects.color,
           listen_count: listenCounts.get(topic.id) || 0,
         };
-      });
-
-      // Sort by listen count (desc), then by title for consistency
-      trendingTopics.sort((a, b) => {
-        if (b.listen_count !== a.listen_count) {
-          return b.listen_count - a.listen_count;
-        }
-        return a.title.localeCompare(b.title);
       });
 
       return trendingTopics.slice(0, limit);

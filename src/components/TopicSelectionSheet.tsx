@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame } from 'lucide-react';
+import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame, TrendingUp } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useDragScroll } from '@/hooks/useDragScroll';
@@ -33,6 +33,8 @@ interface TopicSelectionSheetProps {
   hasProgress?: (topicId: string) => boolean;
   currentSubjectId?: string;
   examTopicIds?: Set<string>;
+  trendingTopicIds?: Set<string>;
+  initialFilter?: 'trending' | null;
 }
 
 // Helper to highlight matching text
@@ -65,7 +67,9 @@ export const TopicSelectionSheet = ({
   isListened,
   hasProgress,
   currentSubjectId,
-  examTopicIds: propExamTopicIds
+  examTopicIds: propExamTopicIds,
+  trendingTopicIds = new Set(),
+  initialFilter = null
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
   const topicRequest = useTopicRequest();
@@ -73,6 +77,7 @@ export const TopicSelectionSheet = ({
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedValue, setSelectedValue] = useState('');
   const [examFilterActive, setExamFilterActive] = useState(false);
+  const [trendingFilterActive, setTrendingFilterActive] = useState(initialFilter === 'trending');
   const inputRef = useRef<HTMLInputElement>(null);
   const { scrollRef: chipsScrollRef, handleClick: wrapChipClick } = useTapVsDrag<HTMLDivElement>();
   const listScrollRef = useDragScroll<HTMLDivElement>();
@@ -202,14 +207,23 @@ export const TopicSelectionSheet = ({
 
   const handleChipClick = useCallback((term: string) => {
     lightTap();
-    setExamFilterActive(false); // Clear exam filter when searching
+    setExamFilterActive(false);
+    setTrendingFilterActive(false);
     setSearchQuery(term);
   }, [lightTap]);
 
   const handleExamFilterToggle = useCallback(() => {
     lightTap();
     setExamFilterActive(prev => !prev);
-    setSearchQuery(''); // Clear search when toggling exam filter
+    setTrendingFilterActive(false);
+    setSearchQuery('');
+  }, [lightTap]);
+
+  const handleTrendingFilterToggle = useCallback(() => {
+    lightTap();
+    setTrendingFilterActive(prev => !prev);
+    setExamFilterActive(false);
+    setSearchQuery('');
   }, [lightTap]);
 
   // Use prop examTopicIds if provided, otherwise fall back to mock (first 3 topics)
@@ -228,14 +242,20 @@ export const TopicSelectionSheet = ({
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
 
-  // Reset search when sheet closes
+  // Reset state when sheet opens/closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Set initial filter when opening
+      setTrendingFilterActive(initialFilter === 'trending');
+      setExamFilterActive(false);
+    } else {
       setSearchQuery('');
       setDebouncedQuery('');
       setSelectedValue('');
+      setTrendingFilterActive(false);
+      setExamFilterActive(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialFilter]);
 
   // Truncate query for display
   const displayQuery = searchQuery.length > 25 
@@ -319,7 +339,20 @@ export const TopicSelectionSheet = ({
                     className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-3 pb-3 border-b border-border bg-popover cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                   >
-                    {/* Exam Filter Chip - Always first */}
+                    {/* Trending Filter Chip */}
+                    <button
+                      onClick={wrapChipClick(handleTrendingFilterToggle)}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
+                        trendingFilterActive 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-primary/10 hover:bg-primary/20 text-primary'
+                      }`}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      Trending
+                    </button>
+
+                    {/* Exam Filter Chip */}
                     <button
                       onClick={wrapChipClick(handleExamFilterToggle)}
                       className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
@@ -332,7 +365,7 @@ export const TopicSelectionSheet = ({
                       Upcoming Exam
                     </button>
 
-                    {/* Divider after exam chip */}
+                    {/* Divider after filter chips */}
                     {(recentSearches.length > 0 || suggestionChips.length > 0) && (
                       <div className="w-px h-5 bg-border flex-shrink-0 self-center" />
                     )}
@@ -536,13 +569,29 @@ export const TopicSelectionSheet = ({
                   )}
                 </>
               ) : (
-                // Browse Mode - Show All Topics (with exam highlighting)
-                <CommandGroup heading={examFilterActive ? `Exam Topics (${examTopicIds.size})` : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`}>
-                  {topics.map((topic) => {
+                // Browse Mode - Show Topics (with filters)
+                <CommandGroup heading={
+                  trendingFilterActive 
+                    ? `Trending Topics (${trendingTopicIds.size})`
+                    : examFilterActive 
+                      ? `Exam Topics (${examTopicIds.size})` 
+                      : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`
+                }>
+                  {topics
+                    .filter(topic => {
+                      // When trending filter active, only show trending topics
+                      if (trendingFilterActive) {
+                        return trendingTopicIds.has(topic.id);
+                      }
+                      return true;
+                    })
+                    .map((topic) => {
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
                     const isExamTopic = examTopicIds.has(topic.id);
-                    const showHighlight = examFilterActive && isExamTopic;
+                    const isTrendingTopic = trendingTopicIds.has(topic.id);
+                    const showExamHighlight = examFilterActive && isExamTopic;
+                    const showTrendingHighlight = trendingFilterActive && isTrendingTopic;
                     
                     // When exam filter is active, dim non-exam topics
                     if (examFilterActive && !isExamTopic) {
@@ -581,7 +630,9 @@ export const TopicSelectionSheet = ({
                         value={topic.id}
                         onSelect={() => handleSelectTopic(topic)}
                         className={`flex items-center gap-3 p-3 cursor-pointer ${
-                          showHighlight ? '!bg-warning/10 ring-1 ring-warning/30 rounded-lg data-[selected=true]:!bg-warning/15' : ''
+                          showExamHighlight ? '!bg-warning/10 ring-1 ring-warning/30 rounded-lg data-[selected=true]:!bg-warning/15' : ''
+                        } ${
+                          showTrendingHighlight ? '!bg-primary/5 ring-1 ring-primary/30 rounded-lg data-[selected=true]:!bg-primary/10' : ''
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -598,10 +649,16 @@ export const TopicSelectionSheet = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
-                            {showHighlight && (
+                            {showExamHighlight && (
                               <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-500 font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
                                 <Flame className="w-2.5 h-2.5" />
                                 Exam
+                              </span>
+                            )}
+                            {showTrendingHighlight && (
+                              <span className="flex items-center gap-0.5 text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+                                <TrendingUp className="w-2.5 h-2.5" />
+                                Trending
                               </span>
                             )}
                             {listened && <span className="text-xs text-primary font-medium">✓</span>}
