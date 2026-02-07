@@ -1,39 +1,40 @@
 
+## Remove Bottom Padding from Saved Cards Content
 
-## Rename "Trending Topics" to "Trending Concepts"
+### The Issue
 
-### Overview
+The gap between "My Saved Cards" and "Trending Concepts" comes from the inner content wrappers that still have bottom padding:
 
-Simple text update to rename the section header from "Trending Topics" to "Trending Concepts", which better aligns with the parent "Core Concepts" branding.
+| State | Line | Current | Bottom Padding |
+|-------|------|---------|----------------|
+| Cards exist | 185 | `py-2` | 8px |
+| Empty state | 202 | `py-3` | 12px |
 
-### Arrow Position Decision
+### Solution
 
-**Keep chevron on the right** for consistency with the "My Saved Cards" section. Both collapsible sections should follow the same pattern:
-- Left: Icon + Label + Count
-- Right: Chevron arrow
+Change these to use **top-only padding** so there's no extra space before the next section:
 
-This is the standard accordion pattern and maintains visual harmony across both sub-sections.
-
----
-
-### Technical Implementation
-
-**File: `src/components/CoreConceptsHub.tsx`**
-
-Update line 227:
-```typescript
+**Line 185** (cards exist):
+```tsx
 // Before
-<h3 className="text-xs font-medium text-muted-foreground">Trending Topics</h3>
+<div className="py-2">
 
 // After
-<h3 className="text-xs font-medium text-muted-foreground">Trending Concepts</h3>
+<div className="pt-2">
 ```
 
----
+**Line 202** (empty state):
+```tsx
+// Before
+<div className="py-3">
+
+// After
+<div className="pt-3">
+```
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/CoreConceptsHub.tsx` | Rename "Trending Topics" to "Trending Concepts" on line 227 |
-
+| File | Lines | Change |
+|------|-------|--------|
+| `src/components/CoreConceptsHub.tsx` | 185 | `py-2` → `pt-2` |
+| `src/components/CoreConceptsHub.tsx` | 202 | `py-3` → `pt-3` |
