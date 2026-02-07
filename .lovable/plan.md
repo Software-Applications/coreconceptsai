@@ -1,60 +1,56 @@
 
-## Making Trending Topics Truly Data-Driven
+# Fix Trending Topics Subject Filtering
 
-### Current Implementation
-The `useTrendingTopics.ts` hook currently determines trending status using hardcoded topic positions `[0, 1, 2, 4, 7]` instead of actual listen counts. While it does fetch `listen_count` from the `user_progress` table, this data is only used for display—the trending selection itself is position-based.
+## Problem
+The Trending Concepts section on the home page shows topics from all subjects mixed together. For example, when viewing Biology, you may see Chemistry or Microbiology topics in the carousel.
 
-### Problem
-- **Hardcoded positions**: The trending algorithm ignores real usage patterns
-- **Not scalable**: New topics won't be recognized as trending until the codebase is updated
-- **Data mismatch**: The listen_count is fetched but not used for ranking
+## Root Cause
+The `useTrendingTopics` hook fetches trending topics globally across all subjects, and they're passed directly to the `CoreConceptsHub` component without filtering by the currently selected subject.
 
-### Solution Overview
-Transform the trending topics selection to rank by **actual listen counts with recency bias**, ensuring the most-engaged topics float to the top while newer content isn't completely overlooked.
+## Solution
+Filter the trending topics by the selected subject's name before passing them to `CoreConceptsHub`. This keeps the global trending data available for other features (like the "Trending" filter in the topic selection sheet) while showing subject-specific content in the home carousel.
 
-### Technical Implementation
+---
 
-**1. Update `useTrendingTopics.ts`** (Lines 21-94)
-   - Remove the hardcoded `TRENDING_POSITIONS` constant
-   - Fetch ALL topics with their listen counts from `user_progress`
-   - Implement a ranking algorithm that:
-     - Sorts topics by `listen_count` in descending order
-     - Breaks ties by `created_at` (newer topics first)
-     - Returns the top `limit` items (default 10)
-   - This ensures topics with genuine engagement bubble up naturally
+## Implementation
 
-**Algorithm Logic:**
+### File: `src/pages/Index.tsx`
+
+**Change 1: Add filtered trending topics**
+
+Create a memoized filtered version of trending topics based on the selected subject:
+
+```typescript
+// After line 140 (after trendingTopicIds)
+const subjectTrendingTopics = useMemo(() => 
+  selectedSubject 
+    ? trendingTopics.filter(t => t.subject_name === selectedSubject.name)
+    : [],
+  [selectedSubject?.name, trendingTopics]
+);
 ```
-1. Fetch all topics with their subject/chapter info
-2. For each topic, count completed entries in user_progress
-3. Sort by: listen_count DESC, then created_at DESC
-4. Return top N results (configurable limit)
+
+**Change 2: Update CoreConceptsHub props**
+
+Pass the filtered list instead of the global list (around line 296):
+
+```diff
+  <CoreConceptsHub
+    ...
+-   trendingTopics={trendingTopics}
++   trendingTopics={subjectTrendingTopics}
+    trendingLoading={trendingLoading}
+    ...
+  />
 ```
 
-**2. Key Changes**
-   - Query modification: Aggregate `user_progress` data BEFORE filtering (not after)
-   - New sort logic: `ORDER BY listen_count DESC, created_at DESC`
-   - Return top results based on actual ranking, not position indices
+---
 
-**3. Benefits**
-   - ✅ **Truly data-driven**: Real user engagement determines trending status
-   - ✅ **Self-updating**: No code changes needed when new topics gain popularity
-   - ✅ **Fair to new content**: Recent high-engagement topics still rank well
-   - ✅ **Scalable**: Works with any number of topics
-   - ✅ **Zero UX changes**: The carousel and drawer UI remain identical
+## Technical Notes
 
-**4. Edge Cases Handled**
-   - No engagement yet: Newer topics still appear in trending (sorted by `created_at`)
-   - Tie-breaking: When listen counts are equal, newer topics get priority
-   - Empty data: Returns empty array gracefully (same as current behavior)
+- The filtering uses `subject_name` from the trending topic (which comes from the `subjects` table via the join) and compares it to `selectedSubject.name`
+- The global `trendingTopics` array is still used for `trendingTopicIds` (line 137-140), which is passed to `TopicSelectionSheet` for the cross-subject "Trending" filter functionality
+- The `useMemo` ensures the filtering only runs when the subject or trending topics change
 
-**5. No UI Changes Required**
-   - `src/pages/Index.tsx`: Uses `trendingTopics` hook—no changes needed
-   - `src/components/TopicSelectionSheet.tsx`: Sorting logic already in place—no changes needed
-   - `src/components/CoreConceptsHub.tsx`: Renders trending topics as-is—no changes needed
-
-### Testing Strategy
-1. Verify the hook returns topics ordered by listen_count DESC
-2. Confirm newer topics still appear when listen_count is 0
-3. Check the trending carousel displays correctly
-4. Validate the drawer "Trending" filter highlights correct topics
+## Result
+Users will see only trending topics from their currently selected subject in the Trending Concepts carousel.
