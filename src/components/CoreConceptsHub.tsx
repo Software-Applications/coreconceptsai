@@ -224,7 +224,7 @@ export const CoreConceptsHub = ({
             >
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-xs font-medium text-muted-foreground">Trending Topics</h3>
+                <h3 className="text-xs font-medium text-muted-foreground">Trending Concepts</h3>
                 <span className="text-xs text-muted-foreground/70">({trendingTopics.length})</span>
               </div>
               <motion.div
