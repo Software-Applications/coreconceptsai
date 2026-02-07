@@ -16,6 +16,7 @@ import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
 import { ReviewBoard } from "@/components/ReviewBoard";
 import { ExpandedCardModal } from "@/components/ExpandedCardModal";
 import { SubjectChips } from "@/components/SubjectChips";
+import { TrendingTopicsCarousel } from "@/components/TrendingTopicsCarousel";
 import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
 import { useWatchedVideos } from "@/hooks/useWatchedVideos";
@@ -284,6 +285,11 @@ const Index = () => {
           examTopicsCount={examTopicsCount}
         />
 
+        {/* Trending Topics Carousel */}
+        <TrendingTopicsCarousel
+          onSelectTopic={(topicId) => setSelectedTopicId(topicId)}
+          isListened={isListened}
+        />
 
         {/* Related Videos and Practice */}
         <div className="pt-4 pb-3">
