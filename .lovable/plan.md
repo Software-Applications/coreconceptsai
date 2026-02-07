@@ -1,38 +1,52 @@
 
+## Fix Unequal Spacing Above Section Headers
 
-## Fix Remaining Spacing Difference Between Sections
+### Root Cause Identified
 
-### Root Cause
+When comparing the visual gap **above** each header row (when both sections are collapsed):
 
-The remaining visual difference comes from the **Trending Concepts content wrapper** (line 248) which uses `py-2`, adding 8px of top padding before the content. This compounds with the container's `pt-1.5` to create more space above the Trending content than exists above the Saved Cards content.
+| Gap | Components | Total |
+|-----|------------|-------|
+| Above "My Saved Cards" | Container `pt-1.5` (6px) | **6px** |
+| Above "Trending Concepts" | My Saved Cards header `py-1.5` bottom (6px) + Trending container `pt-1.5` (6px) | **12px** |
 
-| Section | Container | Header | Content Wrapper | Total Before Content |
-|---------|-----------|--------|-----------------|---------------------|
-| My Saved Cards | `pt-1.5` (6px) | `py-1.5` | `pt-2` (8px) | 6 + 6 + 8 = 20px |
-| Trending Concepts | `pt-1.5` (6px) | `py-1.5` | `py-2` (8px top) | 6 + 6 + 8 = 20px |
+The "Trending Concepts" header has **double the gap** because the collapsible header button above it uses `py-1.5` (vertical padding), which adds 6px of bottom padding that stacks with Trending's own container top padding.
 
-Wait - the math is similar. Let me re-examine. The actual difference is:
+### Visual Breakdown (Collapsed State)
 
-The **Saved Cards scroll area** (line 189) has `pb-2` which adds bottom space, but we removed the container bottom padding. However, the **Trending content wrapper** (line 248) uses `py-2` which has both top AND bottom, while Saved Cards uses `pt-2` (top only).
-
-This means Trending has an extra 8px of TOP padding inside the collapsible content that Saved Cards doesn't have.
+```text
+┌─────────────────────────────────┐
+│   Core Concepts AI Card         │
+└─────────────────────────────────┘
+   ↓ 6px (Saved Cards container pt-1.5)
+┌─────────────────────────────────┐
+│ My Saved Cards header (py-1.5)  │  ← 6px top, 6px bottom padding
+└─────────────────────────────────┘
+   ↓ 6px (header bottom) + 6px (Trending container pt-1.5) = 12px
+┌─────────────────────────────────┐
+│ Trending Concepts header        │
+└─────────────────────────────────┘
+```
 
 ### Solution
 
-Change the Trending Concepts content wrapper from `py-2` to `pt-2` to match the Saved Cards section:
+Remove the top padding from the Trending Concepts container since the vertical gap is already provided by the header button's bottom padding:
 
-**Line 248:**
+**Line 219:**
 ```tsx
 // Before
-<div className="py-2">
+<div className="px-3 pt-1.5">
 
 // After
-<div className="pt-2">
+<div className="px-3">
 ```
+
+This makes both gaps equal at 6px:
+- Above My Saved Cards: 6px from container `pt-1.5`
+- Above Trending Concepts: 6px from My Saved Cards header `py-1.5` bottom padding
 
 ### Files to Modify
 
 | File | Line | Change |
 |------|------|--------|
-| `src/components/CoreConceptsHub.tsx` | 248 | `py-2` → `pt-2` |
-
+| `src/components/CoreConceptsHub.tsx` | 219 | Remove `pt-1.5` from class |
