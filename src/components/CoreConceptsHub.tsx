@@ -120,7 +120,7 @@ export const CoreConceptsHub = ({
                   Core Concepts <AIBadge size="sm" />
                 </h3>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  AI explanations of tough topics
+                  Complex topics, simplified in AI audio
                 </p>
                 {examTopicsCount > 0 && (
                   <div className="inline-flex items-center gap-1.5 bg-warning/10 px-2.5 py-1 rounded-full mt-2">
