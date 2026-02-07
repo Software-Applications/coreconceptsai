@@ -1,52 +1,60 @@
 
-## Fix Unequal Spacing Above Section Headers
+## Making Trending Topics Truly Data-Driven
 
-### Root Cause Identified
+### Current Implementation
+The `useTrendingTopics.ts` hook currently determines trending status using hardcoded topic positions `[0, 1, 2, 4, 7]` instead of actual listen counts. While it does fetch `listen_count` from the `user_progress` table, this data is only used for display—the trending selection itself is position-based.
 
-When comparing the visual gap **above** each header row (when both sections are collapsed):
+### Problem
+- **Hardcoded positions**: The trending algorithm ignores real usage patterns
+- **Not scalable**: New topics won't be recognized as trending until the codebase is updated
+- **Data mismatch**: The listen_count is fetched but not used for ranking
 
-| Gap | Components | Total |
-|-----|------------|-------|
-| Above "My Saved Cards" | Container `pt-1.5` (6px) | **6px** |
-| Above "Trending Concepts" | My Saved Cards header `py-1.5` bottom (6px) + Trending container `pt-1.5` (6px) | **12px** |
+### Solution Overview
+Transform the trending topics selection to rank by **actual listen counts with recency bias**, ensuring the most-engaged topics float to the top while newer content isn't completely overlooked.
 
-The "Trending Concepts" header has **double the gap** because the collapsible header button above it uses `py-1.5` (vertical padding), which adds 6px of bottom padding that stacks with Trending's own container top padding.
+### Technical Implementation
 
-### Visual Breakdown (Collapsed State)
+**1. Update `useTrendingTopics.ts`** (Lines 21-94)
+   - Remove the hardcoded `TRENDING_POSITIONS` constant
+   - Fetch ALL topics with their listen counts from `user_progress`
+   - Implement a ranking algorithm that:
+     - Sorts topics by `listen_count` in descending order
+     - Breaks ties by `created_at` (newer topics first)
+     - Returns the top `limit` items (default 10)
+   - This ensures topics with genuine engagement bubble up naturally
 
-```text
-┌─────────────────────────────────┐
-│   Core Concepts AI Card         │
-└─────────────────────────────────┘
-   ↓ 6px (Saved Cards container pt-1.5)
-┌─────────────────────────────────┐
-│ My Saved Cards header (py-1.5)  │  ← 6px top, 6px bottom padding
-└─────────────────────────────────┘
-   ↓ 6px (header bottom) + 6px (Trending container pt-1.5) = 12px
-┌─────────────────────────────────┐
-│ Trending Concepts header        │
-└─────────────────────────────────┘
+**Algorithm Logic:**
+```
+1. Fetch all topics with their subject/chapter info
+2. For each topic, count completed entries in user_progress
+3. Sort by: listen_count DESC, then created_at DESC
+4. Return top N results (configurable limit)
 ```
 
-### Solution
+**2. Key Changes**
+   - Query modification: Aggregate `user_progress` data BEFORE filtering (not after)
+   - New sort logic: `ORDER BY listen_count DESC, created_at DESC`
+   - Return top results based on actual ranking, not position indices
 
-Remove the top padding from the Trending Concepts container since the vertical gap is already provided by the header button's bottom padding:
+**3. Benefits**
+   - ✅ **Truly data-driven**: Real user engagement determines trending status
+   - ✅ **Self-updating**: No code changes needed when new topics gain popularity
+   - ✅ **Fair to new content**: Recent high-engagement topics still rank well
+   - ✅ **Scalable**: Works with any number of topics
+   - ✅ **Zero UX changes**: The carousel and drawer UI remain identical
 
-**Line 219:**
-```tsx
-// Before
-<div className="px-3 pt-1.5">
+**4. Edge Cases Handled**
+   - No engagement yet: Newer topics still appear in trending (sorted by `created_at`)
+   - Tie-breaking: When listen counts are equal, newer topics get priority
+   - Empty data: Returns empty array gracefully (same as current behavior)
 
-// After
-<div className="px-3">
-```
+**5. No UI Changes Required**
+   - `src/pages/Index.tsx`: Uses `trendingTopics` hook—no changes needed
+   - `src/components/TopicSelectionSheet.tsx`: Sorting logic already in place—no changes needed
+   - `src/components/CoreConceptsHub.tsx`: Renders trending topics as-is—no changes needed
 
-This makes both gaps equal at 6px:
-- Above My Saved Cards: 6px from container `pt-1.5`
-- Above Trending Concepts: 6px from My Saved Cards header `py-1.5` bottom padding
-
-### Files to Modify
-
-| File | Line | Change |
-|------|------|--------|
-| `src/components/CoreConceptsHub.tsx` | 219 | Remove `pt-1.5` from class |
+### Testing Strategy
+1. Verify the hook returns topics ordered by listen_count DESC
+2. Confirm newer topics still appear when listen_count is 0
+3. Check the trending carousel displays correctly
+4. Validate the drawer "Trending" filter highlights correct topics
