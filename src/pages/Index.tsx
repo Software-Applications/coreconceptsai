@@ -397,6 +397,7 @@ const Index = () => {
               setTopicSelectionFilter(null);
             }}
             topics={subjectTopics}
+            allTopics={allTopics}
             onSelectTopic={handleSelectTopic}
             isListened={isListened}
             hasProgress={hasAudioProgress}
