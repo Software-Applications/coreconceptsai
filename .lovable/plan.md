@@ -1,40 +1,34 @@
 
-## Remove Bottom Padding from Saved Cards Content
 
-### The Issue
+## Equalize Spacing Above Section Headers
 
-The gap between "My Saved Cards" and "Trending Concepts" comes from the inner content wrappers that still have bottom padding:
+### The Problem
 
-| State | Line | Current | Bottom Padding |
-|-------|------|---------|----------------|
-| Cards exist | 185 | `py-2` | 8px |
-| Empty state | 202 | `py-3` | 12px |
+The "Trending Concepts" header has more visual space above it than the "My Saved Cards" header because of different container padding:
+
+| Section | Container Class | Top Padding |
+|---------|-----------------|-------------|
+| My Saved Cards | `px-3 pt-1.5` | 6px |
+| Trending Concepts | `px-3 py-1.5` | 6px + inherited spacing |
+
+The `py-1.5` on Trending Concepts adds both top AND bottom padding, while My Saved Cards uses only `pt-1.5`. This creates an asymmetry.
 
 ### Solution
 
-Change these to use **top-only padding** so there's no extra space before the next section:
+Change the Trending Concepts container from `py-1.5` to `pt-1.5` to match the My Saved Cards section:
 
-**Line 185** (cards exist):
+**Line 219:**
 ```tsx
 // Before
-<div className="py-2">
+<div className="px-3 py-1.5">
 
-// After
-<div className="pt-2">
-```
-
-**Line 202** (empty state):
-```tsx
-// Before
-<div className="py-3">
-
-// After
-<div className="pt-3">
+// After  
+<div className="px-3 pt-1.5">
 ```
 
 ### Files to Modify
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/components/CoreConceptsHub.tsx` | 185 | `py-2` → `pt-2` |
-| `src/components/CoreConceptsHub.tsx` | 202 | `py-3` → `pt-3` |
+| File | Line | Change |
+|------|------|--------|
+| `src/components/CoreConceptsHub.tsx` | 219 | `py-1.5` → `pt-1.5` |
+
