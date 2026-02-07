@@ -24,6 +24,13 @@ import {
   CommandList,
 } from '@/components/ui/command';
 
+interface TrendingTopic {
+  id: string;
+  title: string;
+  subject_name: string;
+  listen_count: number;
+}
+
 interface TopicSelectionSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +42,7 @@ interface TopicSelectionSheetProps {
   currentSubjectId?: string;
   examTopicIds?: Set<string>;
   trendingTopicIds?: Set<string>;
+  trendingTopics?: TrendingTopic[]; // Ordered trending topics for proper ranking
   initialFilter?: 'trending' | null;
 }
 
@@ -71,6 +79,7 @@ export const TopicSelectionSheet = ({
   currentSubjectId,
   examTopicIds: propExamTopicIds,
   trendingTopicIds = new Set(),
+  trendingTopics = [],
   initialFilter = null
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
@@ -243,6 +252,13 @@ export const TopicSelectionSheet = ({
     const listened = topics.filter(t => isListened?.(t.id)).length;
     return { total, listened, percentage: total > 0 ? Math.round((listened / total) * 100) : 0 };
   }, [topics, isListened]);
+
+  // Create a map of topic ID -> rank for sorting by trending order
+  const trendingRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    trendingTopics.forEach((t, index) => map.set(t.id, index));
+    return map;
+  }, [trendingTopics]);
 
   // Reset state when sheet opens/closes
   useEffect(() => {
@@ -574,7 +590,7 @@ export const TopicSelectionSheet = ({
                 // Browse Mode - Show Topics (with filters)
                 <CommandGroup heading={
                   trendingFilterActive 
-                    ? `Trending Topics (${trendingTopicIds.size})`
+                    ? `Trending Topics (${trendingTopics.length})`
                     : examFilterActive 
                       ? `Exam Topics (${examTopicIds.size})` 
                       : `Popular Topics (${progressStats.listened}/${progressStats.total} completed)`
@@ -583,12 +599,11 @@ export const TopicSelectionSheet = ({
                     ? [...allTopics]
                         // Filter by current subject first
                         .filter(t => !currentSubjectId || t.subjectId === currentSubjectId)
+                        // Sort by trending rank (lower rank = more popular)
                         .sort((a, b) => {
-                          const aIsTrending = trendingTopicIds.has(a.id);
-                          const bIsTrending = trendingTopicIds.has(b.id);
-                          if (aIsTrending && !bIsTrending) return -1;
-                          if (!aIsTrending && bIsTrending) return 1;
-                          return 0;
+                          const aRank = trendingRankMap.get(a.id) ?? Infinity;
+                          const bRank = trendingRankMap.get(b.id) ?? Infinity;
+                          return aRank - bRank;
                         })
                     : examFilterActive
                       ? [...topics].sort((a, b) => {

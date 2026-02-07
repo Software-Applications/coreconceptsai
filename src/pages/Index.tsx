@@ -417,6 +417,7 @@ const Index = () => {
             currentSubjectId={selectedSubject?.id}
             examTopicIds={examTopicIds}
             trendingTopicIds={trendingTopicIds}
+            trendingTopics={subjectTrendingTopics}
             initialFilter={topicSelectionFilter}
           />
         )}
