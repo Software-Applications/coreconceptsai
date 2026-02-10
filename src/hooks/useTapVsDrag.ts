@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, RefObject } from 'react';
+import { useRef, useEffect, useCallback, useState, RefObject } from 'react';
 
 /**
  * Configuration options for the tap vs drag hook
@@ -63,11 +63,17 @@ export function useTapVsDrag<T extends HTMLElement>(
   } = options;
 
   const ref = useRef<T>(null);
+  const [element, setElement] = useState<T | null>(null);
   const isDraggingRef = useRef(false);
   const lastDragEndRef = useRef(0);
 
+  // Callback ref to detect when element mounts/unmounts (e.g. inside accordions)
+  const callbackRef = useCallback((node: T | null) => {
+    (ref as React.MutableRefObject<T | null>).current = node;
+    setElement(node);
+  }, []);
+
   useEffect(() => {
-    const element = ref.current;
     if (!element) return;
 
     let isDown = false;
@@ -284,7 +290,7 @@ export function useTapVsDrag<T extends HTMLElement>(
       element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('dragstart', handleDragStart);
     };
-  }, [dragThreshold, clickSuppressionDelay, enableMomentum, momentumFriction]);
+  }, [element, dragThreshold, clickSuppressionDelay, enableMomentum, momentumFriction]);
 
   /**
    * Wraps a click handler to prevent it from firing during/after drags
@@ -302,7 +308,7 @@ export function useTapVsDrag<T extends HTMLElement>(
   );
 
   return {
-    scrollRef: ref,
+    scrollRef: callbackRef as unknown as RefObject<T>,
     isDragging: isDraggingRef.current,
     handleClick,
   };
