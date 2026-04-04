@@ -265,6 +265,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       setAudioReady(false);
       setAudioBlobUrl(null);
       setFullTranscript('');
+      setSsmlTranscript(null);
       setError(null);
     }
   }, []);
