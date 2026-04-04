@@ -205,12 +205,12 @@ export const DailyDownloadPlayer = ({
       setShowCelebration(true);
       setTimeout(() => {
         setShowCelebration(false);
-        setShowFlashCard(true);
+        onClose();
       }, 1500);
       onTopicListened?.(topic.id);
       clearProgress(topic.id);
     }
-  }, [topic, onTopicListened, clearProgress]);
+  }, [topic, onTopicListened, clearProgress, onClose]);
 
   // Setup audio element when blob URL is available
   useEffect(() => {
