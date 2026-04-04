@@ -30,6 +30,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   const [audioReady, setAudioReady] = useState(false);
   
   const [fullTranscript, setFullTranscript] = useState<string>('');
+  const [ssmlTranscript, setSsmlTranscript] = useState<string | null>(null);
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [audioDurationMs, setAudioDurationMs] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
