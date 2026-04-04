@@ -16,31 +16,68 @@ interface TTSRequest {
   streaming?: boolean;
 }
 
-// Split text at sentence boundaries for chunking
-function splitTextIntoChunks(text: string, maxBytes: number = 4500): string[] {
+// Split SSML content into chunks that stay under the byte limit
+// Each chunk is wrapped in <speak> tags
+function splitSsmlIntoChunks(ssml: string, maxBytes: number = 4800): string[] {
   const encoder = new TextEncoder();
+  
+  // If already under limit, return as-is
+  if (encoder.encode(ssml).length <= maxBytes) {
+    return [ssml];
+  }
+  
+  // Strip outer <speak> tags to get inner content
+  const inner = ssml.replace(/^<speak>/, '').replace(/<\/speak>$/, '');
+  
+  // Split on break tags (natural pause points) while keeping the break with the preceding text
+  const segments = inner.split(/(?<=<break[^/]*\/>)/);
+  
   const chunks: string[] = [];
   let currentChunk = '';
-
-  const sentences = text.split(/(?<=[.!?])\s+/);
-
-  for (const sentence of sentences) {
-    const potentialChunk = currentChunk ? `${currentChunk} ${sentence}` : sentence;
-    const byteLength = encoder.encode(potentialChunk).length;
-
-    if (byteLength > maxBytes && currentChunk) {
-      chunks.push(currentChunk.trim());
-      currentChunk = sentence;
+  const wrapOverhead = encoder.encode('<speak></speak>').length;
+  
+  for (const segment of segments) {
+    const potentialChunk = currentChunk + segment;
+    const wrappedLength = encoder.encode(`<speak>${potentialChunk}</speak>`).length;
+    
+    if (wrappedLength > maxBytes && currentChunk) {
+      chunks.push(`<speak>${currentChunk}</speak>`);
+      currentChunk = segment;
     } else {
       currentChunk = potentialChunk;
     }
   }
-
+  
   if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
+    chunks.push(`<speak>${currentChunk}</speak>`);
   }
-
-  return chunks;
+  
+  // Safety: if any chunk is still too large, split further at sentence boundaries
+  const safeChunks: string[] = [];
+  for (const chunk of chunks) {
+    if (encoder.encode(chunk).length <= maxBytes) {
+      safeChunks.push(chunk);
+    } else {
+      // Split inner content by sentences
+      const innerContent = chunk.replace(/^<speak>/, '').replace(/<\/speak>$/, '');
+      const sentences = innerContent.split(/(?<=[.!?])\s+/);
+      let subChunk = '';
+      for (const sentence of sentences) {
+        const potential = subChunk + (subChunk ? ' ' : '') + sentence;
+        if (encoder.encode(`<speak>${potential}</speak>`).length > maxBytes && subChunk) {
+          safeChunks.push(`<speak>${subChunk}</speak>`);
+          subChunk = sentence;
+        } else {
+          subChunk = potential;
+        }
+      }
+      if (subChunk.trim()) {
+        safeChunks.push(`<speak>${subChunk}</speak>`);
+      }
+    }
+  }
+  
+  return safeChunks;
 }
 
 // Estimate duration in milliseconds based on text and speaking rate
