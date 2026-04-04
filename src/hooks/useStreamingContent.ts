@@ -30,6 +30,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   const [audioReady, setAudioReady] = useState(false);
   
   const [fullTranscript, setFullTranscript] = useState<string>('');
+  const [ssmlTranscript, setSsmlTranscript] = useState<string | null>(null);
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [audioDurationMs, setAudioDurationMs] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +140,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     setAudioReady(false);
     setError(null);
     setFullTranscript('');
+    setSsmlTranscript(null);
     setAudioBlobUrl(null);
     setAudioDurationMs(0);
     savedPositionMsRef.current = 0;
@@ -178,10 +180,12 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
 
       const transcript = transcriptData.transcript;
-      console.log(`[StreamContent] Transcript ready (status: ${transcriptData.status})`);
+      const ssmlText = transcriptData.ssmlTranscript || null;
+      console.log(`[StreamContent] Transcript ready (status: ${transcriptData.status}), has SSML: ${!!ssmlText}`);
 
       if (isMountedRef.current) {
         setFullTranscript(transcript);
+        setSsmlTranscript(ssmlText);
         setTranscriptReady(true);
         setIsGenerating(false);
         optionsRef.current.onTranscriptReady?.(transcript);
@@ -196,7 +200,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
         ttsAbortControllerRef.current = new AbortController();
         
         const audioResult = await generateAudio(
-          transcript,
+          ssmlText || transcript,
           voiceId,
           speakingRate,
           ttsAbortControllerRef.current.signal
@@ -261,6 +265,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       setAudioReady(false);
       setAudioBlobUrl(null);
       setFullTranscript('');
+      setSsmlTranscript(null);
       setError(null);
     }
   }, []);
@@ -297,7 +302,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     
     try {
       const audioResult = await generateAudio(
-        fullTranscript,
+        ssmlTranscript || fullTranscript,
         newVoiceId,
         speakingRate,
         ttsAbortControllerRef.current.signal
@@ -322,7 +327,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
       return null;
     }
-  }, [fullTranscript, audioBlobUrl, generateAudio]);
+  }, [fullTranscript, ssmlTranscript, audioBlobUrl, generateAudio]);
 
   useEffect(() => {
     return () => {

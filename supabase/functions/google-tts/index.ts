@@ -22,7 +22,6 @@ function splitTextIntoChunks(text: string, maxBytes: number = 4500): string[] {
   const chunks: string[] = [];
   let currentChunk = '';
 
-  // Split by sentences (period, question mark, exclamation mark followed by space)
   const sentences = text.split(/(?<=[.!?])\s+/);
 
   for (const sentence of sentences) {
@@ -67,52 +66,135 @@ function stripXmlTags(text: string): string {
   return text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
 }
 
-// Preprocess text to SSML with pause handling
-function preprocessTextForSSML(text: string): string {
-  // Step 1: Strip any XML-like tags (e.g., <transcript>)
-  const cleanedText = stripXmlTags(text);
+// Check if text contains new-style placeholder tags
+function hasNewPlaceholders(text: string): boolean {
+  return /\*?\*?\[(?:SIGNPOST|PROMPT|RETRIEVAL|PREDICT|TEACH)\]\*?\*?/.test(text);
+}
+
+// Process new-style placeholders into SSML
+// Each placeholder wraps the NEXT sentence in the appropriate prosody/emphasis tag
+function processNewPlaceholders(text: string): string {
+  // Strip any XML-like tags first
+  let cleaned = stripXmlTags(text);
   
-  // Step 2: Split by paragraphs (double newlines or \n\n)
+  // Split by paragraphs
+  const paragraphs = cleaned.split(/\n\n+/).filter(p => p.trim());
+  
+  const processedParagraphs = paragraphs.map((paragraph, index) => {
+    let processed = paragraph;
+    
+    // Process each placeholder type: extract the placeholder and wrap the following sentence
+    // Pattern: **[TAG]** or [TAG] followed by the next sentence
+    
+    // [SIGNPOST] -> <emphasis level="strong">next sentence</emphasis><break time="2000ms"/>
+    processed = processed.replace(
+      /\*?\*?\[SIGNPOST\]\*?\*?\s*([^.!?\n]+[.!?]?)/gi,
+      (_, sentence) => `<emphasis level="strong">${escapeXmlChars(sentence.trim())}</emphasis><break time="2000ms"/>`
+    );
+    
+    // [PROMPT] -> <prosody rate="90%" pitch="-5%">next sentence</prosody><break time="3000ms"/>
+    processed = processed.replace(
+      /\*?\*?\[PROMPT\]\*?\*?\s*([^.!?\n]+[.!?]?)/gi,
+      (_, sentence) => `<prosody rate="90%" pitch="-5%">${escapeXmlChars(sentence.trim())}</prosody><break time="3000ms"/>`
+    );
+    
+    // [RETRIEVAL] -> <prosody pitch="+10%" rate="105%">next sentence</prosody><break time="3000ms"/>
+    processed = processed.replace(
+      /\*?\*?\[RETRIEVAL\]\*?\*?\s*([^.!?\n]+[.!?]?)/gi,
+      (_, sentence) => `<prosody pitch="+10%" rate="105%">${escapeXmlChars(sentence.trim())}</prosody><break time="3000ms"/>`
+    );
+    
+    // [PREDICT] -> <prosody volume="-2dB" rate="85%">next sentence</prosody><break time="3000ms"/>
+    processed = processed.replace(
+      /\*?\*?\[PREDICT\]\*?\*?\s*([^.!?\n]+[.!?]?)/gi,
+      (_, sentence) => `<prosody volume="-2dB" rate="85%">${escapeXmlChars(sentence.trim())}</prosody><break time="3000ms"/>`
+    );
+    
+    // [TEACH] -> <prosody rate="95%" pitch="-1Hz">next sentence</prosody>
+    processed = processed.replace(
+      /\*?\*?\[TEACH\]\*?\*?\s*([^.!?\n]+[.!?]?)/gi,
+      (_, sentence) => `<prosody rate="95%" pitch="-1Hz">${escapeXmlChars(sentence.trim())}</prosody>`
+    );
+    
+    // Escape any remaining unprocessed text (text not already wrapped in SSML tags)
+    // We need to escape parts that aren't already SSML
+    processed = escapeRemainingText(processed);
+    
+    // Add paragraph break (except for first paragraph)
+    if (index > 0) {
+      processed = `<break time="2000ms"/>${processed}`;
+    }
+    
+    return processed;
+  });
+  
+  return `<speak>${processedParagraphs.join(' ')}</speak>`;
+}
+
+// Escape text segments that aren't already SSML tags
+function escapeRemainingText(text: string): string {
+  // Split on SSML tags, escape only non-tag parts
+  const parts = text.split(/(<[^>]+>)/);
+  return parts.map(part => {
+    // If it's an SSML tag, keep as-is
+    if (part.startsWith('<') && part.endsWith('>')) {
+      return part;
+    }
+    // If it contains already-escaped XML entities, skip
+    if (/&(?:amp|lt|gt|quot|apos);/.test(part)) {
+      return part;
+    }
+    // Escape plain text
+    return escapeXmlChars(part);
+  }).join('');
+}
+
+// Legacy: Preprocess text with old [PAUSE: X Seconds] markers to SSML
+function preprocessTextForSSMLLegacy(text: string): string {
+  const cleanedText = stripXmlTags(text);
   const paragraphs = cleanedText.split(/\n\n+/).filter(p => p.trim());
   
-  // Track if previous paragraph ended with a long pause (5+ seconds)
   let prevEndsWithLongPause = false;
   
   const processedParagraphs = paragraphs.map((paragraph, index) => {
-    // Pause marker regex: /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi
     const pauseMarkerRegex = /\[PAUSE:\s*(\d+)\s*(?:Seconds?|s)\]/gi;
     const pauseMarkers: { index: number; seconds: string }[] = [];
     let match;
     
-    // Find all pause markers and their positions
     while ((match = pauseMarkerRegex.exec(paragraph)) !== null) {
       pauseMarkers.push({ index: match.index, seconds: match[1] });
     }
     
-    // Remove pause markers, escape XML chars, then reinsert as SSML breaks
     let processed = paragraph.replace(pauseMarkerRegex, '|||PAUSE_PLACEHOLDER|||');
     processed = escapeXmlChars(processed);
     
-    // Replace placeholders with actual SSML breaks
     let placeholderIndex = 0;
     processed = processed.replace(/\|\|\|PAUSE_PLACEHOLDER\|\|\|/g, () => {
       const marker = pauseMarkers[placeholderIndex++];
       return marker ? `<break time="${marker.seconds}s"/>` : '';
     });
     
-    // Add 2s break at paragraph start (if not first paragraph)
-    // Only add if the previous paragraph didn't end with a 5s+ break
     if (index > 0 && !prevEndsWithLongPause) {
       processed = `<break time="2s"/>${processed}`;
     }
     
-    // Check if this paragraph ends with a long pause for next iteration
     prevEndsWithLongPause = /\[PAUSE:\s*[5-9]\d*\s*(?:Seconds?|s)\]\s*$/i.test(paragraph);
     
     return processed;
   });
   
   return `<speak>${processedParagraphs.join(' ')}</speak>`;
+}
+
+// Main preprocessing dispatcher
+function preprocessTextForSSML(text: string): string {
+  if (hasNewPlaceholders(text)) {
+    console.log('[TTS] Using new placeholder SSML processing');
+    return processNewPlaceholders(text);
+  }
+  
+  console.log('[TTS] Using legacy PAUSE marker SSML processing');
+  return preprocessTextForSSMLLegacy(text);
 }
 
 // Call Google Cloud TTS API for a single chunk using SSML
@@ -122,7 +204,6 @@ async function synthesizeChunk(
   speakingRate: number,
   apiKey: string
 ): Promise<string> {
-  // Preprocess text to SSML with pause handling
   const ssmlText = preprocessTextForSSML(text);
   
   console.log(`[TTS] Processing chunk with SSML, length: ${ssmlText.length}`);
@@ -204,7 +285,7 @@ function concatenateAudioChunks(chunks: string[]): string {
   return btoa(binary);
 }
 
-// Handle streaming response - sends chunks as they're generated
+// Handle streaming response
 async function handleStreamingTTS(
   text: string,
   voiceId: string,
@@ -219,7 +300,6 @@ async function handleStreamingTTS(
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Send initial metadata
         const metadata = {
           type: 'metadata',
           totalChunks: chunks.length,
@@ -227,12 +307,10 @@ async function handleStreamingTTS(
         };
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(metadata)}\n\n`));
         
-        // Process and send each chunk as it's ready
         for (let i = 0; i < chunks.length; i++) {
           console.log(`[Streaming TTS] Processing chunk ${i + 1}/${chunks.length}`);
           
           const audioContent = await synthesizeChunk(chunks[i], voiceId, speakingRate, apiKey);
-          // Small delay to reduce burstiness
           await sleep(150);
           
           const chunkData = {
@@ -246,7 +324,6 @@ async function handleStreamingTTS(
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunkData)}\n\n`));
         }
         
-        // Send completion signal
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
         controller.close();
       } catch (error) {
@@ -272,7 +349,6 @@ async function handleStreamingTTS(
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -296,17 +372,14 @@ serve(async (req) => {
       );
     }
 
-    // Validate speaking rate
     const rate = Math.max(0.5, Math.min(2.0, speakingRate));
 
     console.log(`Processing TTS request: voiceId=${voiceId}, rate=${rate}, textLength=${text.length}, streaming=${streaming}`);
 
-    // Use streaming mode for faster initial playback
     if (streaming) {
       return handleStreamingTTS(text, voiceId, rate, apiKey);
     }
 
-    // Non-streaming mode - return complete audio
     const encoder = new TextEncoder();
     const textBytes = encoder.encode(text).length;
 
@@ -324,7 +397,6 @@ serve(async (req) => {
         console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         const chunkAudio = await synthesizeChunk(chunks[i], voiceId, rate, apiKey);
         audioChunks.push(chunkAudio);
-        // Small delay to reduce burstiness
         await sleep(150);
       }
 
@@ -346,7 +418,6 @@ serve(async (req) => {
   } catch (error) {
     console.error('TTS error:', error);
 
-    // If we got rate-limited, propagate a 429 to clients (more accurate than 500)
     const msg = error instanceof Error ? error.message : '';
     const isRateLimit = typeof msg === 'string' && msg.startsWith('Google TTS API error: 429');
     const status = isRateLimit ? 429 : 500;
