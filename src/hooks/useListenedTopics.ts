@@ -84,6 +84,16 @@ export const useListenedTopics = () => {
       }
     }
     // localStorage is synced in the useEffect above
+
+    // Record individual listen event for trending
+    try {
+      await supabase.from('topic_listens').insert({
+        topic_id: topicId,
+        user_id: isAuthenticated && user ? user.id : null,
+      });
+    } catch (err) {
+      console.error('Error recording listen event:', err);
+    }
   }, [isAuthenticated, user, listenedTopicIds]);
 
   const isListened = useCallback((topicId: string) => {
