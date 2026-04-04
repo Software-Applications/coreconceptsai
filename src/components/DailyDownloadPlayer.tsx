@@ -391,7 +391,6 @@ export const DailyDownloadPlayer = ({
       console.log('[Player] Topic changed, resetting');
       cancelGeneration();
       generatingForTopicId.current = null;
-      setShowFlashCard(false);
       setHasStarted(false);
       setShowResumePrompt(false);
       setIsPlaying(false);
