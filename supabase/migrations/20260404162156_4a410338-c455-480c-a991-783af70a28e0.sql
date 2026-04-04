@@ -1,0 +1,1 @@
+UPDATE topics SET transcript = NULL, generated_audio_url = NULL WHERE transcript IS NOT NULL;
