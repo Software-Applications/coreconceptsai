@@ -51,7 +51,7 @@ export const DailyDownloadPlayer = ({
   onTopicListened
 }: DailyDownloadPlayerProps) => {
   const { lightTap, mediumTap, successNotification } = useHaptics();
-  const [showFlashCard, setShowFlashCard] = useState(false);
+  
   const [hasStarted, setHasStarted] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
