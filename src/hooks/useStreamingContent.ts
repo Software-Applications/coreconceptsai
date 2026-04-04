@@ -326,7 +326,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
       return null;
     }
-  }, [fullTranscript, audioBlobUrl, generateAudio]);
+  }, [fullTranscript, ssmlTranscript, audioBlobUrl, generateAudio]);
 
   useEffect(() => {
     return () => {
