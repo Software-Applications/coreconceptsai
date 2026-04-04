@@ -258,6 +258,35 @@ export type Database = {
         }
         Relationships: []
       }
+      topic_listens: {
+        Row: {
+          id: string
+          listened_at: string | null
+          topic_id: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          listened_at?: string | null
+          topic_id: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          listened_at?: string | null
+          topic_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_listens_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_requests: {
         Row: {
           created_at: string

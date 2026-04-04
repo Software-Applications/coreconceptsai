@@ -43,25 +43,21 @@ export const useTrendingTopics = (limit: number = 10) => {
         return [];
       }
 
-      // Fetch listen counts from user_progress (aggregate across all users)
-      const topicIds = topics.map(t => t.id);
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_progress')
-        .select('topic_id')
-        .in('topic_id', topicIds)
-        .eq('completed', true);
+      // Fetch listen counts from topic_listens (public, all users)
+      const { data: listenData, error: listenError } = await supabase
+        .from('topic_listens')
+        .select('topic_id');
 
-      if (progressError) {
-        console.error('Error fetching progress:', progressError);
-        // Continue without listen counts
+      if (listenError) {
+        console.error('Error fetching listens:', listenError);
       }
 
       // Count listens per topic
       const listenCounts = new Map<string, number>();
-      if (progressData) {
-        progressData.forEach(p => {
-          const count = listenCounts.get(p.topic_id) || 0;
-          listenCounts.set(p.topic_id, count + 1);
+      if (listenData) {
+        listenData.forEach(row => {
+          const count = listenCounts.get(row.topic_id) || 0;
+          listenCounts.set(row.topic_id, count + 1);
         });
       }
 
