@@ -7,7 +7,7 @@ import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useStreamingContent } from '@/hooks/useStreamingContent';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { useWordTimings } from '@/hooks/useWordTimings';
-import { FlashSummaryCard } from './FlashSummaryCard';
+
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
@@ -40,7 +40,6 @@ interface DailyDownloadPlayerProps {
   subjectName: string;
   isOpen: boolean;
   onClose: () => void;
-  onPinCard: (topic: DailyDownloadTopic) => void;
   onTopicListened?: (topicId: string) => void;
 }
 
@@ -49,11 +48,10 @@ export const DailyDownloadPlayer = ({
   subjectName,
   isOpen,
   onClose,
-  onPinCard,
   onTopicListened
 }: DailyDownloadPlayerProps) => {
   const { lightTap, mediumTap, successNotification } = useHaptics();
-  const [showFlashCard, setShowFlashCard] = useState(false);
+  
   const [hasStarted, setHasStarted] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -207,12 +205,12 @@ export const DailyDownloadPlayer = ({
       setShowCelebration(true);
       setTimeout(() => {
         setShowCelebration(false);
-        setShowFlashCard(true);
+        onClose();
       }, 1500);
       onTopicListened?.(topic.id);
       clearProgress(topic.id);
     }
-  }, [topic, onTopicListened, clearProgress]);
+  }, [topic, onTopicListened, clearProgress, onClose]);
 
   // Setup audio element when blob URL is available
   useEffect(() => {
@@ -393,7 +391,6 @@ export const DailyDownloadPlayer = ({
       console.log('[Player] Topic changed, resetting');
       cancelGeneration();
       generatingForTopicId.current = null;
-      setShowFlashCard(false);
       setHasStarted(false);
       setShowResumePrompt(false);
       setIsPlaying(false);
@@ -488,24 +485,13 @@ export const DailyDownloadPlayer = ({
     }
   }, [topic, clearProgress, mediumTap]);
 
-  const handleDismissFlashCard = useCallback(() => {
+  const handleDismissAfterComplete = useCallback(() => {
     successNotification();
-    setShowFlashCard(false);
     if (topic) {
       clearProgress(topic.id);
     }
     onClose();
   }, [topic, clearProgress, onClose, successNotification]);
-
-  const handlePinFlashCard = useCallback(() => {
-    if (topic) {
-      successNotification();
-      onPinCard(topic);
-      setShowFlashCard(false);
-      clearProgress(topic.id);
-      onClose();
-    }
-  }, [topic, onPinCard, clearProgress, onClose, successNotification]);
 
   const { dragProps: swipeDragProps, backdropOpacity } = useSwipeToDismiss({
     onDismiss: onClose,
@@ -839,36 +825,6 @@ export const DailyDownloadPlayer = ({
         )}
       </AnimatePresence>
 
-      {/* Flash card modal */}
-      <AnimatePresence>
-        {showFlashCard && streamingContent.flashSummary && (
-          <motion.div
-            className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col z-50"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-          >
-            <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-full max-w-sm">
-                <FlashSummaryCard
-                  flashSummary={{
-                    id: streamingContent.flashSummary.id,
-                    topicId: topic.id,
-                    visualType: streamingContent.flashSummary.visual_type as 'diagram' | 'formula' | 'analogy',
-                    visualContent: streamingContent.flashSummary.visual_content,
-                    bulletPoints: streamingContent.flashSummary.bullet_points as [string, string, string],
-                    difficulty: streamingContent.flashSummary.difficulty as 'easy' | 'medium' | 'hard',
-                  }}
-                  topicTitle={topic.title}
-                  onDismiss={handleDismissFlashCard}
-                  onPin={handlePinFlashCard}
-                />
-              </div>
-              
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };

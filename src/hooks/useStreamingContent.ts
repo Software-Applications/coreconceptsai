@@ -1,20 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-interface FlashSummary {
-  id: string;
-  topic_id: string;
-  visual_type: string;
-  visual_content: string;
-  bullet_points: string[];
-  difficulty: string;
-  ai_generated: boolean;
-}
-
 interface UseStreamingContentOptions {
   onTranscriptReady?: (transcript: string) => void;
   onAudioReady?: (blobUrl: string, durationMs: number) => void;
-  onComplete?: (fullTranscript: string, flashSummary: FlashSummary | null) => void;
+  onComplete?: (fullTranscript: string) => void;
   onError?: (error: string) => void;
 }
 
@@ -34,20 +24,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const useStreamingContent = (options: UseStreamingContentOptions = {}) => {
   const queryClient = useQueryClient();
   
-  // Generation states
-  const [isGenerating, setIsGenerating] = useState(false);      // True while transcript is being generated
-  const [isAudioGenerating, setIsAudioGenerating] = useState(false); // True while TTS is running
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isAudioGenerating, setIsAudioGenerating] = useState(false);
   const [transcriptReady, setTranscriptReady] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   
-  // Content
   const [fullTranscript, setFullTranscript] = useState<string>('');
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [audioDurationMs, setAudioDurationMs] = useState<number>(0);
-  const [flashSummary, setFlashSummary] = useState<FlashSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
@@ -55,7 +41,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   const audioBlobUrlRef = useRef<string | null>(null);
   const currentParamsRef = useRef<StreamingContentParams | null>(null);
   
-  // Track saved position for voice change resume
   const savedPositionMsRef = useRef<number>(0);
   
   useEffect(() => {
@@ -69,12 +54,10 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     optionsRef.current = options;
   }, [options]);
 
-  // Keep ref in sync with state for stable cleanup
   useEffect(() => {
     audioBlobUrlRef.current = audioBlobUrl;
   }, [audioBlobUrl]);
 
-  // Convert base64 to blob URL
   const base64ToBlobUrl = useCallback((base64: string): string => {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -85,7 +68,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     return URL.createObjectURL(blob);
   }, []);
 
-  // Generate audio via TTS
   const generateAudio = useCallback(async (
     text: string,
     voiceId: string,
@@ -134,50 +116,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     }
   }, [base64ToBlobUrl]);
 
-  // Generate flashcard
-  const generateFlashcard = useCallback(async (
-    topicId: string,
-    topicTitle: string,
-    transcript: string,
-    signal: AbortSignal
-  ): Promise<FlashSummary | null> => {
-    try {
-      console.log('[StreamContent] Generating flashcard...');
-      
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/generate-flashcard`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ topicId, topicTitle, transcript }),
-          signal,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Flashcard request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success && data.flashSummary) {
-        console.log(`[StreamContent] Flashcard ready (status: ${data.status})`);
-        return data.flashSummary;
-      }
-      return null;
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        return null;
-      }
-      console.error('[StreamContent] Flashcard error:', err);
-      return null; // Don't throw - flashcard failure shouldn't break the flow
-    }
-  }, []);
-
   const startGeneration = useCallback(async (params: StreamingContentParams) => {
-    // Cancel any existing generation
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -185,7 +124,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       ttsAbortControllerRef.current.abort();
     }
     
-    // Revoke old blob URL
     if (audioBlobUrl) {
       URL.revokeObjectURL(audioBlobUrl);
     }
@@ -193,16 +131,13 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     abortControllerRef.current = new AbortController();
     const mainSignal = abortControllerRef.current.signal;
 
-    // Store params for retry
     currentParamsRef.current = params;
 
-    // Reset state
     setIsGenerating(true);
     setIsAudioGenerating(false);
     setTranscriptReady(false);
     setAudioReady(false);
     setError(null);
-    setFlashSummary(null);
     setFullTranscript('');
     setAudioBlobUrl(null);
     setAudioDurationMs(0);
@@ -211,7 +146,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     const { voiceId = 'en-US-Neural2-D', speakingRate = 1.0 } = params;
 
     try {
-      // Step 1: Generate transcript
       console.log('[StreamContent] Step 1: Calling generate-transcript...');
       
       const transcriptResponse = await fetch(
@@ -253,36 +187,21 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
         optionsRef.current.onTranscriptReady?.(transcript);
       }
 
-      // Step 2: On transcript success, call flashcard AND TTS in parallel
-      console.log('[StreamContent] Step 2: Calling flashcard and TTS in parallel...');
+      // Step 2: Generate TTS audio
+      console.log('[StreamContent] Step 2: Generating TTS audio...');
       
       if (isMountedRef.current && !mainSignal.aborted) {
         setIsAudioGenerating(true);
         
         ttsAbortControllerRef.current = new AbortController();
         
-        // Run flashcard and TTS in parallel
-        const [flashResult, audioResult] = await Promise.all([
-          generateFlashcard(
-            params.topicId,
-            params.topicTitle,
-            transcript,
-            ttsAbortControllerRef.current.signal
-          ),
-          generateAudio(
-            transcript,
-            voiceId,
-            speakingRate,
-            ttsAbortControllerRef.current.signal
-          )
-        ]);
+        const audioResult = await generateAudio(
+          transcript,
+          voiceId,
+          speakingRate,
+          ttsAbortControllerRef.current.signal
+        );
 
-        // Handle flashcard result
-        if (flashResult && isMountedRef.current) {
-          setFlashSummary(flashResult);
-        }
-
-        // Handle audio result
         if (audioResult && isMountedRef.current) {
           setAudioBlobUrl(audioResult.blobUrl);
           setAudioDurationMs(audioResult.durationMs);
@@ -295,12 +214,10 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
         }
       }
 
-      // Invalidate queries to refresh with new content
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       queryClient.invalidateQueries({ queryKey: ['topic'] });
 
-      // Call completion callback
-      optionsRef.current.onComplete?.(transcript, flashSummary);
+      optionsRef.current.onComplete?.(transcript);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -317,9 +234,8 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
       optionsRef.current.onError?.(errorMessage);
     }
-  }, [generateAudio, generateFlashcard, queryClient, audioBlobUrl, flashSummary]);
+  }, [generateAudio, queryClient, audioBlobUrl]);
 
-  // Retry generation with previously used params
   const retryGeneration = useCallback(() => {
     if (currentParamsRef.current) {
       console.log('[StreamContent] Retrying generation...');
@@ -333,7 +249,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     abortControllerRef.current?.abort();
     ttsAbortControllerRef.current?.abort();
     
-    // Revoke blob URL using ref for stable function
     if (audioBlobUrlRef.current) {
       URL.revokeObjectURL(audioBlobUrlRef.current);
       audioBlobUrlRef.current = null;
@@ -350,7 +265,6 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     }
   }, []);
 
-  // Regenerate audio with a new voice, optionally resuming from a position
   const regenerateAudioWithVoice = useCallback(async (
     newVoiceId: string,
     speakingRate: number = 1.0,
@@ -361,15 +275,12 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       return null;
     }
     
-    // Save resume position
     savedPositionMsRef.current = resumeFromMs;
     
-    // Cancel any pending TTS
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
     }
     
-    // Revoke old blob URL
     if (audioBlobUrl) {
       URL.revokeObjectURL(audioBlobUrl);
     }
@@ -413,10 +324,8 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     }
   }, [fullTranscript, audioBlobUrl, generateAudio]);
 
-  // Cleanup on unmount only (stable effect)
   useEffect(() => {
     return () => {
-      // Direct cleanup without calling cancel to avoid dependency issues
       abortControllerRef.current?.abort();
       ttsAbortControllerRef.current?.abort();
       if (audioBlobUrlRef.current) {
@@ -426,23 +335,18 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
   }, []);
 
   return {
-    // States
     isGenerating,
     isAudioGenerating,
     transcriptReady,
     audioReady,
     
-    // Content
     fullTranscript,
     audioBlobUrl,
     audioDurationMs,
-    flashSummary,
     error,
     
-    // Saved position for voice change resume
     savedPositionMs: savedPositionMsRef.current,
     
-    // Actions
     startGeneration,
     retryGeneration,
     cancel,

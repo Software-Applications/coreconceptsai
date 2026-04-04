@@ -13,11 +13,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { CoreConceptsHub } from "@/components/CoreConceptsHub";
 import { TopicSelectionSheet } from "@/components/TopicSelectionSheet";
 import { DailyDownloadPlayer } from "@/components/DailyDownloadPlayer";
-import { ReviewBoard } from "@/components/ReviewBoard";
-import { ExpandedCardModal } from "@/components/ExpandedCardModal";
 import { SubjectChips } from "@/components/SubjectChips";
 import { useTrendingTopics } from "@/hooks/useTrendingTopics";
-import { usePinnedCards } from "@/hooks/usePinnedCards";
 import { useListenedTopics } from "@/hooks/useListenedTopics";
 import { useWatchedVideos } from "@/hooks/useWatchedVideos";
 import { useCompletedPractice } from "@/hooks/useCompletedPractice";
@@ -30,10 +27,8 @@ import { useTopics, type DailyDownloadTopic } from "@/hooks/useTopics";
 import { useExamTopicIds } from "@/hooks/useExams";
 import { subjectCrossFade } from "@/lib/motionVariants";
 import { videoTiles, practiceTiles, type VideoTile, type PracticeTile } from "@/data/courseData";
-import { type PinnedCard } from "@/data/dailyDownloadData";
 
 // Map subject names to hardcoded IDs in courseData.ts
-// This bridges the gap between Supabase UUIDs and static video/practice data
 const SUBJECT_NAME_TO_ID: Record<string, number> = {
   'Microbiology': 1,
   'Chemistry': 2,
@@ -41,7 +36,6 @@ const SUBJECT_NAME_TO_ID: Record<string, number> = {
 };
 
 const Index = () => {
-  // ALL HOOKS MUST BE CALLED FIRST - before any conditional returns
   const [activeTab, setActiveTab] = useState("home");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoTile | null>(null);
@@ -49,10 +43,7 @@ const Index = () => {
   const [showTopicSelection, setShowTopicSelection] = useState(false);
   const [topicSelectionFilter, setTopicSelectionFilter] = useState<'trending' | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
-  const [showReviewBoard, setShowReviewBoard] = useState(false);
-  const [expandedPinnedCard, setExpandedPinnedCard] = useState<PinnedCard | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<{ id: string; subject_id: string; chapter_number: number; title: string; created_at: string | null } | null>(null);
-  
   
   // Fetch data from Supabase
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects();
@@ -61,7 +52,6 @@ const Index = () => {
   const { data: trendingTopics = [], isLoading: trendingLoading } = useTrendingTopics(30);
   
   // Custom hooks
-  const { pinnedCards, pinCard, unpinCard, clearAllPinned } = usePinnedCards();
   const { markAsListened, isListened, getUnlistenedCount } = useListenedTopics();
   const { markAsWatched, isWatched, getWatchedCount } = useWatchedVideos();
   const { isCompleted: isPracticeCompleted, getBestScore, getCompletedCount } = useCompletedPractice();
@@ -90,7 +80,6 @@ const Index = () => {
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId) ?? subjects[0];
   const isLoading = subjectsLoading || chaptersLoading || topicsLoading;
   
-  // Memoize filtered content to prevent recalculation on every render
   const subjectChapters = useMemo(() => 
     selectedSubject ? allChapters.filter(ch => ch.subject_id === selectedSubject.id) : [],
     [selectedSubject?.id, allChapters]
@@ -113,33 +102,23 @@ const Index = () => {
     [selectedSubject?.id, allTopics]
   );
   
-  const subjectPinnedCards = useMemo(() => 
-    selectedSubject ? pinnedCards.filter(c => c.subjectName === selectedSubject.name) : [],
-    [selectedSubject?.name, pinnedCards]
-  );
-  
-  // Derive selectedTopic from query data so it updates when AI content is generated
   const selectedTopic = useMemo(() => {
     if (!selectedTopicId) return null;
     return allTopics.find(t => t.id === selectedTopicId) ?? null;
   }, [allTopics, selectedTopicId]);
   
-  // Get exam-related topics with fallback for demo
   const { examTopicIds: realExamTopicIds, hasExam } = useExamTopicIds(selectedSubject?.id, subjectTopics);
   
-  // Fallback: if no exam data, use first 3 topics as mock exam topics for demo
   const examTopicIds = hasExam 
     ? realExamTopicIds 
     : new Set(subjectTopics.slice(0, 3).map(t => t.id));
   const examTopicsCount = examTopicIds.size;
   
-  // Memoize trending topic IDs Set
   const trendingTopicIds = useMemo(() => 
     new Set(trendingTopics.map(t => t.id)),
     [trendingTopics]
   );
   
-  // Filter trending topics by selected subject for the home carousel
   const subjectTrendingTopics = useMemo(() => 
     selectedSubject 
       ? trendingTopics.filter(t => t.subject_name === selectedSubject.name)
@@ -151,7 +130,6 @@ const Index = () => {
   const watchedCount = getWatchedCount(subjectVideos.map(v => v.id));
   const completedPracticeCount = getCompletedCount(subjectPractice.map(p => p.id));
   
-  // Set default chapter when subject changes
   useEffect(() => {
     if (subjectChapters.length > 0) {
       setSelectedChapter(subjectChapters[0]);
@@ -159,7 +137,6 @@ const Index = () => {
   }, [selectedSubject?.id, subjectChapters]);
   
   useEffect(() => {
-    // Videos completion check
     if (!selectedSubject) return;
     if (watchedCount === subjectVideos.length && 
         watchedCount > 0 && 
@@ -173,7 +150,6 @@ const Index = () => {
   }, [watchedCount, subjectVideos.length, celebrate, selectedSubject]);
 
   useEffect(() => {
-    // Practice sets completion check
     if (!selectedSubject) return;
     if (completedPracticeCount === subjectPractice.length && 
         completedPracticeCount > 0 && 
@@ -187,7 +163,6 @@ const Index = () => {
   }, [completedPracticeCount, subjectPractice.length, celebrate, selectedSubject]);
 
   useEffect(() => {
-    // Daily Download completion check
     if (!selectedSubject) return;
     if (listenedCount === subjectTopics.length && 
         listenedCount > 0 && 
@@ -200,20 +175,13 @@ const Index = () => {
     prevListenedCount.current = listenedCount;
   }, [listenedCount, subjectTopics.length, celebrate, selectedSubject]);
   
-  // Reset chapter when subject changes
   const handleSubjectChange = (subject: typeof subjects[0]) => {
     setSelectedSubjectId(subject.id);
   };
 
-  // Daily Download handlers
   const handleSelectTopic = (topic: DailyDownloadTopic) => {
     setSelectedTopicId(topic.id);
     setShowTopicSelection(false);
-  };
-
-  const handlePinCard = (topic: DailyDownloadTopic) => {
-    const subjectName = subjects.find(s => s.id === topic.subjectId)?.name || 'Unknown';
-    pinCard(topic.flashSummary, topic.title, subjectName);
   };
 
   const getTopicSubjectName = () => {
@@ -221,7 +189,6 @@ const Index = () => {
     return subjects.find(s => s.id === selectedTopic.subjectId)?.name || '';
   };
   
-  // Show loading state while data is being fetched
   if (isLoading || !selectedSubject) {
     return (
       <div className="h-full bg-background flex flex-col items-center justify-center">
@@ -290,15 +257,12 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Core Concepts AI Hub (with integrated pinned cards and trending topics) */}
+        {/* Core Concepts AI Hub */}
         <CoreConceptsHub
           onOpenTopics={() => {
             setTopicSelectionFilter(null);
             setShowTopicSelection(true);
           }}
-          onOpenReviewBoard={() => setShowReviewBoard(true)}
-          onCardClick={setExpandedPinnedCard}
-          pinnedCards={subjectPinnedCards}
           unlistenedCount={unlistenedCount}
           examTopicsCount={examTopicsCount}
           trendingTopics={subjectTrendingTopics}
@@ -431,33 +395,7 @@ const Index = () => {
             subjectName={getTopicSubjectName()}
             isOpen={!!selectedTopic}
             onClose={() => setSelectedTopicId(null)}
-            onPinCard={handlePinCard}
             onTopicListened={markAsListened}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        {showReviewBoard && (
-          <ReviewBoard
-            isOpen={showReviewBoard}
-            onClose={() => setShowReviewBoard(false)}
-            pinnedCards={pinnedCards}
-            onUnpinCard={unpinCard}
-            onClearAll={clearAllPinned}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Expanded Pinned Card Modal */}
-      <AnimatePresence mode="wait">
-        {expandedPinnedCard && (
-          <ExpandedCardModal
-            card={expandedPinnedCard}
-            cards={pinnedCards}
-            onClose={() => setExpandedPinnedCard(null)}
-            onNavigate={setExpandedPinnedCard}
-            onRemove={unpinCard}
           />
         )}
       </AnimatePresence>

@@ -3,9 +3,6 @@ project_id = "uzlkbqfxlamwetmvpqsi"
 [functions.generate-transcript]
 verify_jwt = false
 
-[functions.generate-flashcard]
-verify_jwt = false
-
 [functions.google-tts]
 verify_jwt = false
 
