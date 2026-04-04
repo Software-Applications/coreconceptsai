@@ -40,7 +40,6 @@ interface DailyDownloadPlayerProps {
   subjectName: string;
   isOpen: boolean;
   onClose: () => void;
-  onPinCard: (topic: DailyDownloadTopic) => void;
   onTopicListened?: (topicId: string) => void;
 }
 
@@ -49,7 +48,6 @@ export const DailyDownloadPlayer = ({
   subjectName,
   isOpen,
   onClose,
-  onPinCard,
   onTopicListened
 }: DailyDownloadPlayerProps) => {
   const { lightTap, mediumTap, successNotification } = useHaptics();
