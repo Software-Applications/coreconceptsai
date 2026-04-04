@@ -1,7 +1,7 @@
 import * as React from "react";
 import { type DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
-import { Search } from "lucide-react";
+import { Search, XCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -37,8 +37,8 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & { onClear?: () => void }
+>(({ className, onClear, ...props }, ref) => (
   <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
@@ -49,6 +49,11 @@ const CommandInput = React.forwardRef<
       )}
       {...props}
     />
+    {props.value && String(props.value).length > 0 && onClear && (
+      <button type="button" onClick={onClear} className="ml-1 p-1 shrink-0">
+        <XCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+      </button>
+    )}
   </div>
 ));
 
