@@ -180,10 +180,12 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
       }
 
       const transcript = transcriptData.transcript;
-      console.log(`[StreamContent] Transcript ready (status: ${transcriptData.status})`);
+      const ssmlText = transcriptData.ssmlTranscript || null;
+      console.log(`[StreamContent] Transcript ready (status: ${transcriptData.status}), has SSML: ${!!ssmlText}`);
 
       if (isMountedRef.current) {
         setFullTranscript(transcript);
+        setSsmlTranscript(ssmlText);
         setTranscriptReady(true);
         setIsGenerating(false);
         optionsRef.current.onTranscriptReady?.(transcript);
