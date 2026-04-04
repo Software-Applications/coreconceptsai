@@ -96,7 +96,10 @@ export const useTrendingTopics = (limit: number = 10) => {
         return dateB - dateA;
       });
 
-      return trendingTopics.slice(0, limit);
+      // Filter to only topics with 2+ listens
+      const filtered = trendingTopics.filter(t => t.listen_count >= 2);
+
+      return filtered.slice(0, limit);
     },
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true,
