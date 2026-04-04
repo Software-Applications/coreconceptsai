@@ -825,36 +825,6 @@ export const DailyDownloadPlayer = ({
         )}
       </AnimatePresence>
 
-      {/* Flash card modal */}
-      <AnimatePresence>
-        {showFlashCard && streamingContent.flashSummary && (
-          <motion.div
-            className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col z-50"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-          >
-            <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-full max-w-sm">
-                <FlashSummaryCard
-                  flashSummary={{
-                    id: streamingContent.flashSummary.id,
-                    topicId: topic.id,
-                    visualType: streamingContent.flashSummary.visual_type as 'diagram' | 'formula' | 'analogy',
-                    visualContent: streamingContent.flashSummary.visual_content,
-                    bulletPoints: streamingContent.flashSummary.bullet_points as [string, string, string],
-                    difficulty: streamingContent.flashSummary.difficulty as 'easy' | 'medium' | 'hard',
-                  }}
-                  topicTitle={topic.title}
-                  onDismiss={handleDismissFlashCard}
-                  onPin={handlePinFlashCard}
-                />
-              </div>
-              
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
