@@ -234,16 +234,15 @@ function preprocessTextForSSML(text: string): string {
   return preprocessTextForSSMLLegacy(text);
 }
 
-// Call Google Cloud TTS API for a single chunk using SSML
-async function synthesizeChunk(
-  text: string,
+// Call Google Cloud TTS API for a single SSML chunk (already wrapped in <speak>)
+async function synthesizeSSMLChunk(
+  ssml: string,
   voiceId: string,
   speakingRate: number,
   apiKey: string
 ): Promise<string> {
-  const ssmlText = preprocessTextForSSML(text);
-  
-  console.log(`[TTS] Processing chunk with SSML, length: ${ssmlText.length}`);
+  const encoder = new TextEncoder();
+  console.log(`[TTS] Sending SSML chunk, byte length: ${encoder.encode(ssml).length}`);
 
   const maxAttempts = 5;
   const baseDelayMs = 250;
@@ -257,7 +256,7 @@ async function synthesizeChunk(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input: { ssml: ssmlText },
+          input: { ssml },
           voice: {
             languageCode: 'en-US',
             name: voiceId,
