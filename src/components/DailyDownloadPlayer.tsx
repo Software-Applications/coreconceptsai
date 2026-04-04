@@ -122,7 +122,7 @@ export const DailyDownloadPlayer = ({
   const stripTags = useCallback((text: string): string => {
     return text
       .replace(/<\/?transcript>/gi, '')
-      .replace(/\[(?:PAUSE|PROMPT|NOTE|DIRECTION)[^\]]*\]/gi, '')
+      .replace(/\[(?:PAUSE|PROMPT|NOTE|DIRECTION|SIGNPOST|RETRIEVAL|PREDICT|TEACH)[^\]]*\]/gi, '')
       .replace(/\n\n+/g, '\u0000')
       .replace(/\n/g, ' ')
       .replace(/\u0000/g, '\n\n')
