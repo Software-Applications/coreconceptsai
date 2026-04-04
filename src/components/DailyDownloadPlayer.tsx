@@ -7,7 +7,7 @@ import { useAudioProgress } from '@/hooks/useAudioProgress';
 import { useStreamingContent } from '@/hooks/useStreamingContent';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { useWordTimings } from '@/hooks/useWordTimings';
-import { FlashSummaryCard } from './FlashSummaryCard';
+
 import { VoiceSelector } from './VoiceSelector';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
