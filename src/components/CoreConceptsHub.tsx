@@ -1,21 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Headphones, ChevronDown, Bookmark, ChevronRight, TrendingUp } from 'lucide-react';
+import { Headphones, ChevronDown, ChevronRight, TrendingUp } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { springTransition } from '@/lib/motionVariants';
 import { AIBadge } from './AIBadge';
-import { PinnedCardPreview } from './PinnedCardPreview';
 import { TrendingTopicCard } from './TrendingTopicCard';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PinnedCard } from '@/data/dailyDownloadData';
 import type { TrendingTopic } from '@/hooks/useTrendingTopics';
 
 interface CoreConceptsHubProps {
   onOpenTopics: () => void;
-  onOpenReviewBoard: () => void;
-  onCardClick: (card: PinnedCard) => void;
-  pinnedCards: PinnedCard[];
   unlistenedCount: number;
   examTopicsCount?: number;
   trendingTopics?: TrendingTopic[];
@@ -27,9 +22,6 @@ interface CoreConceptsHubProps {
 
 export const CoreConceptsHub = ({
   onOpenTopics,
-  onOpenReviewBoard,
-  onCardClick,
-  pinnedCards,
   unlistenedCount,
   examTopicsCount = 0,
   trendingTopics = [],
@@ -39,30 +31,14 @@ export const CoreConceptsHub = ({
   onOpenTrendingTopics
 }: CoreConceptsHubProps) => {
   const { mediumTap, lightTap } = useHaptics();
-  const { scrollRef, handleClick } = useTapVsDrag<HTMLDivElement>();
   const { scrollRef: trendingScrollRef, handleClick: handleTrendingClick } = useTapVsDrag<HTMLDivElement>();
-  
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const stored = localStorage.getItem('saved-cards-expanded');
-    return stored !== null ? stored === 'true' : false;
-  });
   
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(() => {
     const stored = localStorage.getItem('trending-topics-expanded');
     return stored !== null ? stored === 'true' : false;
   });
   
-  const hasPinnedCards = pinnedCards.length > 0;
   const hasTrendingTopics = trendingTopics.length > 0 || trendingLoading;
-
-  const handleToggleSavedCards = () => {
-    lightTap();
-    setIsExpanded(prev => {
-      const newState = !prev;
-      localStorage.setItem('saved-cards-expanded', String(newState));
-      return newState;
-    });
-  };
 
   const handleToggleTrending = () => {
     lightTap();
@@ -137,83 +113,6 @@ export const CoreConceptsHub = ({
               </div>
             </div>
           </motion.button>
-        </div>
-
-        {/* Saved Cards Section - Demoted, cleaner */}
-         <div className="px-3 pt-3 pb-1.5">
-          {/* Section Header - Clickable */}
-          <button
-            onClick={handleToggleSavedCards}
-            className="w-full flex items-center justify-between py-1.5 hover:bg-muted/30 rounded-lg transition-colors -mx-1 px-1"
-          >
-            <div className="flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-xs font-medium text-muted-foreground">My Saved Cards</h3>
-              <span className="text-xs text-muted-foreground/70">({pinnedCards.length})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {hasPinnedCards && isExpanded && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenReviewBoard();
-                  }} 
-                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                >
-                  See All <ChevronRight className="w-3 h-3" />
-                </button>
-              )}
-              <motion.div
-                animate={{ rotate: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </motion.div>
-            </div>
-          </button>
-
-          {/* Collapsible Content */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                {/* Cards or Empty State */}
-                {hasPinnedCards ? (
-                  <div className="pt-2">
-                    <div
-                      ref={scrollRef}
-                      data-drag-scroll="x"
-                      className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch snap-x snap-mandatory overscroll-x-contain select-none -mx-3 px-3"
-                      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-                    >
-                      {pinnedCards.slice(0, 5).map((card) => (
-                        <PinnedCardPreview
-                          key={card.id}
-                          card={card}
-                          onClick={handleClick(() => onCardClick(card))}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="pt-3">
-                    <div className="bg-muted/30 rounded-lg p-4 text-center">
-                      <Bookmark className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No saved cards yet</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        Pin flashcards from Core Concepts to review later
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* Trending Topics Section */}
