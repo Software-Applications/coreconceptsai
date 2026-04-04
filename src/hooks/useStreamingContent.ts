@@ -200,7 +200,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
         ttsAbortControllerRef.current = new AbortController();
         
         const audioResult = await generateAudio(
-          transcript,
+          ssmlText || transcript,
           voiceId,
           speakingRate,
           ttsAbortControllerRef.current.signal
