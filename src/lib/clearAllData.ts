@@ -6,9 +6,7 @@ const LOCALSTORAGE_KEYS = [
   'daily-download-voice',
   'user-subjects',
   'quiz-progress',
-  'pinned-cards',
   'watched-videos',
-  'saved-cards-expanded',
   'daily-download-fab-tooltip-seen',
   'topic-search-recent',
 ];
