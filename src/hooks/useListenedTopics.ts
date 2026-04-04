@@ -87,7 +87,7 @@ export const useListenedTopics = () => {
 
     // Record individual listen event for trending
     try {
-      await supabase.from('topic_listens').insert({
+      await (supabase as any).from('topic_listens').insert({
         topic_id: topicId,
         user_id: isAuthenticated && user ? user.id : null,
       });
