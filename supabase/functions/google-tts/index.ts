@@ -329,9 +329,12 @@ async function handleStreamingTTS(
   apiKey: string
 ): Promise<Response> {
   const encoder = new TextEncoder();
-  const chunks = splitTextIntoChunks(text);
   
-  console.log(`[Streaming TTS] Processing ${chunks.length} chunks`);
+  // Convert to SSML first, then split
+  const fullSsml = preprocessTextForSSML(text);
+  const chunks = splitSsmlIntoChunks(fullSsml);
+  
+  console.log(`[Streaming TTS] Processing ${chunks.length} SSML chunks`);
   
   const stream = new ReadableStream({
     async start(controller) {
@@ -346,7 +349,7 @@ async function handleStreamingTTS(
         for (let i = 0; i < chunks.length; i++) {
           console.log(`[Streaming TTS] Processing chunk ${i + 1}/${chunks.length}`);
           
-          const audioContent = await synthesizeChunk(chunks[i], voiceId, speakingRate, apiKey);
+          const audioContent = await synthesizeSSMLChunk(chunks[i], voiceId, speakingRate, apiKey);
           await sleep(150);
           
           const chunkData = {
@@ -354,7 +357,7 @@ async function handleStreamingTTS(
             chunkIndex: i,
             totalChunks: chunks.length,
             audioContent,
-            chunkDurationMs: estimateDuration(chunks[i], speakingRate)
+            chunkDurationMs: estimateDuration(text, speakingRate) / chunks.length
           };
           
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunkData)}\n\n`));
@@ -416,22 +419,22 @@ serve(async (req) => {
       return handleStreamingTTS(text, voiceId, rate, apiKey);
     }
 
-    const encoder = new TextEncoder();
-    const textBytes = encoder.encode(text).length;
-
+    // Convert to SSML first, then split into safe chunks
+    const fullSsml = preprocessTextForSSML(text);
+    const ssmlChunks = splitSsmlIntoChunks(fullSsml);
+    
     let audioContent: string;
 
-    if (textBytes <= 4500) {
-      console.log('Single chunk request');
-      audioContent = await synthesizeChunk(text, voiceId, rate, apiKey);
+    if (ssmlChunks.length === 1) {
+      console.log('Single SSML chunk request');
+      audioContent = await synthesizeSSMLChunk(ssmlChunks[0], voiceId, rate, apiKey);
     } else {
-      const chunks = splitTextIntoChunks(text);
-      console.log(`Split into ${chunks.length} chunks`);
+      console.log(`Split into ${ssmlChunks.length} SSML chunks`);
 
       const audioChunks: string[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-        const chunkAudio = await synthesizeChunk(chunks[i], voiceId, rate, apiKey);
+      for (let i = 0; i < ssmlChunks.length; i++) {
+        console.log(`Processing chunk ${i + 1}/${ssmlChunks.length}`);
+        const chunkAudio = await synthesizeSSMLChunk(ssmlChunks[i], voiceId, rate, apiKey);
         audioChunks.push(chunkAudio);
         await sleep(150);
       }
