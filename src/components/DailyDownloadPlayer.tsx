@@ -485,24 +485,13 @@ export const DailyDownloadPlayer = ({
     }
   }, [topic, clearProgress, mediumTap]);
 
-  const handleDismissFlashCard = useCallback(() => {
+  const handleDismissAfterComplete = useCallback(() => {
     successNotification();
-    setShowFlashCard(false);
     if (topic) {
       clearProgress(topic.id);
     }
     onClose();
   }, [topic, clearProgress, onClose, successNotification]);
-
-  const handlePinFlashCard = useCallback(() => {
-    if (topic) {
-      successNotification();
-      onPinCard(topic);
-      setShowFlashCard(false);
-      clearProgress(topic.id);
-      onClose();
-    }
-  }, [topic, onPinCard, clearProgress, onClose, successNotification]);
 
   const { dragProps: swipeDragProps, backdropOpacity } = useSwipeToDismiss({
     onDismiss: onClose,
