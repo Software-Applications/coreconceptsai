@@ -333,6 +333,7 @@ export const TopicSelectionSheet = ({
             placeholder="Search topics..."
             value={searchQuery}
             onValueChange={setSearchQuery}
+            onClear={() => setSearchQuery('')}
             className={!isSearching && (suggestionChips.length > 0 || recentSearches.length > 0) ? "border-0" : ""}
           />
           
