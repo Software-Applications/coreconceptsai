@@ -197,7 +197,7 @@ function scoreTopic(
   const titleLower = topic.title.toLowerCase();
   const descLower = topic.description.toLowerCase();
   const transcriptLower = topic.transcript?.toLowerCase() || '';
-  const bulletPoints = topic.flashSummary?.bulletPoints || [];
+  const bulletPoints: string[] = [];
   
   // Track matched keywords to avoid double-scoring
   const matchedInTitle = new Set<string>();
