@@ -16,31 +16,68 @@ interface TTSRequest {
   streaming?: boolean;
 }
 
-// Split text at sentence boundaries for chunking
-function splitTextIntoChunks(text: string, maxBytes: number = 4500): string[] {
+// Split SSML content into chunks that stay under the byte limit
+// Each chunk is wrapped in <speak> tags
+function splitSsmlIntoChunks(ssml: string, maxBytes: number = 4800): string[] {
   const encoder = new TextEncoder();
+  
+  // If already under limit, return as-is
+  if (encoder.encode(ssml).length <= maxBytes) {
+    return [ssml];
+  }
+  
+  // Strip outer <speak> tags to get inner content
+  const inner = ssml.replace(/^<speak>/, '').replace(/<\/speak>$/, '');
+  
+  // Split on break tags (natural pause points) while keeping the break with the preceding text
+  const segments = inner.split(/(?<=<break[^/]*\/>)/);
+  
   const chunks: string[] = [];
   let currentChunk = '';
-
-  const sentences = text.split(/(?<=[.!?])\s+/);
-
-  for (const sentence of sentences) {
-    const potentialChunk = currentChunk ? `${currentChunk} ${sentence}` : sentence;
-    const byteLength = encoder.encode(potentialChunk).length;
-
-    if (byteLength > maxBytes && currentChunk) {
-      chunks.push(currentChunk.trim());
-      currentChunk = sentence;
+  const wrapOverhead = encoder.encode('<speak></speak>').length;
+  
+  for (const segment of segments) {
+    const potentialChunk = currentChunk + segment;
+    const wrappedLength = encoder.encode(`<speak>${potentialChunk}</speak>`).length;
+    
+    if (wrappedLength > maxBytes && currentChunk) {
+      chunks.push(`<speak>${currentChunk}</speak>`);
+      currentChunk = segment;
     } else {
       currentChunk = potentialChunk;
     }
   }
-
+  
   if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
+    chunks.push(`<speak>${currentChunk}</speak>`);
   }
-
-  return chunks;
+  
+  // Safety: if any chunk is still too large, split further at sentence boundaries
+  const safeChunks: string[] = [];
+  for (const chunk of chunks) {
+    if (encoder.encode(chunk).length <= maxBytes) {
+      safeChunks.push(chunk);
+    } else {
+      // Split inner content by sentences
+      const innerContent = chunk.replace(/^<speak>/, '').replace(/<\/speak>$/, '');
+      const sentences = innerContent.split(/(?<=[.!?])\s+/);
+      let subChunk = '';
+      for (const sentence of sentences) {
+        const potential = subChunk + (subChunk ? ' ' : '') + sentence;
+        if (encoder.encode(`<speak>${potential}</speak>`).length > maxBytes && subChunk) {
+          safeChunks.push(`<speak>${subChunk}</speak>`);
+          subChunk = sentence;
+        } else {
+          subChunk = potential;
+        }
+      }
+      if (subChunk.trim()) {
+        safeChunks.push(`<speak>${subChunk}</speak>`);
+      }
+    }
+  }
+  
+  return safeChunks;
 }
 
 // Estimate duration in milliseconds based on text and speaking rate
@@ -197,16 +234,15 @@ function preprocessTextForSSML(text: string): string {
   return preprocessTextForSSMLLegacy(text);
 }
 
-// Call Google Cloud TTS API for a single chunk using SSML
-async function synthesizeChunk(
-  text: string,
+// Call Google Cloud TTS API for a single SSML chunk (already wrapped in <speak>)
+async function synthesizeSSMLChunk(
+  ssml: string,
   voiceId: string,
   speakingRate: number,
   apiKey: string
 ): Promise<string> {
-  const ssmlText = preprocessTextForSSML(text);
-  
-  console.log(`[TTS] Processing chunk with SSML, length: ${ssmlText.length}`);
+  const encoder = new TextEncoder();
+  console.log(`[TTS] Sending SSML chunk, byte length: ${encoder.encode(ssml).length}`);
 
   const maxAttempts = 5;
   const baseDelayMs = 250;
@@ -220,7 +256,7 @@ async function synthesizeChunk(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input: { ssml: ssmlText },
+          input: { ssml },
           voice: {
             languageCode: 'en-US',
             name: voiceId,
@@ -293,9 +329,12 @@ async function handleStreamingTTS(
   apiKey: string
 ): Promise<Response> {
   const encoder = new TextEncoder();
-  const chunks = splitTextIntoChunks(text);
   
-  console.log(`[Streaming TTS] Processing ${chunks.length} chunks`);
+  // Convert to SSML first, then split
+  const fullSsml = preprocessTextForSSML(text);
+  const chunks = splitSsmlIntoChunks(fullSsml);
+  
+  console.log(`[Streaming TTS] Processing ${chunks.length} SSML chunks`);
   
   const stream = new ReadableStream({
     async start(controller) {
@@ -310,7 +349,7 @@ async function handleStreamingTTS(
         for (let i = 0; i < chunks.length; i++) {
           console.log(`[Streaming TTS] Processing chunk ${i + 1}/${chunks.length}`);
           
-          const audioContent = await synthesizeChunk(chunks[i], voiceId, speakingRate, apiKey);
+          const audioContent = await synthesizeSSMLChunk(chunks[i], voiceId, speakingRate, apiKey);
           await sleep(150);
           
           const chunkData = {
@@ -318,7 +357,7 @@ async function handleStreamingTTS(
             chunkIndex: i,
             totalChunks: chunks.length,
             audioContent,
-            chunkDurationMs: estimateDuration(chunks[i], speakingRate)
+            chunkDurationMs: estimateDuration(text, speakingRate) / chunks.length
           };
           
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunkData)}\n\n`));
@@ -380,22 +419,22 @@ serve(async (req) => {
       return handleStreamingTTS(text, voiceId, rate, apiKey);
     }
 
-    const encoder = new TextEncoder();
-    const textBytes = encoder.encode(text).length;
-
+    // Convert to SSML first, then split into safe chunks
+    const fullSsml = preprocessTextForSSML(text);
+    const ssmlChunks = splitSsmlIntoChunks(fullSsml);
+    
     let audioContent: string;
 
-    if (textBytes <= 4500) {
-      console.log('Single chunk request');
-      audioContent = await synthesizeChunk(text, voiceId, rate, apiKey);
+    if (ssmlChunks.length === 1) {
+      console.log('Single SSML chunk request');
+      audioContent = await synthesizeSSMLChunk(ssmlChunks[0], voiceId, rate, apiKey);
     } else {
-      const chunks = splitTextIntoChunks(text);
-      console.log(`Split into ${chunks.length} chunks`);
+      console.log(`Split into ${ssmlChunks.length} SSML chunks`);
 
       const audioChunks: string[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-        const chunkAudio = await synthesizeChunk(chunks[i], voiceId, rate, apiKey);
+      for (let i = 0; i < ssmlChunks.length; i++) {
+        console.log(`Processing chunk ${i + 1}/${ssmlChunks.length}`);
+        const chunkAudio = await synthesizeSSMLChunk(ssmlChunks[i], voiceId, rate, apiKey);
         audioChunks.push(chunkAudio);
         await sleep(150);
       }
