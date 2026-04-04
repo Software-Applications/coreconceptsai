@@ -44,7 +44,7 @@ export const useTrendingTopics = (limit: number = 10) => {
       }
 
       // Fetch listen counts from topic_listens (public, all users)
-      const { data: listenData, error: listenError } = await supabase
+      const { data: listenData, error: listenError } = await (supabase as any)
         .from('topic_listens')
         .select('topic_id');
 
