@@ -140,6 +140,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     setAudioReady(false);
     setError(null);
     setFullTranscript('');
+    setSsmlTranscript(null);
     setAudioBlobUrl(null);
     setAudioDurationMs(0);
     savedPositionMsRef.current = 0;
