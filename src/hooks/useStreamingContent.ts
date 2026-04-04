@@ -301,7 +301,7 @@ export const useStreamingContent = (options: UseStreamingContentOptions = {}) =>
     
     try {
       const audioResult = await generateAudio(
-        fullTranscript,
+        ssmlTranscript || fullTranscript,
         newVoiceId,
         speakingRate,
         ttsAbortControllerRef.current.signal
