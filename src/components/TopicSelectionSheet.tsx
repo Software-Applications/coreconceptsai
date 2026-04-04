@@ -294,7 +294,7 @@ export const TopicSelectionSheet = ({
       />
 
       <motion.div
-        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl h-[85vh] overflow-hidden flex flex-col"
+        className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl h-[85%] overflow-hidden flex flex-col"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
