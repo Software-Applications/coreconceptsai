@@ -182,7 +182,9 @@ export const DailyDownloadPlayer = ({
   const currentCharIndex = useMemo(() => {
     if (!durationMs || !fullTranscriptText.length) return 0;
     const progress = currentTimeMs / durationMs;
-    return Math.floor(progress * fullTranscriptText.length);
+    const idx = Math.floor(progress * fullTranscriptText.length);
+    charIndexRef.current = idx;
+    return idx;
   }, [currentTimeMs, durationMs, fullTranscriptText.length]);
 
   // Progress percentage for progress bar
