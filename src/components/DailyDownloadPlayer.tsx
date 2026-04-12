@@ -390,15 +390,14 @@ export const DailyDownloadPlayer = ({
 
   // Save progress on topic change or unmount
   useEffect(() => {
-    const prevId = previousTopicId.current;
+    const topicId = topic?.id;
     return () => {
-      // Save progress for the topic we're leaving
-      if (prevId && currentCharIndex > 0) {
-        console.log('[AudioProgress] Saving on cleanup:', { topicId: prevId, currentCharIndex });
-        saveProgress(prevId, currentCharIndex);
+      if (topicId && charIndexRef.current > 0) {
+        console.log('[AudioProgress] Saving on cleanup:', { topicId, charIndex: charIndexRef.current });
+        saveProgress(topicId, charIndexRef.current);
       }
     };
-  }, [topic?.id]);
+  }, [topic?.id, saveProgress]);
 
   // Reset state when topic changes
   useEffect(() => {
