@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Headphones, CheckCircle, PlayCircle } from 'lucide-react';
+import { ChevronRight, Headphones, CheckCircle, PlayCircle, Clock } from 'lucide-react';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to highlight matching text
