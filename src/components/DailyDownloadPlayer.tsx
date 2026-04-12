@@ -63,6 +63,7 @@ export const DailyDownloadPlayer = ({
   // Audio state
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const charIndexRef = useRef(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -181,7 +182,9 @@ export const DailyDownloadPlayer = ({
   const currentCharIndex = useMemo(() => {
     if (!durationMs || !fullTranscriptText.length) return 0;
     const progress = currentTimeMs / durationMs;
-    return Math.floor(progress * fullTranscriptText.length);
+    const idx = Math.floor(progress * fullTranscriptText.length);
+    charIndexRef.current = idx;
+    return idx;
   }, [currentTimeMs, durationMs, fullTranscriptText.length]);
 
   // Progress percentage for progress bar
@@ -385,6 +388,17 @@ export const DailyDownloadPlayer = ({
   // Destructure cancel for stable dependency
   const cancelGeneration = streamingContent.cancel;
 
+  // Save progress on topic change or unmount
+  useEffect(() => {
+    const topicId = topic?.id;
+    return () => {
+      if (topicId && charIndexRef.current > 0) {
+        console.log('[AudioProgress] Saving on cleanup:', { topicId, charIndex: charIndexRef.current });
+        saveProgress(topicId, charIndexRef.current);
+      }
+    };
+  }, [topic?.id, saveProgress]);
+
   // Reset state when topic changes
   useEffect(() => {
     if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
@@ -416,19 +430,17 @@ export const DailyDownloadPlayer = ({
 
   // Auto-save progress periodically while playing
   useEffect(() => {
+    console.log('[AudioProgress] Effect triggered:', { isPlaying, topicId: topic?.id, currentCharIndex, durationMs });
     if (!isPlaying || !topic) return;
     
     const interval = setInterval(() => {
-      const now = Date.now();
-      if (now - lastSaveTime.current > PROGRESS_SAVE_INTERVAL_MS) {
-        console.log('[AudioProgress] Saving progress:', { topicId: topic.id, currentCharIndex });
-        saveProgress(topic.id, currentCharIndex);
-        lastSaveTime.current = now;
-      }
+      console.log('[AudioProgress] Saving progress:', { topicId: topic.id, currentCharIndex });
+      saveProgress(topic.id, currentCharIndex);
+      lastSaveTime.current = Date.now();
     }, PROGRESS_SAVE_INTERVAL_MS);
     
     return () => clearInterval(interval);
-  }, [isPlaying, topic, currentCharIndex, saveProgress]);
+  }, [isPlaying, topic, currentCharIndex, saveProgress, durationMs]);
 
   // Transcript drag handlers
   const handleTranscriptMouseDown = (e: MouseEvent<HTMLDivElement>) => {
