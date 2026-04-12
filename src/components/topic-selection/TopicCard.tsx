@@ -32,15 +32,17 @@ interface TopicCardProps {
   index: number;
   onSelect: () => void;
   highlightQuery?: string;
+  progressPercent?: number;
 }
 
 export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
-  ({ topic, listened, hasResume, index, onSelect, highlightQuery = '' }, ref) => {
+  ({ topic, listened, hasResume, index, onSelect, highlightQuery = '', progressPercent }, ref) => {
+    const showProgress = hasResume && progressPercent != null && progressPercent > 0;
     return (
       <motion.button
         ref={ref}
         onClick={onSelect}
-        className={`w-full text-left bg-card border rounded-xl p-3 transition-colors touch-pan-y ${
+        className={`w-full text-left bg-card border rounded-xl p-3 transition-colors touch-pan-y overflow-hidden relative ${
           listened 
             ? 'border-primary/30 bg-primary/5' 
             : hasResume
@@ -71,9 +73,11 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
               {listened && (
                 <span className="text-xs text-primary font-medium">✓</span>
               )}
-              {hasResume && (
+              {showProgress ? (
+                <span className="text-xs text-warning font-medium whitespace-nowrap">Resume · {progressPercent}%</span>
+              ) : hasResume ? (
                 <span className="text-xs text-warning font-medium">Resume</span>
-              )}
+              ) : null}
             </div>
             <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
               <HighlightText text={topic.description} query={highlightQuery} />
@@ -81,6 +85,15 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </div>
+        {/* Thin progress bar at bottom */}
+        {showProgress && (
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
+            <div
+              className="h-full bg-warning transition-all rounded-full"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        )}
       </motion.button>
     );
   }
