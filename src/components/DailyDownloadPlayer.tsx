@@ -416,19 +416,17 @@ export const DailyDownloadPlayer = ({
 
   // Auto-save progress periodically while playing
   useEffect(() => {
+    console.log('[AudioProgress] Effect triggered:', { isPlaying, topicId: topic?.id, currentCharIndex, durationMs });
     if (!isPlaying || !topic) return;
     
     const interval = setInterval(() => {
-      const now = Date.now();
-      if (now - lastSaveTime.current > PROGRESS_SAVE_INTERVAL_MS) {
-        console.log('[AudioProgress] Saving progress:', { topicId: topic.id, currentCharIndex });
-        saveProgress(topic.id, currentCharIndex);
-        lastSaveTime.current = now;
-      }
+      console.log('[AudioProgress] Saving progress:', { topicId: topic.id, currentCharIndex });
+      saveProgress(topic.id, currentCharIndex);
+      lastSaveTime.current = Date.now();
     }, PROGRESS_SAVE_INTERVAL_MS);
     
     return () => clearInterval(interval);
-  }, [isPlaying, topic, currentCharIndex, saveProgress]);
+  }, [isPlaying, topic, currentCharIndex, saveProgress, durationMs]);
 
   // Transcript drag handlers
   const handleTranscriptMouseDown = (e: MouseEvent<HTMLDivElement>) => {
