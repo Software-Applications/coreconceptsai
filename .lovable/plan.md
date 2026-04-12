@@ -1,17 +1,21 @@
 
 
-# Fix Progress Bar Width & Resume Icon
+# Show Topic Duration on Topic Cards
 
-## Issues
-1. **Progress bar spans full card width** — it's absolutely positioned with `left-0 right-0`, ignoring the icon and chevron gutters. It should align with the text content area only.
-2. **Resume icon (`RotateCcw`)** — a "rotate/undo" arrow isn't the best metaphor for resuming playback. A `Play` or `PlayCircle` icon better communicates "continue listening."
+## What changes
+Display the topic duration (e.g. "5:30") as a small muted label on each topic card, next to the description. Only shown when the duration is available and not "0:00".
 
-## Changes
+## Technical details
 
 ### `src/components/topic-selection/TopicCard.tsx`
-1. Move the progress bar from absolute positioning to inside the text content `div` (the `flex-1 min-w-0` container), so it naturally matches the width of the title/description area. Place it as the last child with a small top margin.
-2. Replace `RotateCcw` icon with `PlayCircle` from lucide-react for the resume state — this clearly signals "continue playing."
+- Import `Clock` icon from lucide-react
+- After the description `<p>` tag (line 82-84), add a small duration label with a clock icon when `topic.duration` exists and isn't "0:00"
+- Style: `text-xs text-muted-foreground` with a tiny clock icon, placed below the description
 
-### Inline topic cards in `src/components/TopicSelectionSheet.tsx`
-Apply the same two fixes to any inline card renderings that have the progress bar.
+### `src/components/TopicSelectionSheet.tsx`
+- Add the same duration display to any inline topic card renderings
+
+## Files modified
+- `src/components/topic-selection/TopicCard.tsx`
+- `src/components/TopicSelectionSheet.tsx`
 
