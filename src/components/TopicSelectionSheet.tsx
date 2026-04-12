@@ -731,7 +731,7 @@ export const TopicSelectionSheet = ({
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
                             {showExamHighlight && (
-                              <span className="flex items-center gap-0.5 text-[10px] text-warning-foreground font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
+                              <span className="flex items-center gap-0.5 text-[10px] text-warning font-medium bg-warning/10 px-1.5 py-0.5 rounded-full">
                                 <Flame className="w-2.5 h-2.5" />
                                 Exam
                               </span>
