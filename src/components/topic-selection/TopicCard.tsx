@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Headphones, CheckCircle, RotateCcw } from 'lucide-react';
+import { ChevronRight, Headphones, CheckCircle, PlayCircle } from 'lucide-react';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
 
 // Helper to highlight matching text
@@ -60,7 +60,7 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
             {listened ? (
               <CheckCircle className="w-4 h-4 text-primary" />
             ) : hasResume ? (
-              <RotateCcw className="w-4 h-4 text-warning" />
+              <PlayCircle className="w-4 h-4 text-warning" />
             ) : (
               <Headphones className="w-4 h-4 text-primary" />
             )}
@@ -82,18 +82,17 @@ export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(
             <p className="text-xs text-muted-foreground line-clamp-3 mt-0.5">
               <HighlightText text={topic.description} query={highlightQuery} />
             </p>
+            {showProgress && (
+              <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-warning transition-all rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            )}
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </div>
-        {/* Thin progress bar at bottom */}
-        {showProgress && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
-            <div
-              className="h-full bg-warning transition-all rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        )}
       </motion.button>
     );
   }

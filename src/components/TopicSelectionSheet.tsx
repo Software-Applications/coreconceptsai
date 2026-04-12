@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame, TrendingUp } from 'lucide-react';
+import { X, Headphones, CheckCircle, PlayCircle, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame, TrendingUp } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useDragScroll } from '@/hooks/useDragScroll';
@@ -469,7 +469,7 @@ export const TopicSelectionSheet = ({
                                   {listened ? (
                                     <CheckCircle className="w-4 h-4 text-primary" />
                                   ) : hasResumeState ? (
-                                    <RotateCcw className="w-4 h-4 text-warning" />
+                                    <PlayCircle className="w-4 h-4 text-warning" />
                                   ) : (
                                     <Headphones className="w-4 h-4 text-primary" />
                                   )}
@@ -489,13 +489,13 @@ export const TopicSelectionSheet = ({
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
+                                  {pct > 0 && (
+                                    <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
+                                      <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                                    </div>
+                                  )}
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                {pct > 0 && (
-                                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
-                                    <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
-                                  </div>
-                                )}
                               </CommandItem>
                             );
                           })}
@@ -523,7 +523,7 @@ export const TopicSelectionSheet = ({
                                   {listened ? (
                                     <CheckCircle className="w-4 h-4 text-primary" />
                                   ) : hasResumeState ? (
-                                    <RotateCcw className="w-4 h-4 text-warning" />
+                                    <PlayCircle className="w-4 h-4 text-warning" />
                                   ) : (
                                     <Headphones className="w-4 h-4 text-muted-foreground" />
                                   )}
@@ -543,13 +543,13 @@ export const TopicSelectionSheet = ({
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
+                                  {pct > 0 && (
+                                    <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
+                                      <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                                    </div>
+                                  )}
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                {pct > 0 && (
-                                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
-                                    <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
-                                  </div>
-                                )}
                               </CommandItem>
                             );
                           })}
@@ -666,7 +666,7 @@ export const TopicSelectionSheet = ({
                             {listened ? (
                               <CheckCircle className="w-4 h-4 text-primary" />
                             ) : hasResumeState ? (
-                              <RotateCcw className="w-4 h-4 text-warning" />
+                              <PlayCircle className="w-4 h-4 text-warning" />
                             ) : (
                               <Headphones className="w-4 h-4 text-muted-foreground" />
                             )}
@@ -676,13 +676,13 @@ export const TopicSelectionSheet = ({
                               <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
                             </div>
                             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                            {pct > 0 && (
+                              <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
+                                <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            )}
                           </div>
                           <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          {pct > 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
-                              <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
-                          )}
                         </CommandItem>
                       );
                     }
@@ -704,7 +704,7 @@ export const TopicSelectionSheet = ({
                           {listened ? (
                             <CheckCircle className="w-4 h-4 text-primary" />
                           ) : hasResumeState ? (
-                            <RotateCcw className="w-4 h-4 text-warning" />
+                            <PlayCircle className="w-4 h-4 text-warning" />
                           ) : (
                             <Headphones className="w-4 h-4 text-primary" />
                           )}
@@ -732,13 +732,13 @@ export const TopicSelectionSheet = ({
                             ) : null}
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                          {pct > 0 && (
+                            <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
+                              <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          )}
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        {pct > 0 && (
-                          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
-                            <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        )}
                       </CommandItem>
                     );
                   })}
