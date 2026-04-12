@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Headphones, CheckCircle, RotateCcw, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame, TrendingUp } from 'lucide-react';
+import { X, Headphones, CheckCircle, PlayCircle, ChevronRight, Lightbulb, Loader2, Clock, XCircle, Flame, TrendingUp } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useTapVsDrag } from '@/hooks/useTapVsDrag';
 import { useDragScroll } from '@/hooks/useDragScroll';
