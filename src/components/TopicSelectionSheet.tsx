@@ -11,6 +11,7 @@ import { searchTopics, hasResults, type SearchResults } from '@/lib/topicSearch'
 import { validateTopicRequest } from '@/lib/topicValidation';
 import { toast } from '@/hooks/use-toast';
 import type { DailyDownloadTopic } from '@/hooks/useTopics';
+import { useAudioProgress } from '@/hooks/useAudioProgress';
 
 const RECENT_SEARCHES_KEY = 'core-concepts-recent-searches';
 const MAX_RECENT_SEARCHES = 5;
