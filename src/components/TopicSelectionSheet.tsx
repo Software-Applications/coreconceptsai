@@ -84,6 +84,7 @@ export const TopicSelectionSheet = ({
   initialFilter = null
 }: TopicSelectionSheetProps) => {
   const { lightTap, selectionChanged, successNotification } = useHaptics();
+  const { getProgressPercent } = useAudioProgress();
   const topicRequest = useTopicRequest();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
