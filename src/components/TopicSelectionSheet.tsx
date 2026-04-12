@@ -454,20 +454,21 @@ export const TopicSelectionSheet = ({
                           {searchResults.directHits.map((scoredTopic) => {
                             const topic = scoredTopic.topic;
                             const listened = isListened?.(topic.id) ?? false;
-                            const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
+                            const hasResumeState = !listened && (hasProgress?.(topic.id) ?? false);
+                            const pct = hasResumeState ? getProgressPercent(topic.id, topic.transcript?.length || 0) : 0;
                             return (
                               <CommandItem
                                 key={topic.id}
                                 value={topic.id}
                                 onSelect={() => handleSelectTopic(topic)}
-                                className="flex items-center gap-3 p-3 cursor-pointer"
+                                className="flex items-center gap-3 p-3 cursor-pointer relative overflow-hidden"
                               >
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-primary/10'
+                                  listened ? 'bg-primary/20' : hasResumeState ? 'bg-warning/20' : 'bg-primary/10'
                                 }`}>
                                   {listened ? (
                                     <CheckCircle className="w-4 h-4 text-primary" />
-                                  ) : hasResume ? (
+                                  ) : hasResumeState ? (
                                     <RotateCcw className="w-4 h-4 text-warning" />
                                   ) : (
                                     <Headphones className="w-4 h-4 text-primary" />
@@ -479,13 +480,22 @@ export const TopicSelectionSheet = ({
                                       <HighlightText text={topic.title} query={searchQuery} />
                                     </span>
                                     {listened && <span className="text-xs text-primary font-medium">✓</span>}
-                                    {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
+                                    {pct > 0 ? (
+                                      <span className="text-xs text-warning font-medium whitespace-nowrap">Resume · {pct}%</span>
+                                    ) : hasResumeState ? (
+                                      <span className="text-xs text-warning font-medium">Resume</span>
+                                    ) : null}
                                   </div>
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                {pct > 0 && (
+                                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
+                                    <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                )}
                               </CommandItem>
                             );
                           })}
@@ -498,20 +508,21 @@ export const TopicSelectionSheet = ({
                           {searchResults.relatedTopics.map((scoredTopic) => {
                             const topic = scoredTopic.topic;
                             const listened = isListened?.(topic.id) ?? false;
-                            const hasResume = !listened && (hasProgress?.(topic.id) ?? false);
+                            const hasResumeState = !listened && (hasProgress?.(topic.id) ?? false);
+                            const pct = hasResumeState ? getProgressPercent(topic.id, topic.transcript?.length || 0) : 0;
                             return (
                               <CommandItem
                                 key={topic.id}
                                 value={topic.id}
                                 onSelect={() => handleSelectTopic(topic)}
-                                className="flex items-center gap-3 p-3 cursor-pointer opacity-80"
+                                className="flex items-center gap-3 p-3 cursor-pointer opacity-80 relative overflow-hidden"
                               >
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  listened ? 'bg-primary/20' : hasResume ? 'bg-warning/20' : 'bg-muted'
+                                  listened ? 'bg-primary/20' : hasResumeState ? 'bg-warning/20' : 'bg-muted'
                                 }`}>
                                   {listened ? (
                                     <CheckCircle className="w-4 h-4 text-primary" />
-                                  ) : hasResume ? (
+                                  ) : hasResumeState ? (
                                     <RotateCcw className="w-4 h-4 text-warning" />
                                   ) : (
                                     <Headphones className="w-4 h-4 text-muted-foreground" />
@@ -523,13 +534,22 @@ export const TopicSelectionSheet = ({
                                       <HighlightText text={topic.title} query={searchQuery} />
                                     </span>
                                     {listened && <span className="text-xs text-primary font-medium">✓</span>}
-                                    {hasResume && <span className="text-xs text-warning font-medium">Resume</span>}
+                                    {pct > 0 ? (
+                                      <span className="text-xs text-warning font-medium whitespace-nowrap">Resume · {pct}%</span>
+                                    ) : hasResumeState ? (
+                                      <span className="text-xs text-warning font-medium">Resume</span>
+                                    ) : null}
                                   </div>
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                {pct > 0 && (
+                                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-warning/20">
+                                    <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                )}
                               </CommandItem>
                             );
                           })}
