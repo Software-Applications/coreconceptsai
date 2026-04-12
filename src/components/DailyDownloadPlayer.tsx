@@ -385,6 +385,18 @@ export const DailyDownloadPlayer = ({
   // Destructure cancel for stable dependency
   const cancelGeneration = streamingContent.cancel;
 
+  // Save progress on topic change or unmount
+  useEffect(() => {
+    const prevId = previousTopicId.current;
+    return () => {
+      // Save progress for the topic we're leaving
+      if (prevId && currentCharIndex > 0) {
+        console.log('[AudioProgress] Saving on cleanup:', { topicId: prevId, currentCharIndex });
+        saveProgress(prevId, currentCharIndex);
+      }
+    };
+  }, [topic?.id]);
+
   // Reset state when topic changes
   useEffect(() => {
     if (previousTopicId.current !== null && previousTopicId.current !== topic?.id) {
