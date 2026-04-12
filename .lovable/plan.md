@@ -1,83 +1,36 @@
 
 
-# Fix Trending Topics Not Counting Plays
+# Add Visual Progress Bar to Topic Cards
 
-## Root Causes
+## What changes
+Add a thin progress bar at the bottom of topic cards that have been partially listened to (the "Resume" state). The bar shows how far the user got as a percentage of the transcript length.
 
-Two issues prevent Chemical Equilibrium from appearing as trending:
+## How it works
+- `useAudioProgress` already stores `charIndex` per topic
+- Each topic has a `transcript` field with the full text
+- Progress percentage = `charIndex / transcript.length`
+- A thin bar (2-3px) renders at the bottom of topic cards only for partially-listened topics
 
-### 1. Only one row per user per topic
-`useListenedTopics` uses `upsert` with `onConflict: 'user_id,topic_id'`, so playing a topic twice overwrites the same row. The trending hook counts rows, so listen_count = 1 regardless of how many times you play it.
+## Technical details
 
-### 2. RLS blocks cross-user aggregation
-The `user_progress` SELECT policy is `auth.uid() = user_id`, so the trending query can only see the *current* user's rows. For unauthenticated users, it returns zero rows.
+### 1. Add `getProgressPercent` to `useAudioProgress`
+New method that takes `(topicId, totalLength)` and returns a 0-100 number using the stored `charIndex`.
 
-## Solution
+### 2. Update `TopicCard` component
+- Add new optional prop `progressPercent?: number`
+- When `hasResume` is true and `progressPercent > 0`, render a thin progress bar at the card bottom (inside the rounded border)
+- Use a `warning` color to match the existing resume styling
+- Replace the "Resume" text badge with something like "Resume · 42%"
 
-### A. Track each play as a separate row
+### 3. Update `TopicSelectionSheet` and `SearchResultsSection`
+- Pass `progressPercent` when rendering `TopicCard`, computed from `getProgress(topicId)` and `topic.transcript.length`
 
-**Database migration**: Create a new `topic_listens` table that records every play:
+### 4. Update inline topic cards in `TopicSelectionSheet`
+The sheet has several inline card renderings (not using `TopicCard`). Add the same thin progress bar to those instances.
 
-```sql
-CREATE TABLE public.topic_listens (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  topic_id uuid NOT NULL,
-  user_id uuid,
-  listened_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.topic_listens ENABLE ROW LEVEL SECURITY;
-
--- Anyone can read aggregated listen data (no PII exposed)
-CREATE POLICY "Anyone can view topic listens"
-  ON public.topic_listens FOR SELECT
-  TO public USING (true);
-
--- Authenticated users can insert their own listens
-CREATE POLICY "Users can insert own listens"
-  ON public.topic_listens FOR INSERT
-  TO public WITH CHECK (auth.uid() = user_id);
-
--- Anonymous users can also insert (user_id = NULL)
-CREATE POLICY "Anonymous can insert listens"
-  ON public.topic_listens FOR INSERT
-  TO public WITH CHECK (user_id IS NULL);
-```
-
-### B. Record a listen on every play
-
-**File**: `src/hooks/useListenedTopics.ts`
-
-Add a new function `recordListen` that inserts into `topic_listens` every time a topic is played (not upserted). The existing `markAsListened` / `user_progress` logic stays unchanged for tracking completion status.
-
-### C. Update trending hook to use `topic_listens`
-
-**File**: `src/hooks/useTrendingTopics.ts`
-
-Replace the `user_progress` query with a query against `topic_listens`, counting all rows per `topic_id`. Since the SELECT policy is public, this works for all users.
-
-```typescript
-const { data: listenData } = await supabase
-  .from('topic_listens')
-  .select('topic_id');
-
-// Count per topic
-listenData?.forEach(row => {
-  const count = listenCounts.get(row.topic_id) || 0;
-  listenCounts.set(row.topic_id, count + 1);
-});
-```
-
-### D. Call `recordListen` from the audio player
-
-**File**: `src/components/DailyDownloadPlayer.tsx` (or wherever play completion triggers `markAsListened`)
-
-Add a call to the new `recordListen` function alongside the existing `markAsListened` call.
-
-## Impact
-
-- Each play increments the count (no more upsert overwrite)
-- Trending data is visible to all users (public SELECT policy)
-- No PII exposed -- `topic_listens` only stores topic_id, optional user_id, and timestamp
-- Existing `user_progress` table and completion tracking remain unchanged
+## Files modified
+- `src/hooks/useAudioProgress.ts` -- add `getProgressPercent`
+- `src/components/topic-selection/TopicCard.tsx` -- add progress bar UI
+- `src/components/TopicSelectionSheet.tsx` -- pass progress percent, add bars to inline cards
+- `src/components/topic-selection/SearchResultsSection.tsx` -- pass progress percent
 
