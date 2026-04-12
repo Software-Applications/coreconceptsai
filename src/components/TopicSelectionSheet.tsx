@@ -641,6 +641,9 @@ export const TopicSelectionSheet = ({
                     const listened = isListened?.(topic.id) ?? false;
                     const hasResumeState = !listened && (hasProgress?.(topic.id) ?? false);
                     const pct = hasResumeState ? getProgressPercent(topic.id, topic.transcript?.length || 0) : 0;
+                    if (hasResumeState || pct > 0) {
+                      console.log('[TopicList] Resume state:', { title: topic.title, hasResumeState, pct, transcriptLength: topic.transcript?.length });
+                    }
                     const isExamTopic = examTopicIds.has(topic.id);
                     const isTrendingTopic = trendingTopicIds.has(topic.id);
                     const showExamHighlight = examFilterActive && isExamTopic;
