@@ -489,6 +489,12 @@ export const TopicSelectionSheet = ({
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
+                                  {topic.duration && topic.duration !== '0:00' && (
+                                    <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{topic.duration}</span>
+                                    </div>
+                                  )}
                                   {pct > 0 && (
                                     <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
                                       <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
@@ -543,6 +549,12 @@ export const TopicSelectionSheet = ({
                                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                     <HighlightText text={topic.description} query={searchQuery} />
                                   </p>
+                                  {topic.duration && topic.duration !== '0:00' && (
+                                    <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{topic.duration}</span>
+                                    </div>
+                                  )}
                                   {pct > 0 && (
                                     <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
                                       <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
@@ -676,6 +688,12 @@ export const TopicSelectionSheet = ({
                               <span className="font-medium text-foreground text-sm truncate">{topic.title}</span>
                             </div>
                             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                            {topic.duration && topic.duration !== '0:00' && (
+                              <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                <Clock className="w-3 h-3" />
+                                <span>{topic.duration}</span>
+                              </div>
+                            )}
                             {pct > 0 && (
                               <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
                                 <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
@@ -732,6 +750,12 @@ export const TopicSelectionSheet = ({
                             ) : null}
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{topic.description}</p>
+                          {topic.duration && topic.duration !== '0:00' && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              <span>{topic.duration}</span>
+                            </div>
+                          )}
                           {pct > 0 && (
                             <div className="mt-1.5 h-[3px] w-full bg-warning/20 rounded-full overflow-hidden">
                               <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
