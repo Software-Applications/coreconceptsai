@@ -421,6 +421,7 @@ export const DailyDownloadPlayer = ({
     const interval = setInterval(() => {
       const now = Date.now();
       if (now - lastSaveTime.current > PROGRESS_SAVE_INTERVAL_MS) {
+        console.log('[AudioProgress] Saving progress:', { topicId: topic.id, currentCharIndex });
         saveProgress(topic.id, currentCharIndex);
         lastSaveTime.current = now;
       }
