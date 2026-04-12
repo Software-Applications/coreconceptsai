@@ -32,6 +32,7 @@ interface TopicCardProps {
   index: number;
   onSelect: () => void;
   highlightQuery?: string;
+  progressPercent?: number;
 }
 
 export const TopicCard = forwardRef<HTMLButtonElement, TopicCardProps>(

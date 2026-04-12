@@ -73,5 +73,12 @@ export const useAudioProgress = () => {
     return getProgress(topicId) !== null;
   }, [getProgress]);
 
-  return { saveProgress, getProgress, clearProgress, hasProgress };
+  const getProgressPercent = useCallback((topicId: string, totalLength: number): number => {
+    if (totalLength <= 0) return 0;
+    const charIndex = getProgress(topicId);
+    if (charIndex === null || charIndex <= 0) return 0;
+    return Math.min(Math.round((charIndex / totalLength) * 100), 99);
+  }, [getProgress]);
+
+  return { saveProgress, getProgress, clearProgress, hasProgress, getProgressPercent };
 };
