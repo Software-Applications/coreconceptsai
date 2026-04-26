@@ -86,6 +86,73 @@ Set these via Supabase Dashboard → Project Settings → Edge Functions → Sec
 
 ---
 
+## ✅ Pre-Build Checklist — Secrets & Env Vars
+
+Run through this before your first build. Items marked **auto** are injected by Supabase — you don't set them.
+
+### 1. Frontend `.env` (project root)
+
+Copy this block into a new `.env` file and fill in your Supabase project values:
+
+```env
+# Supabase (frontend)
+VITE_SUPABASE_PROJECT_ID="your-project-ref"
+VITE_SUPABASE_URL="https://your-project-ref.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
+```
+
+> ⚠️ Also update the hardcoded values in `src/integrations/supabase/client.ts` if you point at a different Supabase project — the client does not read from `import.meta.env`.
+
+### 2. Supabase Edge Function secrets
+
+Set these in **Supabase Dashboard → Project Settings → Edge Functions → Secrets**, or via CLI:
+
+```sh
+# Required — you must add these manually
+supabase secrets set GOOGLE_API_KEY="your-google-cloud-tts-key"
+supabase secrets set LOVABLE_API_KEY="your-lovable-ai-gateway-key"
+```
+
+| Secret                        | Required? | Where to get it                                                                 |
+| ----------------------------- | --------- | ------------------------------------------------------------------------------- |
+| `GOOGLE_API_KEY`              | ✅ manual  | Google Cloud Console → APIs & Services → Credentials (enable Text-to-Speech API) |
+| `LOVABLE_API_KEY`             | ✅ manual  | Lovable workspace settings (or swap edge functions to your own LLM provider)    |
+| `SUPABASE_URL`                | ✅ auto    | Auto-injected by Supabase                                                       |
+| `SUPABASE_ANON_KEY`           | ✅ auto    | Auto-injected by Supabase                                                       |
+| `SUPABASE_SERVICE_ROLE_KEY`   | ✅ auto    | Auto-injected by Supabase. **Never expose to the frontend**                     |
+| `SUPABASE_DB_URL`             | ✅ auto    | Auto-injected by Supabase                                                       |
+| `SUPABASE_PUBLISHABLE_KEY`    | ✅ auto    | Auto-injected by Supabase                                                       |
+
+### 3. Verify before building
+
+```sh
+# Confirm both manual secrets exist
+supabase secrets list | grep -E "GOOGLE_API_KEY|LOVABLE_API_KEY"
+
+# Confirm storage bucket exists
+supabase storage ls
+# expected: textbook-covers (public)
+
+# Confirm migrations applied
+supabase db push
+
+# Confirm edge functions deployed
+supabase functions list
+# expected: generate-transcript, google-tts, generate-textbook-cover
+```
+
+### 4. Build
+
+```sh
+npm install
+npm run build
+```
+
+If you see a `400` from `google-tts` → `GOOGLE_API_KEY` is missing or the Text-to-Speech API isn't enabled in your Google Cloud project.
+If you see transcript generation hang or 401 → `LOVABLE_API_KEY` is missing.
+
+---
+
 ## Database Setup
 
 The full schema lives in `supabase/migrations/`. Apply it to a fresh Supabase project with:
