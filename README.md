@@ -59,6 +59,11 @@ Dev server runs on http://localhost:8080.
 
 ## Environment Variables
 
+> 💡 **Quick start:** copy [`.env.template`](./.env.template) to `.env` and fill in your Supabase values:
+> ```sh
+> cp .env.template .env
+> ```
+
 ### Frontend (`.env`)
 
 The Vite frontend reads three variables from `.env`. The Supabase client itself **hardcodes** the URL and anon key in `src/integrations/supabase/client.ts` (intentional — keeps edge-function calls stable across environments), so these `.env` values are mainly for tooling parity.
