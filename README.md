@@ -47,22 +47,25 @@ Dev server runs on http://localhost:8080.
 
 ### Available scripts
 
-| Command            | What it does                              |
-| ------------------ | ----------------------------------------- |
-| `npm run dev`      | Start Vite dev server (port 8080)         |
-| `npm run build`    | Production build to `dist/`               |
-| `npm run preview`  | Preview the production build locally      |
-| `npm run lint`     | Run ESLint                                |
-| `npm run test`     | Run Vitest test suite                     |
+| Command             | What it does                                                  |
+| ------------------- | ------------------------------------------------------------- |
+| `npm run dev`       | Start Vite dev server (port 8080)                             |
+| `npm run build`     | Production build to `dist/`                                   |
+| `npm run preview`   | Preview the production build locally                          |
+| `npm run preflight` | Verify `.env` is set up correctly and Supabase is reachable   |
+| `npm run lint`      | Run ESLint                                                    |
+| `npm run test`      | Run Vitest test suite                                         |
 
 ---
 
 ## Environment Variables
 
-> 💡 **Quick start:** copy [`.env.template`](./.env.template) to `.env` and fill in your Supabase values:
+> 💡 **Quick start:** copy [`.env.template`](./.env.template) to `.env`, fill in your Supabase values, then run the preflight check:
 > ```sh
 > cp .env.template .env
+> npm run preflight
 > ```
+> The preflight ([`scripts/preflight.mjs`](./scripts/preflight.mjs)) verifies all `VITE_SUPABASE_*` vars are set, the URL/project-ref/anon-key are well-formed, the project responds, and the hardcoded values in `src/integrations/supabase/client.ts` match.
 
 ### Frontend (`.env`)
 
