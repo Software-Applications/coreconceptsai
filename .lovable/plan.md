@@ -1,35 +1,64 @@
 
+## Goal
+Generate a polished 5-slide PPTX deck pitching Core Concepts AI to executives, using the provided product story as-is (aspirational framing), with real screenshots from the live app.
 
-The user wants a new product story for "Core Concepts AI" based on what the app actually does — not the aspirational doc they uploaded (which references things like "Active Prompting" pauses, "Visual Anchors" mnemonic cards, "Swipe Decision" review board, and "Daily Commute Study Habit" that don't exist in the codebase).
+## Deliverable
+`/mnt/documents/core-concepts-ai-exec-deck.pptx`
 
-## What the app actually is (from the code)
+## Deck structure
 
-From the codebase I can see:
-- **Core Concepts AI Hub** — tagline already in product: "Complex topics, simplified in AI audio"
-- **AI-generated audio explanations** of complex topics, organized by Subject → Chapter → Topic
-- **3-stage generation pipeline**: Architect (blueprint) → Script Writer (transcript) → Audio Engineer (SSML for TTS) — per the memory note
-- **Google TTS with multiple voice options** (Oliver, Marcus, James, Aria, Emma, Sophia) — `useVoicePreference.ts`
-- **Streaming audio player** with playback speed (1x–2x), skip 15s, scrubbing — `useAudioPlayer.ts`, `DailyDownloadPlayer.tsx`
-- **Resume playback** — `useAudioProgress.ts` saves char index per topic for 7 days
-- **Listened tracking** — `useListenedTopics.ts`, `topic_listens` table, unlistened badge counter
-- **Trending Concepts** — `useTrendingTopics.ts`, collapsible carousel
-- **Topic search & request** — users can search and request new topics (`useTopicRequest.ts`)
-- **Exam-aware highlighting** — `useExams.ts`, "🔥 N topics match your upcoming exam" pill
-- **Practice quizzes** per chapter — `PracticeQuizSheet.tsx`, `useQuizProgress.ts`
-- **Topic durations** (now populated from transcript word count)
-- **Mobile-first PWA** with Capacitor config, haptics, bottom nav, sheet UIs
-- **NO** flashcards / mnemonic cards / swipe review on the frontend (memory: "visual summary and flashcard system has been completely removed")
-- **NO** in-audio active-prompting pauses / quiz-the-listener mechanic
+**Slide 1 — Title**
+- "Core Concepts AI"
+- Subtitle: "Turning idle minutes into active study"
+- Pearson+ executive-audience framing, date, presenter line
 
-## What's false in the user's doc
-- "Active Prompting" pauses inside audio — not implemented
-- "Visual Anchors" mnemonic cards — explicitly removed
-- "Swipe Decision" mechanic on a Review Board — not implemented
-- "Spaced repetition" — not implemented
+**Slide 2 — The Problem**
+- Header: "Students lose hours of learning to dead time"
+- Three stat-style callouts: Reading is slow · Audiobooks cause Passive Audio Fatigue · Found moments (commutes, gym, chores) go unused
+- Closing line: "Pearson+ captures dedicated study blocks — but not the hours in between."
 
-## Plan
+**Slide 3 — The Solution (with home screen screenshot)**
+- Header: "AI-generated 5–15 min audio explanations, built for retention"
+- Left: screenshot of the app home with the Core Concepts card visible
+- Right: 4 bullet pillars from the story — Multi-agent pipeline (Architect → Script Writer → Audio Engineer), Active Prompting, Retrieval Interruptions, Narrative Scaffolding
+- Footer tag: "Integrity-first. Concept mastery, not answer keys."
 
-This is a **writing task**, not a code change. I'll produce a rewritten product story grounded only in what the app actually does, keeping the same section structure (Summary, Rationale, Mapped OKRs, Target Users, Hypothesis Statements, Key Metrics) so it's a drop-in replacement for their doc. I'll deliver it inline in chat (markdown) — no file generation needed unless the user asks for a .docx/.pdf.
+**Slide 4 — Use Case (with flow screenshots)**
+- Header: "Maya, Bio undergrad. 22-min bus ride. One tough topic."
+- Horizontal 3-step flow with screenshots:
+  1. Opens Pearson+ on the bus → taps Core Concepts (home screenshot)
+  2. Picks "Krebs Cycle" from her Biology chapter (topic selection screenshot)
+  3. Listens with natural voice + transcript, pauses for retrieval check-ins (player screenshot)
+- Outcome line: "Arrives on campus already primed for lecture."
 
-If the user later wants this as a downloadable Word/PDF, I can generate it then.
+**Slide 5 — Business Value**
+- Header: "Why this moves Pearson+ metrics"
+- Three columns:
+  - **Engagement** — Listening minutes / active user / week
+  - **Retention** — Login frequency in 14-day exam window (exam-aware highlighting)
+  - **Efficiency** — Pre-generated transcript cache reduces redundant AI spend
+- Bottom strip: "What's next — Bloom's-aligned MCQs · Level toggles (Beginner ↔ Advanced)"
 
+## Visual design
+- Palette: **Midnight Executive** (navy `#1E2761`, ice blue `#CADCFC`, white) — premium exec feel matching the app's primary navy/blue
+- Accent: violet/purple gradient stripe on title + section headers, mirroring the app's Core Concepts AI brand badge
+- Typography: Georgia headers / Calibri body
+- Sandwich structure: dark navy on slides 1 & 5, light on 2–4
+- One consistent motif: thin violet accent bar on the left of each content block
+- All app screenshots framed in a subtle rounded device-style border with soft shadow
+
+## How screenshots will be captured
+1. `browser--navigate_to_sandbox` to `/` at iPhone-frame viewport (414x896) → screenshot home with Core Concepts card
+2. Tap Core Concepts card → screenshot topic selection drawer
+3. Open a topic → screenshot the audio player with transcript
+4. Save to `/tmp/` and embed as base64 in pptx (per skill rules)
+
+## Build approach
+- Use `pptxgenjs` (Node) per the pptx skill
+- Embed screenshots as base64 (never path refs)
+- Render to PDF via LibreOffice → `pdftoppm` → visual QA every slide
+- Iterate on overlap / contrast / clipping until clean
+- Final output: `/mnt/documents/core-concepts-ai-exec-deck.pptx` delivered via `presentation-artifact` tag
+
+## Notes on framing (per your choice)
+Using the product story **as-is** — Active Prompting, Retrieval Interruptions, multi-agent pipeline, and Narrative Scaffolding will all be presented as live capabilities. Bloom's MCQs and level toggles stay in the "What's next" footer on slide 5, exactly as written in the story's Future Scope.
