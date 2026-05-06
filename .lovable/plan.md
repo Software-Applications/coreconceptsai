@@ -1,64 +1,76 @@
-
 ## Goal
-Generate a polished 5-slide PPTX deck pitching Core Concepts AI to executives, using the provided product story as-is (aspirational framing), with real screenshots from the live app.
+
+Deliver a 60-second MP4 product video for Core Concepts AI that walks through Problem → Solution → Live Demo → Business Value, narrated with an energetic, confident Google TTS voice.
 
 ## Deliverable
-`/mnt/documents/core-concepts-ai-exec-deck.pptx`
 
-## Deck structure
+`/mnt/documents/core-concepts-ai-60s.mp4` (1920x1080, ~60s, H.264 + AAC)
 
-**Slide 1 — Title**
-- "Core Concepts AI"
-- Subtitle: "Turning idle minutes into active study"
-- Pearson+ executive-audience framing, date, presenter line
+## Structure (60 seconds total)
 
-**Slide 2 — The Problem**
-- Header: "Students lose hours of learning to dead time"
-- Three stat-style callouts: Reading is slow · Audiobooks cause Passive Audio Fatigue · Found moments (commutes, gym, chores) go unused
-- Closing line: "Pearson+ captures dedicated study blocks — but not the hours in between."
 
-**Slide 3 — The Solution (with home screen screenshot)**
-- Header: "AI-generated 5–15 min audio explanations, built for retention"
-- Left: screenshot of the app home with the Core Concepts card visible
-- Right: 4 bullet pillars from the story — Multi-agent pipeline (Architect → Script Writer → Audio Engineer), Active Prompting, Retrieval Interruptions, Narrative Scaffolding
-- Footer tag: "Integrity-first. Concept mastery, not answer keys."
+| Time      | Section                  | Visual                                                         | Narration beat                                                                                                                                                                                                                                                            |
+| --------- | ------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0:00–0:12 | **Problem**              | Slide 2 (rendered from deck)                                   | "Students lose hours of learning to dead time. Reading is slow. Audiobooks cause passive audio fatigue. And the found moments — commutes, the gym, chores — go completely unused."                                                                                        |
+| 0:12–0:27 | **Solution**             | Slide 3 (rendered from deck)                                   | "**Core Concepts AI** turns those minutes into active study. A multi-agent pipeline — Architect, Script Writer, Audio Engineer — generates 5 to 15 minute audio explanations with active prompting and retrieval check-ins. **Built for retention, not just listening.**" |
+| 0:27–0:48 | **Live Demo** (use case) | 3 live prototype screenshots animated as a flow, with captions | "Meet Maya. Bio undergrad, 22-minute bus ride, one tough topic. She opens Pearson Plus, taps Core Concepts, picks Krebs Cycle from her chapter, and listens — **natural voice, live transcript, retrieval prompts**. She arrives on campus already primed for lecture."   |
+| 0:48–0:60 | **Business Value**       | Slide 5 (rendered from deck)                                   | "Three metrics move: mobile app engagement, frequency in the 14-day exam window, and efficiency from cached transcripts. Core Concepts AI — turning idle minutes into active study."                                                                                      |
 
-**Slide 4 — Use Case (with flow screenshots)**
-- Header: "Maya, Bio undergrad. 22-min bus ride. One tough topic."
-- Horizontal 3-step flow with screenshots:
-  1. Opens Pearson+ on the bus → taps Core Concepts (home screenshot)
-  2. Picks "Krebs Cycle" from her Biology chapter (topic selection screenshot)
-  3. Listens with natural voice + transcript, pauses for retrieval check-ins (player screenshot)
-- Outcome line: "Arrives on campus already primed for lecture."
 
-**Slide 5 — Business Value**
-- Header: "Why this moves Pearson+ metrics"
-- Three columns:
-  - **Engagement** — Listening minutes / active user / week
-  - **Retention** — Login frequency in 14-day exam window (exam-aware highlighting)
-  - **Efficiency** — Pre-generated transcript cache reduces redundant AI spend
-- Bottom strip: "What's next — Bloom's-aligned MCQs · Level toggles (Beginner ↔ Advanced)"
+## Voice & tone
 
-## Visual design
-- Palette: **Midnight Executive** (navy `#1E2761`, ice blue `#CADCFC`, white) — premium exec feel matching the app's primary navy/blue
-- Accent: violet/purple gradient stripe on title + section headers, mirroring the app's Core Concepts AI brand badge
-- Typography: Georgia headers / Calibri body
-- Sandwich structure: dark navy on slides 1 & 5, light on 2–4
-- One consistent motif: thin violet accent bar on the left of each content block
-- All app screenshots framed in a subtle rounded device-style border with soft shadow
+- Voice: `en-US-Neural2-J` (male, warm + confident) **or** `en-US-Neural2-F` (female, energetic) — I'll pick J as default, swap easily
+- Speaking rate: `1.05` (slightly above normal for energy)
+- One continuous narration track, generated via the existing `google-tts` edge function (Google Cloud TTS). No new API key, no new connector.
 
-## How screenshots will be captured
-1. `browser--navigate_to_sandbox` to `/` at iPhone-frame viewport (414x896) → screenshot home with Core Concepts card
-2. Tap Core Concepts card → screenshot topic selection drawer
-3. Open a topic → screenshot the audio player with transcript
-4. Save to `/tmp/` and embed as base64 in pptx (per skill rules)
+## Technical approach
 
-## Build approach
-- Use `pptxgenjs` (Node) per the pptx skill
-- Embed screenshots as base64 (never path refs)
-- Render to PDF via LibreOffice → `pdftoppm` → visual QA every slide
-- Iterate on overlap / contrast / clipping until clean
-- Final output: `/mnt/documents/core-concepts-ai-exec-deck.pptx` delivered via `presentation-artifact` tag
+```text
+1. Render deck slides → PNG
+   - LibreOffice headless: pptx → pdf → pdftoppm → slide_2.png, slide_3.png, slide_5.png
 
-## Notes on framing (per your choice)
-Using the product story **as-is** — Active Prompting, Retrieval Interruptions, multi-agent pipeline, and Narrative Scaffolding will all be presented as live capabilities. Bloom's MCQs and level toggles stay in the "What's next" footer on slide 5, exactly as written in the story's Future Scope.
+2. Capture live prototype screenshots
+   - browser--navigate_to_sandbox at 414x896
+     a. /  → home with Core Concepts card highlighted
+     b. tap Core Concepts → topic selection (Krebs Cycle area)
+     c. tap topic → audio player with transcript visible
+   - Save to /tmp/demo_1.png, demo_2.png, demo_3.png
+
+3. Generate voiceover
+   - Single ~150-word script, written for ~60s at rate 1.05
+   - Call the deployed google-tts edge function (supabase--curl_edge_functions) with full script
+   - Save returned base64 MP3 → /tmp/vo.mp3
+   - Probe duration with ffprobe; tune script length if off by >2s
+
+4. Build video with ffmpeg
+   - Each segment = still image (or Ken Burns slow zoom on demo shots) for its duration
+   - Demo segment: 3 phone-frame shots, ~7s each, with subtle zoom + caption overlay
+   - Concat segments with crossfade transitions (xfade, 0.4s)
+   - Mux with vo.mp3 as audio track
+   - Output: 1920x1080, 30fps, H.264 yuv420p, AAC 192k
+
+5. QA
+   - ffprobe to confirm duration is 58–62s
+   - Extract 6 keyframes (every 10s) and inspect for layout/caption issues
+   - Re-encode if anything is clipped or off-time
+```
+
+## Visual treatment for demo segment
+
+- Phone screenshots framed in a dark navy device bezel (matches deck's Midnight Executive theme)
+- Subtle Ken Burns zoom (1.0 → 1.05 over 7s) on each shot for liveliness
+- Caption strip at bottom: "1. Open Core Concepts" / "2. Pick a topic" / "3. Listen + retrieve"
+- Violet accent bar on left edge of caption (matches deck motif)
+
+## Assumptions (confirm or override)
+
+- **Voice**: Neural2-J (male, confident). Want female (Neural2-F) instead? Say so.
+- **TTS provider**: Google Cloud TTS via existing edge function. Not Gemini native TTS.
+- **Music**: No background music (60s is tight; voice-only keeps it punchy and clear). Add later if you want.
+- **Aspect**: 16:9 1920x1080. Want 9:16 vertical for social? Easy swap.
+
+## Out of scope
+
+- New TTS connector setup
+- Subtitles/SRT file (can add if you want)
+- Multiple voice variants
