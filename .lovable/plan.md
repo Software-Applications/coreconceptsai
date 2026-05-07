@@ -1,76 +1,101 @@
 ## Goal
 
-Deliver a 60-second MP4 product video for Core Concepts AI that walks through Problem → Solution → Live Demo → Business Value, narrated with an energetic, confident Google TTS voice.
+Tighten the executive deck and the 60-second MP4 to address the five issues you flagged. Keep total runtime at 60 seconds, keep narration coherent, and make the demo segment look like the actual Core Concepts AI prototype.
 
-## Deliverable
+## Changes
 
-`/mnt/documents/core-concepts-ai-60s.mp4` (1920x1080, ~60s, H.264 + AAC)
+### 1. Title slide is thumbnail-only (no VO)
 
-## Structure (60 seconds total)
+- Slide 1 stays in the deck and is used as the **MP4 poster/thumbnail** only.
+- Video playback starts directly with the Problem narration at 0:00.
+- New segment timing (60s total, no gap):
+  ```text
+  0:00 – 0:13   Problem        (slide 2)
+  0:13 – 0:28   Solution       (slide 3)
+  0:28 – 0:48   Live demo      (Remotion, real prototype)
+  0:48 – 1:00   Business value (slide 5)
+  ```
 
+### 2. Problem slide — reformat + real in-app screenshot + inventor-tone opportunity
 
-| Time      | Section                  | Visual                                                         | Narration beat                                                                                                                                                                                                                                                            |
-| --------- | ------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00–0:12 | **Problem**              | Slide 2 (rendered from deck)                                   | "Students lose hours of learning to dead time. Reading is slow. Audiobooks cause passive audio fatigue. And the found moments — commutes, the gym, chores — go completely unused."                                                                                        |
-| 0:12–0:27 | **Solution**             | Slide 3 (rendered from deck)                                   | "**Core Concepts AI** turns those minutes into active study. A multi-agent pipeline — Architect, Script Writer, Audio Engineer — generates 5 to 15 minute audio explanations with active prompting and retrieval check-ins. **Built for retention, not just listening.**" |
-| 0:27–0:48 | **Live Demo** (use case) | 3 live prototype screenshots animated as a flow, with captions | "Meet Maya. Bio undergrad, 22-minute bus ride, one tough topic. She opens Pearson Plus, taps Core Concepts, picks Krebs Cycle from her chapter, and listens — **natural voice, live transcript, retrieval prompts**. She arrives on campus already primed for lecture."   |
-| 0:48–0:60 | **Business Value**       | Slide 5 (rendered from deck)                                   | "Three metrics move: mobile app engagement, frequency in the 14-day exam window, and efficiency from cached transcripts. Core Concepts AI — turning idle minutes into active study."                                                                                      |
+- Re-render Slide 2 in `core-concepts-ai-exec-deck.pptx`:
+  - Fix line-height, alignment, and bullet spacing of the two voice-of-customer quotes (currently overflowing / inconsistent).
+  - Highlight key phrases consistently (one accent color, bold weight, no mixed sizes).
+  - Replace the current marketing screenshot with a **real screenshot captured from the running prototype** at `/` (Home with Core Concepts card visible) using the browser tool at 390×844, framed in the deck's dark phone bezel.
+  - Rewrite the opportunity line in a bold inventor's tone, e.g.:
+    > **"We're converting dead time into the highest-retention learning moment of the day."**
+  - Move opportunity to a full-width band under the quotes so it reads as the punchline.
+- Re-render Slide 2 to PNG for the MP4.
 
+### 3. Solution slide — typography fix + multi-agent AI pipeline
 
-## Voice & tone
+- Slide 3 typography pass: unify header font (Georgia 36pt), body (Calibri 16pt), consistent leading, remove mixed sizes inside the Bloom's pyramid labels.
+- Add a compact **multi-agent pipeline strip** above the pyramid:
+  ```text
+  [Architect] → [Script Writer] → [Audio Engineer]
+  ```
+  Each node in a violet rounded chip with a one-line role caption underneath. Arrow connectors in ice-blue.
+- Keep the Bloom's pyramid + "lifts learners from Remember/Understand → Apply/Analyze" arrow but shrink slightly to make room for the pipeline strip.
+- Update VO to call out the multi-agent pipeline explicitly.
 
-- Voice: `en-US-Neural2-J` (male, warm + confident) **or** `en-US-Neural2-F` (female, energetic) — I'll pick J as default, swap easily
-- Speaking rate: `1.05` (slightly above normal for energy)
-- One continuous narration track, generated via the existing `google-tts` edge function (Google Cloud TTS). No new API key, no new connector.
+### 4. Live demo — use the real prototype via Remotion
 
-## Technical approach
+- Replace the PIL-rendered animation with a **Remotion scene that embeds real prototype screenshots** captured from the running app, sequenced and animated with `useCurrentFrame()` + `spring()`:
+  1. `/` — Home with Core Concepts card
+  2. Core Concepts hub — search drawer open with "epigenetics" typed
+  3. Topic selected — generating overlay
+  4. Audio player — transcript with active word highlight + 3px amber progress bar
+- Capture flow: `browser--navigate_to_sandbox` at 390×844, drive the actual app, `browser--screenshot` at each step → save into `remotion/public/images/`.
+- Compose in Remotion at 1920×1080:
+  - Phone frame centered-right, subtle Ken Burns + tap ripple overlays at the exact tap coordinates.
+  - **Left-side step caption** rendered at **17px (scaled to 1080p ≈ 38px on canvas)** — so it reads as 17px in a phone-sized preview but is clearly legible in the 1920×1080 MP4. Heading 28px on phone scale (62px canvas), body 17px (~38px canvas). No more 10–12px micro text.
+  - One step caption per beat: "1. Open Core Concepts" / "2. Search a topic" / "3. Generate audio" / "4. Listen + retrieve".
+- Render demo segment to `/tmp/seg_04_demo.mp4` (20s, 30fps, H.264) via the programmatic Remotion render script; mux with `04_demo.mp3`.
+
+### 5. Business value slide — legible link + concrete benefits
+
+- Slide 5 redo:
+  - Replace the small footer URL with a **prominent CTA bar** at the bottom: white pill on violet, text `**coreconceptsai.lovable.app**` at 24pt bold, full clickable hyperlink (python-pptx `add_hyperlink`). Same hyperlink applied to the slide title for redundancy.
+  - Expand the three benefits from one-liners to **headline + one-sentence proof**:
+    1. **Mobile engagement.** Turns commute, gym, and chore time into 5–15 min active study sessions inside Pearson Plus.
+    2. **Exam-window frequency.** Retrieval prompts and signposting drive repeat opens in the 14-day pre-exam window when usage spikes matter most.
+    3. **Unit-cost efficiency.** Cached transcripts + chunked TTS reuse cut per-listen synthesis cost as the same topics are replayed across cohorts.
+  - Layout: 3 vertical cards, violet number badge, bold header (Georgia 22pt), body (Calibri 14pt), 0.4" gutters.
+- Re-render Slide 5 to PNG for the MP4.
+
+## Narration (rewritten, ~155 words, ~60s @ 1.05x)
 
 ```text
-1. Render deck slides → PNG
-   - LibreOffice headless: pptx → pdf → pdftoppm → slide_2.png, slide_3.png, slide_5.png
+[PROBLEM 0:00–0:13]
+Students lose hours to dead time. Reading is slow. Audiobooks invite passive
+fatigue — progress that fails the retention test. The found minutes — commutes,
+the gym, chores — go completely unused.
 
-2. Capture live prototype screenshots
-   - browser--navigate_to_sandbox at 414x896
-     a. /  → home with Core Concepts card highlighted
-     b. tap Core Concepts → topic selection (Krebs Cycle area)
-     c. tap topic → audio player with transcript visible
-   - Save to /tmp/demo_1.png, demo_2.png, demo_3.png
+[SOLUTION 0:13–0:28]
+Core Concepts AI turns those minutes into active study. A multi-agent pipeline —
+Architect, Script Writer, Audio Engineer — generates five-to-fifteen minute
+explanations with retrieval prompts and narrative scaffolds that lift learners from remember-and-
+understand into apply-and-analyze.
 
-3. Generate voiceover
-   - Single ~150-word script, written for ~60s at rate 1.05
-   - Call the deployed google-tts edge function (supabase--curl_edge_functions) with full script
-   - Save returned base64 MP3 → /tmp/vo.mp3
-   - Probe duration with ffprobe; tune script length if off by >2s
+[DEMO 0:28–0:48]
+Here's the flow. Open Core Concepts. Search a topic — epigenetics. Tap to
+generate. Natural voice, live transcript, retrieval check-ins. The bus ride is
+now a study session.
 
-4. Build video with ffmpeg
-   - Each segment = still image (or Ken Burns slow zoom on demo shots) for its duration
-   - Demo segment: 3 phone-frame shots, ~7s each, with subtle zoom + caption overlay
-   - Concat segments with crossfade transitions (xfade, 0.4s)
-   - Mux with vo.mp3 as audio track
-   - Output: 1920x1080, 30fps, H.264 yuv420p, AAC 192k
-
-5. QA
-   - ffprobe to confirm duration is 58–62s
-   - Extract 6 keyframes (every 10s) and inspect for layout/caption issues
-   - Re-encode if anything is clipped or off-time
+[VALUE 0:48–1:00]
+Engineered to lift Pearson's "value per minute". Three metrics move: mobile engagement, exam-window frequency, and unit-cost efficiency from cached transcripts. 
 ```
 
-## Visual treatment for demo segment
+## Technical execution order
 
-- Phone screenshots framed in a dark navy device bezel (matches deck's Midnight Executive theme)
-- Subtle Ken Burns zoom (1.0 → 1.05 over 7s) on each shot for liveliness
-- Caption strip at bottom: "1. Open Core Concepts" / "2. Pick a topic" / "3. Listen + retrieve"
-- Violet accent bar on left edge of caption (matches deck motif)
-
-## Assumptions (confirm or override)
-
-- **Voice**: Neural2-J (male, confident). Want female (Neural2-F) instead? Say so.
-- **TTS provider**: Google Cloud TTS via existing edge function. Not Gemini native TTS.
-- **Music**: No background music (60s is tight; voice-only keeps it punchy and clear). Add later if you want.
-- **Aspect**: 16:9 1920x1080. Want 9:16 vertical for social? Easy swap.
+1. Edit `core-concepts-ai-exec-deck.pptx` slides 2, 3, 5 with python-pptx; re-export to PDF → PNG.
+2. Spin up Remotion project under `remotion/`, capture real prototype screenshots via `browser--navigate_to_sandbox` + `browser--screenshot`, drop into `remotion/public/images/`.
+3. Build `remotion/src/scenes/Demo.tsx` with the 4-step flow and large left-side captions; render `seg_04_demo.mp4`.
+4. Regenerate VO via `google-tts` edge function (`en-US-Neural2-J`, rate 1.05) as 4 segments aligned to the new timing; concat.
+5. FFmpeg concat: `seg_02_problem.mp4` (slide 2 still) + `seg_03_solution.mp4` (slide 3 still) + `seg_04_demo.mp4` + `seg_05_value.mp4` (slide 5 still), mux with concatenated VO; output to `/mnt/documents/core-concepts-ai-60s.mp4` (versioned `_v2` if you want to keep the current one).
+6. Save updated deck to `/mnt/documents/core-concepts-ai-exec-deck.pptx` (overwrite).
+7. QA: ffprobe duration 59.5–60.5s; render 6 keyframes + every deck slide to JPG and inspect for typography, link legibility, and demo readability.
 
 ## Out of scope
 
-- New TTS connector setup
-- Subtitles/SRT file (can add if you want)
-- Multiple voice variants
+- Background music, subtitles file, vertical 9:16 cut, voice swap. Easy follow-ups if you want them.
